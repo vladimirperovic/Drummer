@@ -6,7 +6,8 @@
 // pos: položaj na notnom sistemu u polovinama razmaka, 0 = gornja linija (F5), raste naniže.
 // midiIn: note koje TD-17 šalje po fabričkim podešavanjima, midiOut: GM nota za slanje ritma.
 export const INSTRUMENTS = [
-  { id: 'crash', label: 'Crash', pos: -2, head: 'x', voice: 'up', midiIn: [49, 55, 57, 52], midiOut: 49, color: '#f4c95d', keys: ['KeyE'], target: 'crash' },
+  { id: 'crash', label: 'Crash', pos: -2, head: 'x', voice: 'up', midiIn: [49, 55], midiOut: 49, color: '#f4c95d', keys: ['KeyE'], target: 'crash' },
+  { id: 'crash2', label: 'Crash 2', pos: -3, head: 'x', voice: 'up', midiIn: [57, 52], midiOut: 57, color: '#f2b84b', keys: ['KeyU'], target: 'crash2' },
   { id: 'ride', label: 'Ride', pos: 0, head: 'x', voice: 'up', midiIn: [51, 59], midiOut: 51, color: '#f0a35e', keys: ['KeyI'], target: 'ride' },
   { id: 'bell', label: 'Ride zvono', pos: 0, head: 'diamond', voice: 'up', midiIn: [53], midiOut: 53, color: '#e8b07a', keys: ['KeyO'], target: 'bell' },
   { id: 'hh', label: 'Hi-hat zatvoren', pos: -1, head: 'x', voice: 'up', midiIn: [42, 22], midiOut: 42, color: '#5fd0f0', keys: ['KeyD', 'KeyK'], target: 'hihat' },

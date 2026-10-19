@@ -4,7 +4,7 @@
 import { INSTRUMENTS, INST } from './patterns.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-const VIEWBOX = '100 150 1030 680';
+const VIEWBOX = '100 150 1225 680';
 
 // Raspored kao na TD-17KVX gledano sa stolice: hi-hat lijevo, crash i ride gore, tomovi na kiku.
 const PADS = {
@@ -17,9 +17,10 @@ const PADS = {
   hihat: { kind: 'cym', cx: 236, cy: 535, r: 110 },
   crash: { kind: 'cym', cx: 360, cy: 340, r: 136 },
   ride: { kind: 'cym', cx: 922, cy: 296, r: 122 },
+  crash2: { kind: 'cym', cx: 1192, cy: 452, r: 118 },
 };
 const KICK_PEDAL = [[636, 560], [706, 560], [690, 706], [652, 706]];
-const LABELS = { kick: 'Kick', tom1: 'Tom 1', tom2: 'Tom 2', snare: 'Dobos', tom3: 'Floor tom', hhpedal: 'HH nogom', hihat: 'Hi-hat', crash: 'Crash', ride: 'Ride' };
+const LABELS = { kick: 'Kick', tom1: 'Tom 1', tom2: 'Tom 2', snare: 'Dobos', tom3: 'Floor tom', hhpedal: 'HH nogom', hihat: 'Hi-hat', crash: 'Crash', ride: 'Ride', crash2: 'Crash 2' };
 const HIT_COLORS = { good: '#1e8e3e', ok: '#9a9a9a', extra: '#d93025', miss: '#d93025', free: '#111' };
 
 function el(tag, attrs, parent) {
@@ -77,7 +78,7 @@ export function createKit(container) {
   drawPedal(KICK_PEDAL, art);
   for (const id of ['tom1', 'tom2', 'snare', 'tom3']) drawDrum(PADS[id], art);
   drawPedal(PADS.hhpedal.pts, art);
-  for (const id of ['hihat', 'crash', 'ride']) drawCymbal(PADS[id], art);
+  for (const id of ['hihat', 'crash', 'ride', 'crash2']) drawCymbal(PADS[id], art);
 
   const keysByTarget = {};
   for (const inst of INSTRUMENTS) (keysByTarget[inst.target] ||= []).push(...inst.keys.map(k => k.replace('Key', '')));
@@ -97,7 +98,7 @@ export function createKit(container) {
     ring: el('circle', { cx, cy, r, class: 'approach', opacity: 0 }, fx),
     hit: el('circle', { cx, cy, r: r + 9, class: 'hitring', opacity: 0 }, fx),
   });
-  for (const id of ['tom1', 'tom2', 'snare', 'tom3', 'hihat', 'crash', 'ride']) {
+  for (const id of ['tom1', 'tom2', 'snare', 'tom3', 'hihat', 'crash', 'ride', 'crash2']) {
     const p = PADS[id];
     targets[id] = circleTarget(p.cx, p.cy, p.r);
   }
