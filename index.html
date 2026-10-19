@@ -4,80 +4,72 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drummer</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='12' rx='13' ry='6' fill='%23ff6b6b'/%3E%3Cpath d='M3 12v9c0 3.3 5.8 6 13 6s13-2.7 13-6v-9' fill='%23c92a2a'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='white' stroke='black' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='black'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><ellipse cx="16" cy="12" rx="13" ry="6" fill="#ff6b6b"/><path d="M3 12v9c0 3.3 5.8 6 13 6s13-2.7 13-6v-9" fill="#c92a2a"/><path d="M8 4l7 7M26 3l-8 8" stroke="#e9ecf1" stroke-width="2" stroke-linecap="round"/></svg>
-    <b>Drummer</b><span class="sub">vježbanje bubnja</span>
+<header class="bar">
+  <div class="brand">Drummer</div>
+  <button id="playBtn" class="play" title="Start / stop (razmak)">▶ Start</button>
+  <div class="tempo" title="Tempo (strelice gore/dolje, Shift ±5)">
+    <button class="tbtn" data-bpm="-5">−5</button>
+    <button class="tbtn" data-bpm="-1">−</button>
+    <input id="bpm" type="number" min="30" max="260" aria-label="Tempo">
+    <span class="unit">BPM</span>
+    <button class="tbtn" data-bpm="1">+</button>
+    <button class="tbtn" data-bpm="5">+5</button>
+  </div>
+  <div class="opts">
+    <label class="tog"><input type="checkbox" id="metro"> Metronom</label>
+    <select id="clickSub" aria-label="Klik na"></select>
+    <label class="tog"><input type="checkbox" id="countIn"> Odbrojavanje</label>
+    <label class="tog"><input type="checkbox" id="loop"> Ponavljaj</label>
+    <label class="tog"><input type="checkbox" id="playPattern"> Sviraj ritam</label>
+    <label class="tog"><input type="checkbox" id="liveSound"> Moj zvuk</label>
+    <label class="tog rec"><input type="checkbox" id="record"> Snimaj</label>
   </div>
   <div id="midiStatus" class="status"><span class="dot"></span><span class="txt">MIDI…</span></div>
 </header>
 
-<div class="transport">
-  <button id="playBtn" class="play" title="Start / stop (razmak)">▶ Start</button>
-  <div class="tempo">
-    <button class="tbtn" data-bpm="-5">−5</button>
-    <button class="tbtn" data-bpm="-1">−1</button>
-    <label class="bpm"><input id="bpm" type="number" min="30" max="260" aria-label="Tempo"><span>BPM</span></label>
-    <button class="tbtn" data-bpm="1">+1</button>
-    <button class="tbtn" data-bpm="5">+5</button>
-    <input id="bpmSlider" type="range" min="30" max="260" aria-label="Tempo klizač">
+<section class="sheet">
+  <div class="sheet-head">
+    <h1 id="patternName"></h1>
+    <span id="patternInfo" class="muted"></span>
+    <span id="lastHit" class="lasthit"></span>
   </div>
-  <div class="opts">
-    <label class="chip"><input type="checkbox" id="metro"> Metronom</label>
-    <select id="clickSub" aria-label="Klik na"></select>
-    <label class="chip"><input type="checkbox" id="countIn"> Odbrojavanje</label>
-    <label class="chip"><input type="checkbox" id="loop"> Ponavljaj</label>
-    <label class="chip"><input type="checkbox" id="playPattern"> Sviraj ritam</label>
-    <label class="chip"><input type="checkbox" id="liveSound"> Zvuk mojih udaraca</label>
-    <label class="chip rec"><input type="checkbox" id="record"> Snimaj u ritam</label>
-  </div>
-</div>
+  <div id="notation"></div>
+  <div id="countOverlay" class="countin" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+</section>
 
-<main class="layout">
-  <section class="main">
-    <div class="card sheet">
-      <div class="sheet-head">
-        <h1 id="patternName"></h1>
-        <span id="patternInfo" class="muted"></span>
-        <span id="lastHit" class="lasthit"></span>
-      </div>
-      <div id="notation" class="paper"></div>
-      <div id="countOverlay" class="countin" hidden></div>
-      <div id="toast" class="toast" hidden></div>
-    </div>
-
-    <div class="viewtabs" role="tablist">
+<main class="lower">
+  <section class="stage">
+    <nav class="tabs viewtabs">
       <button data-view="kit" class="active">Bubanj</button>
       <button data-view="editor">Uredi ritam</button>
-    </div>
-    <div id="view-kit" class="card kitcard"></div>
-    <div id="view-editor" class="card editor" hidden>
+    </nav>
+    <div id="view-kit" class="kitview"></div>
+    <div id="view-editor" class="editor" hidden>
       <div class="ed-controls">
         <label>Naziv <input id="edName" type="text"></label>
         <label>Taktova <select id="edBars"></select></label>
-        <label>Doba u taktu <select id="edBeats"></select></label>
+        <label>Doba <select id="edBeats"></select></label>
         <label>Podjela
           <select id="edDiv"><option value="16">šesnaestine</option><option value="12">triole</option></select>
         </label>
         <label class="wide">Ruke (R/L po koraku)
           <input id="edSticking" type="text" placeholder="npr. RLRRLRLL, razmak = ništa" spellcheck="false">
         </label>
-      </div>
-      <div class="ed-actions">
         <button id="edClear">Očisti</button>
-        <button id="edCopyBar">Kopiraj 1. takt u ostale</button>
-        <span class="muted">Klik: normalno → akcenat → ghost → prazno. Desni klik briše. Shift-klik akcenat, Alt-klik ghost.</span>
+        <button id="edCopyBar">Kopiraj 1. takt</button>
       </div>
+      <p class="muted hint">Klik: normalno → akcenat → ghost → prazno. Desni klik briše. Shift-klik akcenat, Alt-klik ghost.</p>
       <div id="grid" class="grid"></div>
     </div>
   </section>
 
   <aside class="side">
-    <nav class="sidetabs" role="tablist">
+    <nav class="tabs sidetabs">
       <button data-panel="library" class="active">Ritmovi</button>
       <button data-panel="stats">Rezultat</button>
       <button data-panel="settings">Podešavanja</button>
@@ -86,7 +78,7 @@
     <div id="panel-library" class="panel">
       <div class="row">
         <button id="saveBtn" class="primary">Sačuvaj</button>
-        <button id="saveAsBtn">Sačuvaj kao novi</button>
+        <button id="saveAsBtn">Kao novi</button>
         <button id="newBtn">Novi ritam</button>
       </div>
       <h3>Moji ritmovi</h3>
@@ -102,7 +94,7 @@
     <div id="panel-stats" class="panel" hidden>
       <div class="bigscore"><span id="accuracy">–</span><small>tačnost</small></div>
       <div id="counts" class="counts"></div>
-      <div class="loophead muted">Prolazi kroz ritam</div>
+      <div class="muted small">Prolazi kroz ritam</div>
       <div id="loopBars" class="loopbars"></div>
       <table id="statTable" class="stats"></table>
       <p id="advice" class="advice"></p>
@@ -137,7 +129,7 @@
           <option value="2of4">Taktovi 3 i 4 od svaka 4 tihi</option>
         </select>
       </label>
-      <label class="chip block"><input type="checkbox" id="trainerOn"> Trener tempa: +<input id="trainerStep" type="number" min="1" max="10" class="mini"> BPM kad prolaz ima 90% ili više</label>
+      <label class="tog block"><input type="checkbox" id="trainerOn"> Trener tempa: +<input id="trainerStep" type="number" min="1" max="10" class="mini"> BPM kad prolaz ima 90% ili više</label>
 
       <h3>Zvuk</h3>
       <label class="field">Zvuk bubnja <select id="kitSelect"><option value="">Ugrađeni (sintetički)</option></select></label>

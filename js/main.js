@@ -288,7 +288,7 @@ function renderHeader() {
 }
 
 function renderNotationView() {
-  notation = renderNotation($('#notation'), pattern);
+  notation = renderNotation($('#notation'), pattern, { maxHeight: Math.max(150, window.innerHeight * 0.34) });
 }
 
 const rerender = debounce(() => {
@@ -302,7 +302,6 @@ function renderTransport() {
   b.textContent = play.on ? '■ Stop' : '▶ Start';
   b.classList.toggle('playing', play.on);
   $('#bpm').value = pattern.bpm;
-  $('#bpmSlider').value = pattern.bpm;
   for (const id of ['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record']) $('#' + id).checked = settings[id];
   renderClickSub();
 }
@@ -321,7 +320,6 @@ function setBpm(v) {
   settings.current = pattern;
   saveSettings();
   $('#bpm').value = pattern.bpm;
-  $('#bpmSlider').value = pattern.bpm;
   renderHeader();
 }
 
@@ -610,7 +608,6 @@ function renderKeyHelp() {
 function bind() {
   $('#playBtn').onclick = toggle;
   $('#bpm').onchange = e => setBpm(e.target.value);
-  $('#bpmSlider').oninput = e => setBpm(e.target.value);
   for (const b of $$('.tbtn')) b.onclick = () => setBpm(pattern.bpm + Number(b.dataset.bpm));
   for (const id of ['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record']) {
     $('#' + id).onchange = e => {
@@ -720,7 +717,10 @@ function bind() {
     $('#' + id).oninput = e => { settings.vol[bus] = Number(e.target.value); audio.setVolume(bus, settings.vol[bus]); saveSettings(); };
   }
   document.addEventListener('pointerdown', () => audio.ensure().then(showLatency), { once: true });
-  let paperWidth = 0;
+  let paperWidth = 0, viewHeight = window.innerHeight;
+  window.addEventListener('resize', () => {
+    if (Math.abs(window.innerHeight - viewHeight) > 20) { viewHeight = window.innerHeight; rerender(); }
+  });
   new ResizeObserver(([entry]) => {
     const w = Math.round(entry.contentRect.width);
     if (Math.abs(w - paperWidth) > 4) { paperWidth = w; rerender(); }

@@ -6,7 +6,7 @@ import { INSTRUMENTS, INST, slotsPerBeat, slotsPerBar, totalSlots } from './patt
 const NS = 'http://www.w3.org/2000/svg';
 const SP = 10;            // razmak između linija
 const HALF = SP / 2;
-const TOP = 76;           // od vrha reda do gornje linije
+const TOP = 72;           // od vrha reda do gornje linije
 const HEAD_W = 6.2;       // pola širine glave note
 const HEADER = 60;        // ključ i oznaka takta
 const PAD_L = 18, PAD_R = 12;
@@ -36,28 +36,35 @@ function beatEvents(p, voice, start, spb) {
   return events;
 }
 
-export function renderNotation(container, p) {
+export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
   container.innerHTML = '';
-  const width = Math.max(340, container.clientWidth || 900);
+  const pixelW = Math.max(340, container.clientWidth || 900);
   const spb = slotsPerBeat(p), spBar = slotsPerBar(p), total = totalSlots(p);
   const minBar = spBar * (p.division === 12 ? 30 : 23) + PAD_L + PAD_R;
-  const fit = Math.max(1, Math.floor((width - HEADER - 8) / minBar));
   const up = INSTRUMENTS.filter(i => i.voice === 'up');
   const down = INSTRUMENTS.filter(i => i.voice === 'down');
   const used = v => v.some(inst => p.steps[inst.id].some(Boolean));
   const upUsed = used(up), downUsed = used(down);
   const LINE_H = TOP + 4 * SP + (downUsed ? 64 : 28) + (p.sticking?.trim() ? 24 : 0);
-  const linesCount = Math.ceil(p.bars / Math.min(p.bars, fit));
+
+  // Note što veće (bubnjar gleda sa metar udaljenosti), a da stanu u zadatu visinu
+  let scale = 1.5, width, linesCount;
+  for (;; scale -= 0.05) {
+    width = pixelW / scale;
+    const fit = Math.max(1, Math.floor((width - HEADER - 8) / minBar));
+    linesCount = Math.ceil(p.bars / Math.min(p.bars, fit));
+    if ((linesCount * LINE_H + 6) * scale <= maxHeight || scale <= 0.75) break;
+  }
   const barsPerLine = Math.ceil(p.bars / linesCount);
   const barW = (width - HEADER - 8) / barsPerLine;
   const slotW = (barW - PAD_L - PAD_R) / spBar;
   const height = linesCount * LINE_H + 6;
 
-  const svg = el('svg', { width, height, viewBox: `0 0 ${width} ${height}`, class: 'notation-svg' }, container);
+  const svg = el('svg', { width: pixelW, height: height * scale, viewBox: `0 0 ${width} ${height}`, class: 'notation-svg' }, container);
   const staffLayer = el('g', {}, svg);
   const notesLayer = el('g', {}, svg);
   const markLayer = el('g', { class: 'marks' }, svg);
-  const playhead = el('rect', { class: 'playhead', width: 3, height: 4 * SP + 64, x: -20, y: 0, rx: 1.5 }, svg);
+  const playhead = el('rect', { class: 'playhead', width: 2, height: 4 * SP + 64, x: -20, y: 0, rx: 1 }, svg);
 
   // Notni sistemi
   const lines = [];
@@ -242,7 +249,7 @@ export function renderNotation(container, p) {
     setPlayhead(s) {
       if (s == null) return playhead.setAttribute('x', -20);
       const { x, line } = slotPos(s);
-      playhead.setAttribute('x', x - 1.5);
+      playhead.setAttribute('x', x - 1);
       playhead.setAttribute('y', line.y0 - 32);
     },
     flashSlot(slot) {
@@ -251,11 +258,11 @@ export function renderNotation(container, p) {
         setTimeout(() => g.classList.remove('now'), 170);
       }
     },
-    // Oznaka udarca na notama: good zeleno, ok narandžasto, extra crveno, miss prazan crveni krug
+    // Oznaka udarca oko note: good zeleni krug, ok sivi, miss isprekidan crveni, extra crvena tačka
     mark(s, instId, kind, loop) {
       const { x, line, bar } = slotPos(s);
       const inst = INST[instId];
-      const c = el('circle', { cx: x, cy: line.y0 + inst.pos * HALF, r: kind === 'miss' ? 8 : 5, class: `mark ${kind}` }, markLayer);
+      const c = el('circle', { cx: x, cy: line.y0 + inst.pos * HALF, r: kind === 'extra' ? 3.6 : 9.5, class: `mark ${kind}` }, markLayer);
       marks.push({ c, bar, loop });
     },
     clearBar(bar, loop) {
