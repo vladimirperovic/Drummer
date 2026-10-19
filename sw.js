@@ -1,10 +1,10 @@
 // Bump VERSION whenever a cached application file changes.
-const VERSION = '2026-10-19-v6-1';
+const VERSION = '2026-10-19-v7-1';
 const ROOT = new URL('./', self.location.href);
 const PREFIX = `drummer:${ROOT.pathname}:`;
 const CACHE = PREFIX + VERSION;
 const ASSETS = ['./', 'index.html', 'style.css', 'manifest.webmanifest',
-  'js/kit-drag.js',
+  'js/kit-drag.js', 'js/kit-play.js', 'assets/kit/pick-map.png',
   'icons/drummer-192.png', 'icons/drummer-512.png', 'kits/index.json',
   'js/main.js', 'js/patterns.js', 'js/notation.js', 'js/kit.js', 'js/audio.js', 'js/midi.js',
   'js/scoring.js', 'js/storage.js', 'js/practice.js', 'js/studio.js', 'js/backing.js', 'js/replay.js',

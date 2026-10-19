@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test core.test.mjs practice.test.mjs expansion.test.mjs catalog.test.mjs agent.test.mjs kit-config.test.mjs",
-    "test:browser": "node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs && node layout-browser.mjs",
+    "test:browser": "node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs && node layout-browser.mjs && node pointer-browser.mjs",
     "test:python": "python -m unittest discover -s . -p test_analysis.py -v"
   },
   "devDependencies": {

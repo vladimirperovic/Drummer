@@ -70,7 +70,7 @@ await scenario('Layout: real 3D picking moves a part without orbiting; 2D and hi
   const color=await p.evaluate(async()=>{const k=__layoutQA.kit.three;__layoutQA.onHit('floor2',95,performance.now(),'keyboard');await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return k.targets.get('floor2')[0].mesh.material.color.getHexString();});assert.notEqual(color,'161616');
   await p.locator('#view-kit').screenshot({path:dir+'custom-3d.png'});await p.locator('#kit2d').click();await p.locator('#view-kit').screenshot({path:dir+'custom-2d.png'});
   const held=await position(p,'floor2');await p.locator('#kit3d').click();await p.locator('#kitMove').click();
-  const canvas=await p.locator('#kit3dHost canvas').boundingBox();await p.mouse.move(canvas.x+canvas.width*.5,canvas.y+canvas.height*.5);await p.mouse.down();await p.mouse.move(canvas.x+canvas.width*.65,canvas.y+canvas.height*.5,{steps:10});await p.mouse.up();
+  const canvas=await p.locator('#kit3dHost canvas').boundingBox();await p.mouse.move(canvas.x+15,canvas.y+15);await p.mouse.down();await p.mouse.move(canvas.x+115,canvas.y+25,{steps:10});await p.mouse.up();
   assert.deepEqual(await position(p,'floor2'),held);assert.notDeepEqual(await p.evaluate(()=>__layoutQA.kit.three.camera.position.toArray()),after.camera);
 });
 await scenario('Layout: Escape and pointer cancellation roll back previews without saving',async p=>{

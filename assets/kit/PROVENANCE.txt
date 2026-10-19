@@ -15,6 +15,10 @@ depth buffer. They contain the exposed instrument surfaces used for hit
 colors. No reference photograph, downloaded drum illustration, external
 3D model, logo or scanned instrument artwork was used in this export.
 
+pick-map.png encodes visible parts as flat ID colors using the same camera
+and depth buffer. It supports accurate mouse hits on the fixed 2D drawing,
+including drum shells, cymbals, rims, the ride bell and pedals.
+
 js/kit-art-data.js records camera-projected targets and the SHA-256 of
 the source model with LF-normalized line endings. Regenerate assets when changing model geometry; the
 source-consistency test detects stale artwork. The previous js/kit.js

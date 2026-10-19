@@ -3,6 +3,21 @@
 // No WebGL or Three.js is needed to display this view or animate its hits.
 import { INSTRUMENTS, INST } from './patterns.js';
 import { KIT_ART } from './kit-art-data.js';
+import { bindKitPlay } from './kit-play.js';
+
+let pickingImage;
+function loadPickingImage() {
+  return pickingImage ||= new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => { try {
+      const canvas = document.createElement('canvas'); canvas.width = KIT_ART.width; canvas.height = KIT_ART.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0); resolve(context.getImageData(0, 0, canvas.width, canvas.height).data);
+    } catch (error) { pickingImage = null; reject(error); } };
+    image.onerror = () => { pickingImage = null; reject(new Error('Kit picking image unavailable')); };
+    image.src = 'assets/kit/pick-map.png';
+  });
+}
 
 const NS = 'http://www.w3.org/2000/svg';
 const LABELS = { kick: 'Kick', tom1: 'Tom 1', tom2: 'Tom 2', snare: 'Dobos', tom3: 'Floor tom', hhpedal: 'HH nogom', hihat: 'Hi-hat', crash: 'Crash', ride: 'Ride', crash2: 'Crash 2' };
@@ -13,10 +28,20 @@ function el(tag, attrs, parent) {
   for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
   parent?.appendChild(node); return node;
 }
-export function createKit(container) {
+export function createKit(container, callbacks) {
   container.replaceChildren();
   const { width, height, pads } = KIT_ART, prefix = `kit-art-${++nextKit}`;
   const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, class: 'kit-svg', role: 'img', 'aria-label': 'Bubanj', preserveAspectRatio: 'xMidYMid meet' }, container);
+  let pixels = null, disposed = false;
+  loadPickingImage().then(data => { if (!disposed) { pixels = data; svg.dataset.playReady = 'true'; } }).catch(() => { if (!disposed) callbacks?.unavailable?.(); });
+  const playing = bindKitPlay(svg, e => {
+    if (!pixels) return null;
+    const matrix = svg.getScreenCTM()?.inverse(); if (!matrix) return null;
+    const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix), x = Math.floor(point.x), y = Math.floor(point.y);
+    if (x < 0 || y < 0 || x >= width || y >= height) return null;
+    const offset = (y * width + x) * 4;
+    return Object.entries(KIT_ART.pickColors).find(([, color]) => color.every((v, i) => Math.abs(v - pixels[offset + i]) <= 3))?.[0];
+  }, callbacks);
   el('title', {}, svg).textContent = '2D crtež iz našeg 3D modela';
   const defs = el('defs', {}, svg);
   el('image', { href: 'assets/kit/drummer-2d.png', width, height, 'data-kit-art': '' }, svg);
@@ -48,6 +73,7 @@ export function createKit(container) {
   }
   function colorPad(target, instrument) { target.overlay.style.fill = instrument.color; fade(target.overlay, .88); }
   return {
+    dispose() { disposed = true; pixels = null; playing.dispose(); },
     pulse(id) {
       const instrument = INST[id], target = instrument && targets[instrument.target]; if (!target) return;
       colorPad(target, instrument); if (id === 'hho') fade(openLabel, 1, 500);

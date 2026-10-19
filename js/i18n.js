@@ -2,6 +2,9 @@
 // and accessible labels, retaining originals so SR/EN can switch without reload.
 import { CATALOG_DEFINITIONS, PRESET_CATEGORIES } from './preset-catalog.js';
 export const EN = {
+  'Klikni deo za zvuk · Shift: akcenat · Alt: tiše. Snimaj upisuje udarce dok ritam ide.': 'Click a part to play · Shift: accent · Alt: softer. Record to grid adds hits during playback.',
+  'Prevuci praznu pozadinu za rotaciju · točkić ili dva prsta za zum': 'Drag the empty background to rotate · wheel or pinch to zoom',
+  '3D bubanj; klikni deo za zvuk, prevuci pozadinu za rotaciju, točkić za zum': '3D drum kit; click a part to play, drag the background to rotate, wheel to zoom',
   'Pomjeri djelove': 'Move parts', 'Vrati raspored': 'Reset layout', 'Raspored bubnja': 'Drum kit layout',
   '3D bubanj; prevuci deo za pomeranje': '3D drum kit; drag a part to move it',
   'Prevuci deo po podu. Esc otkazuje pomeranje. Sačuvaj profil za ovaj raspored.': 'Drag a part along the floor. Esc cancels the move. Save a profile to keep this layout.',

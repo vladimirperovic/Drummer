@@ -5,6 +5,7 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { INST } from './patterns.js';
 import { kitLayout, normalizeKit } from './kit-config.js';
 import { bindKitDrag } from './kit-drag.js';
+import { bindKitPlay, meshPad } from './kit-play.js';
 
 export function createKit3D(container, onFailure = () => {}, configuration, dragCallbacks) {
   const config = normalizeKit(configuration), layout = kitLayout(config);
@@ -14,7 +15,7 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
   const canvas = renderer.domElement;
   canvas.tabIndex = 0;
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', '3D bubanj; prevuci za rotaciju, točkić za zum');
+  canvas.setAttribute('aria-label', '3D bubanj; klikni deo za zvuk, prevuci pozadinu za rotaciju, točkić za zum');
   container.appendChild(canvas);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(39, 1, .1, 60);
@@ -149,6 +150,7 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
   for (const p of layout.filter(p => p.kind === 'cymbal')) appendPart(p, () => cymbal(p.id, p.x, p.y, p.z, p.radius, p.tilt));
   function pedal(id, x, z, rotation = 0) {
     const group = new THREE.Group(); group.position.set(x, .045, z); group.rotation.y = rotation; scene.add(group);
+    group.userData.pad = id;
     const base = shape(new THREE.BoxGeometry(.22, .018, .46), group); base.position.y = -.014;
     const board = new THREE.Shape(); board.moveTo(-.065, -.2); board.lineTo(.065, -.2); board.lineTo(.098, .16); board.quadraticCurveTo(.098, .21, 0, .22); board.quadraticCurveTo(-.098, .21, -.098, .16); board.closePath();
     const plate = shape(new THREE.ExtrudeGeometry(board, { depth: .018, bevelEnabled: false, curveSegments: 8 }), group); plate.rotation.x = Math.PI / 2; plate.position.y = .027;
@@ -192,6 +194,11 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
     },
     delta(e, start) { const p = pointerRay(e).intersectPlane(start.plane, new THREE.Vector3()); return p ? { x: p.x - start.point.x, z: p.z - start.point.z } : null; },
   }, dragCallbacks);
+  const playing = bindKitPlay(canvas, e => {
+    pointerRay(e);
+    const hit = raycaster.intersectObjects([...partGroups.values()], true).find(hit => hit.object.isMesh);
+    return hit ? meshPad(hit.object) : null;
+  }, dragCallbacks);
   function updateLayout(value, fit = false) {
     for (const p of kitLayout(value)) partGroups.get(p.id)?.position.set(p.x, 0, p.z);
     scene.updateMatrixWorld(true);
@@ -206,7 +213,7 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
   function setEditing(value) {
     drag.setEditing(value); controls.enabled = !value;
     if (value) { controls.enableDamping = false; controls.update(); controls.enableDamping = true; }
-    canvas.setAttribute('aria-label', value ? '3D bubanj; prevuci deo za pomeranje' : '3D bubanj; prevuci za rotaciju, točkić za zum');
+    canvas.setAttribute('aria-label', value ? '3D bubanj; prevuci deo za pomeranje' : '3D bubanj; klikni deo za zvuk, prevuci pozadinu za rotaciju, točkić za zum');
   }
 
   function reset() {
@@ -274,7 +281,7 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
     flashes.set(instrument.target, { time: performance.now(), color: new THREE.Color(instrument.color) });
   }
   function dispose() {
-    if (disposed) return; drag.dispose(); disposed = true; renderer.setAnimationLoop(null); controls.dispose(); observer.disconnect(); intersection.disconnect();
+    if (disposed) return; playing.dispose(); drag.dispose(); disposed = true; renderer.setAnimationLoop(null); controls.dispose(); observer.disconnect(); intersection.disconnect();
     document.removeEventListener('visibilitychange', syncLoop); canvas.removeEventListener('webglcontextlost', lost); canvas.removeEventListener('keydown', onKey);
     const geometries = new Set(), materials = new Set();
     scene.traverse(node => { if (node.geometry) geometries.add(node.geometry); if (node.material) materials.add(node.material); });

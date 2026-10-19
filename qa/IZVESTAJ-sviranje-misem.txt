@@ -1,0 +1,43 @@
+DRUMMER — SVIRANJE MIŠEM
+19. oktobar 2026.
+
+Klik na bubanj, činelu ili pedalu odmah svira i prikazuje boju, dok je
+ritam zaustavljen ili aktivan. Radi u standardnom 2D crtežu, prilagođenom
+2D rasporedu i 3D prikazu, uključujući oba bas bubnja i dodatne delove.
+MIDI/tastatura i dalje poštuju Moj zvuk; virtuelni padovi se čuju i kada
+je ta opcija isključena. Shift daje akcenat, Alt tiši udarac.
+Tokom reprodukcije klik prolazi kroz postojeće bodovanje i dnevnik.
+Upis u mrežu zahteva uključeno Snimaj; probanje dok je ritam zaustavljen
+ne menja note. Pomjeri djelove ne svira. U 3D se rotira praznom pozadinom.
+
+ZAVRŠNE PROVERE: 264 prolaze, 0 neuspelih
+- npm test u qa/: 220/220 jedinicnih testova.
+- node qa/catalog-browser.mjs, Chromium: 15/15 regresionih scenarija.
+- node qa/layout-browser.mjs, Chromium: 11/11 regresionih scenarija.
+- node qa/pointer-browser.mjs, Chromium: 9/9 novih scenarija.
+- DRUMMER_BROWSER=msedge node qa/pointer-browser.mjs: 9/9 novih scenarija.
+Ovo je ciljana provera izmene; ranija kompletna provera cele aplikacije
+ostaje dokumentovana u prethodnim izveštajima.
+
+Nove provere koriste stvarne mouse/pointer događaje u izolovanim profilima.
+Prvi klik otključava AudioContext bez zaobilaženja autoplay pravila;
+merena je i nenulta amplituda izlaznog live audio signala.
+Pokriveni su svi vidljivi standardni ciljevi, prošireni i ljevoruki set,
+dva bas bubnja, drugi doboš, treći tom, drugi floor tom, pedale,
+ride zvono i cross-stick, bojenje, reprodukcija i upis dinamike,
+jedan udarac po kliku, brzi klikovi, desni klik/prazna pozadina,
+pomeranje i ponovno građenje prikaza, odvajanje 3D sviranja od rotacije,
+3D sviranje dok ritam ide, mobilni EN prikaz, nedostupna mapa klikova
+(automatski SVG fallback), offline 2D i prvo offline otvaranje 3D.
+
+JSON rezultati:
+qa/artifacts/pointer/chromium/results.json
+qa/artifacts/pointer/msedge/results.json
+qa/artifacts/catalog/chromium/results.json
+qa/artifacts/layout/chromium/results.json
+
+Otvorena korisnikova aplikacija ažurirana je na PWA v7-1.
+Klik na bas bubanj i doboš potvrđen je u stvarnoj aplikaciji dok je
+reprodukcija zaustavljena. Tempo, izabrani ritam i visina nota su sačuvani.
+Snimak: qa/artifacts/drummer-pointer-live.png.
+git diff --check: prolazi.

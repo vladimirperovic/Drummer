@@ -63,7 +63,9 @@ Biblioteka ima 94 ritma: 14 osnovnih i po 20 novih u kategorijama **Latino**, **
 
 Editor zauzima celu širinu, a ispod njega su Ritmovi / Rezultat / Podešavanja. Povuci ručicu ispod nota za visinu notnog sistema, ili fokusiraj ručicu i koristi strelice. Izaberi **Redovi nota → 2 / 4** da rasporediš taktove u više redova; broj redova ne može biti veći od broja taktova. **Samo note** prikazuje komande i veliki notni sistem, a **Esc** vraća editor. Sviranje prati novi red automatskim pomeranjem. Visina, izbor redova i režim se pamte.
 
-U kartici **Bubanj** izaberi **3D**. Prevuci miš ili prst za rotaciju, koristi točkić ili dva prsta za zum. Dostupni su i dugmad za rotaciju, zum i **Vrati pogled**. Dok je 3D platno fokusirano, levo/desno rotira, gore/dole ili +/− zumira, a Home vraća pogled. Notni zapis, MIDI i tastatura koriste iste boje u oba prikaza.
+U kartici **Bubanj** klikni bilo koji bubanj, činelu ili pedalu za zvuk i boju, dok ritam ide ili dok je zaustavljen. Klik se čuje i kada je **Moj zvuk** isključen; ta opcija i dalje kontroliše monitoring MIDI-ja i tastature. **Shift-klik** daje akcenat, a **Alt-klik** tiši udarac. Dok ritam ide, udarci ulaze u bodovanje; samo uz uključeno **Snimaj** upisuju se u mrežu ritma. U režimu **Pomjeri djelove** klik ne svira.
+
+Izaberi **3D**, pa prevuci praznu pozadinu za rotaciju; klik na deo odmah svira i ne okreće kameru. Koristi točkić ili dva prsta za zum. Dostupni su i dugmad za rotaciju, zum i **Vrati pogled**. Dok je 3D platno fokusirano, levo/desno rotira, gore/dole ili +/− zumira, a Home vraća pogled. Notni zapis, MIDI, tastatura i miš koriste iste boje u oba prikaza.
 
 **2D crtež je izrađen direktno iz našeg proceduralnog 3D modela**, u fiksnom ortografskom pogledu. Prethodna ilustracija je zamenjena. Crni centri i cele površine činela menjaju boju bez smanjivanja; maske izvedene iz istog modela sprečavaju bojenje preko delova koji su ispred. Ovaj prikaz radi bez WebGL-a i offline. Slika i maske su u `assets/kit/`, a ponovo se generišu komandom `node qa/generate-kit-art.mjs` dok lokalni server radi. Poreklo: [assets/kit/PROVENANCE.txt](assets/kit/PROVENANCE.txt).
 

@@ -257,14 +257,16 @@ function onHit(instId, vel, perf, source = 'keyboard', midiNote) {
   if (!kitInstruments(settings.kitConfig).some(i => i.id === instId)) return;
   const rawVelocity = vel;
   vel = velocityFor(vel, settings.velocityCurve, settings.velocityGain);
+  // Virtual pads must be audible even when MIDI monitoring is off (a common
+  // setting when the connected module already produces its own sound).
+  if ((settings.liveSound && !calibration) || source === 'mouse') {
+    if (audio.ready) audio.playNow(instId, vel / 127);
+    else audio.ensure().then(() => audio.playNow(instId, vel / 127)).catch(() => toast('Zvuk nije dostupan.'));
+  }
   if (calibration) {
     if (instId === 'snare') calibration.hits.push(perf);
     kit.hit(instId, 'free');
     return;
-  }
-  if (settings.liveSound) {
-    if (audio.ready) audio.playNow(instId, vel / 127);
-    else audio.ensure().then(() => audio.playNow(instId, vel / 127)).catch(() => toast('Zvuk nije dostupan.'));
   }
   let res = null;
   if (play.on && perf - settings.calib >= play.firstPerf && (!play.exerciseEndPerf || perf - settings.calib <= play.exerciseEndPerf + LEVELS[settings.level][1])) {
@@ -953,6 +955,7 @@ function applyKit(value, persist = true) {
 
 kit = createKitView($('#view-kit'), settings, saveSettings, {
   isBusy: kitBusy,
+  hit: (id, velocity, time) => onHit(id, velocity, time, 'mouse'),
   commit(value) {
     if (kitBusy()) return false;
     const config = normalizeKit(value);

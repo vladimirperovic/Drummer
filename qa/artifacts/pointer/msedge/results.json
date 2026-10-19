@@ -1,0 +1,44 @@
+{
+  "browserVersion": "155.0.4283.62",
+  "generatedAt": "2026-10-19T17:37:22.644Z",
+  "passed": 9,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Pointer: all twelve standard 2D targets sound while stopped, with monitoring off",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: live clicks keep playback running, score once and do not edit with Record off",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: Record writes the clicked instrument and dynamics only during playback",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: expanded 2D includes both bass drums, snares, three rack toms and pedals",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: moving a part stays silent, then its new location plays without duplicate listeners",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: 3D parts play immediately without camera motion; background still rotates",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: rapid repeated clicks, right-click and empty background do not duplicate hits",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: mobile English layout and no picking image retain playable 2D fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "Pointer: offline reload retains fixed 2D picking and first 3D opening",
+      "status": "PASS"
+    }
+  ]
+}

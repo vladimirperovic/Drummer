@@ -173,7 +173,7 @@ await scenario('Kit: all thirteen live instruments and reference playback color 
 await scenario('Kit: mouse rotation, zoom, reset and keyboard controls work without tempo conflicts', async p => {
   await three(p); const camera = () => p.evaluate(() => __qa.kit.three.camera.position.toArray()); const home = await camera();
   const rect = await p.locator('#kit3dHost canvas').boundingBox();
-  await p.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2); await p.mouse.down(); await p.mouse.move(rect.x + rect.width / 2 + 100, rect.y + rect.height / 2 + 10, { steps: 8 }); await p.mouse.up(); await p.waitForTimeout(600);
+  await p.mouse.move(rect.x + 15, rect.y + 15); await p.mouse.down(); await p.mouse.move(rect.x + 115, rect.y + 25, { steps: 8 }); await p.mouse.up(); await p.waitForTimeout(600);
   assert.notDeepEqual(await camera(), home);
   await p.locator('#kitReset').click(); const reset = await camera(); assert.ok(reset.every((v, i) => Math.abs(v - home[i]) < .01));
   const bpm = await p.locator('#bpm').inputValue(); await p.locator('#kit3dHost canvas').focus(); await p.keyboard.press('ArrowUp'); assert.equal(await p.locator('#bpm').inputValue(), bpm); assert.notDeepEqual(await camera(), home);

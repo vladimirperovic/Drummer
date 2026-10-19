@@ -6,8 +6,9 @@ export function createKitView(container, settings, save, layoutHost = {}) {
   container.innerHTML = `<div class="kit-toolbar">
     <div class="kit-switch" role="group" aria-label="Prikaz bubnja"><button id="kit2d" aria-pressed="true">2D</button><button id="kit3d" aria-pressed="false">3D</button></div>
     <button id="kitMove" aria-pressed="false">Pomjeri djelove</button><button id="kitLayoutReset">Vrati raspored</button>
+    <span id="kitPlayHint" class="muted">Klikni deo za zvuk · Shift: akcenat · Alt: tiše. Snimaj upisuje udarce dok ritam ide.</span>
     <span id="kitMoveHint" class="muted" hidden>Prevuci deo po podu. Esc otkazuje pomeranje. Sačuvaj profil za ovaj raspored.</span>
-    <span id="kit3dHint" class="muted" hidden>Prevuci za rotaciju · točkić ili dva prsta za zum</span>
+    <span id="kit3dHint" class="muted" hidden>Prevuci praznu pozadinu za rotaciju · točkić ili dva prsta za zum</span>
     <div id="kit3dControls" hidden><button id="kitRotateLeft" title="Okreni ulevo" aria-label="Okreni ulevo">↶</button><button id="kitRotateRight" title="Okreni udesno" aria-label="Okreni udesno">↷</button><button id="kitZoomIn" title="Približi" aria-label="Približi">+</button><button id="kitZoomOut" title="Udalji" aria-label="Udalji">−</button><button id="kitReset">Vrati pogled</button></div>
     <span id="kitViewStatus" class="muted" role="status"></span></div>
     <div id="kit2dHost" class="kit-host"></div><div id="kit3dHost" class="kit-host" hidden></div>`;
@@ -25,13 +26,18 @@ export function createKitView(container, settings, save, layoutHost = {}) {
     preview(settings.kitConfig, true); playState();
   }
   const dragCallbacks = {
+    canPlay: () => !editing,
+    hit: (id, velocity, time) => layoutHost.hit?.(id, velocity, time),
     start() { if (!editing || !canEdit()) return false; $('#kitViewStatus').textContent = ''; gesture = normalizeKit(settings.kitConfig); draft = null; return true; },
     preview(id, dx, dz) { if (!gesture) return; if (!canEdit()) return setEditing(false); draft = moveKitPart(gesture, id, dx, dz); preview(draft); },
     commit() { commit(draft); }, cancel,
   };
   function buildTwo() {
     two?.dispose?.();
-    two = isDefaultKit(settings.kitConfig) && !editing ? createKit($('#kit2dHost')) : createConfiguredKit($('#kit2dHost'), settings.kitConfig, dragCallbacks);
+    two = isDefaultKit(settings.kitConfig) && !editing ? createKit($('#kit2dHost'), {
+      ...dragCallbacks,
+      unavailable() { two?.dispose?.(); two = createConfiguredKit($('#kit2dHost'), settings.kitConfig, dragCallbacks); two.setEditing(editing); },
+    }) : createConfiguredKit($('#kit2dHost'), settings.kitConfig, dragCallbacks);
     two.setEditing?.(editing);
   }
   buildTwo();
@@ -42,6 +48,7 @@ export function createKitView(container, settings, save, layoutHost = {}) {
     three?.setEditing(editing);
     $('#kitMove').setAttribute('aria-pressed', editing);
     $('#kitMoveHint').hidden = !editing;
+    $('#kitPlayHint').hidden = editing;
     $('#kit3dHint').hidden = mode !== '3d' || editing;
   }
   function playState() {
