@@ -1,0 +1,3 @@
+PASS BUG: imported non-string sticking must not crash pattern loading
+PASS BUG: imported non-string name must not break export
+{"passed":2,"failed":0}

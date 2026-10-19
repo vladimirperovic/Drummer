@@ -1,0 +1,101 @@
+DRUMMER — RUČNO POMERANJE DELOVA I RASPORED U PROFILIMA
+Datum: 19. oktobar 2026.
+
+ISHOD
+
+483/483 uspešna izvršavanja u završnim rezultatima, 0 padova.
+220 JavaScript + 7 Python + 128 browser scenarija u Chromium-u i Edge-u.
+355 različitih test-slučajeva. Chromium 151.0.7922.34; Edge 155.0.4283.62.
+Zbir, datumi prolaza i hash-evi izvora: qa/layout-final-results.json.
+
+Otvorena lokalna aplikacija ažurirana je kroz PWA na 2026-10-19-v6-1.
+Režim Pomjeri djelove je uključen. Korisnikov set, ritam, tempo i visina
+nota ostali su sačuvani. Probni rasporedi/profili kreirani su samo u
+izolovanim testnim browserima. Nema commita, pusha ili javne objave.
+
+UPOTREBA
+
+1. U kartici Bubanj klikni Pomjeri djelove pored 2D/3D dugmadi.
+2. Prevuci bubanj ili činelu mišem. Pomera se sa stalkom i pedalom;
+   položaj važi za oba prikaza. I oba bas bubnja mogu se pomerati zasebno.
+3. Otvori Moj bubanj, unesi naziv/izaberi profil i klikni Sačuvaj profil.
+   Profil čuva i ručni raspored, uključujući JSON izvoz/uvoz.
+
+Puštanje miša pamti trenutni raspored lokalno. Imenovani profil se menja
+tek na Sačuvaj profil. Esc otkazuje aktivno prevlačenje. Vrati raspored
+vraća automatske položaje, uz isti broj delova i izabranu ruku.
+Dok je režim uključen, miš u 3D pomera delove; dugmad za pogled rade.
+Isključi Pomjeri djelove za normalnu rotaciju mišem.
+
+IMPLEMENTACIJA
+
+- Zajednički normalizovani pomeraji x/z u konfiguraciji i profilima.
+  Broj nota, boje, identitet instrumenata i MIDI mapa ne zavise od položaja.
+- Standardni 2D ulaskom u uređivanje prelazi na originalni SVG renderer.
+  Prilagođeni 2D i 3D koriste iste položaje. Sve radi lokalno i offline.
+- 3D bira stvarnu površinu mišem i pomera ceo sklop po horizontalnoj ravni.
+  Kamera se ne okreće tokom prevlačenja; nakon puštanja po potrebi širi
+  kadar, zadržavajući ugao gledanja. 2D prilagođava okvir nakon puštanja.
+- Promena ruke preslikava i ručne položaje. Isključivanje/ponovno
+  uključivanje dela čuva pomeraj; početni set vraća automatski raspored.
+- Pointer capture zadržava prevlačenje i izvan granice crteža. Upis se radi
+  jednom, po puštanju miša. Esc, pointercancel, gubitak fokusa i prelazak
+  prikaza otkazuju nedovršen pomeraj. Greška upisa vraća prethodni raspored.
+- Aktivno sviranje, program, replay ili kalibracija blokiraju uređivanje.
+  Početak sviranja otkazuje aktivno prevlačenje.
+- SR/EN tekstovi i mobilni raspored. Standardna 2D slika i svih 12 maski
+  ponovo su izvezeni iz aktuelnog 3D modela, uz proveru izvornog hash-a.
+
+NOVE PROVERE
+
+Pet modelskih testova: stroga normalizacija i ograničenja, nezavisno
+pomeranje jednog dela, preslikavanje, duboka kopija profila, uklanjanje/
+vraćanje dela i reset bez promene sastava seta.
+
+Jedanaest browser scenarija, sa stvarnim mouse-down/move/up događajima:
+- 2D pomeranje, pamćenje posle reload-a i podudaranje sa 3D koordinatama.
+- Drugi bas i hi-hat pedala pomeraju svoje sklopove, ostali ostaju isti.
+- 3D picking, stabilna kamera tokom gesta, kadar posle pomeranja,
+  boje novih površina i normalna rotacija posle isključivanja uređivanja.
+- Esc i pointercancel vraćaju pregled bez upisa.
+- Puštanje miša izvan crteža, jedan upis i ograničen pomeraj.
+- Dva imenovana profila, izbor starog rasporeda, JSON izvoz/uvoz i reload.
+- Levoruki raspored, privremeno isključen deo i reset.
+- Greška localStorage upisa vraća položaje i ne prijavljuje uspeh.
+- Početak vežbe otkazuje aktivno prevlačenje i zaključava uređivanje.
+- Offline reload, prvo offline otvaranje 3D i novo offline pomeranje.
+- EN, širina 390 px i povratak na 2D kada WebGL nije dostupan.
+
+REGRESIJA I OGRANIČENJA
+
+Svi postojeći skupovi ponovo prolaze: ritmovi, editor, note, MIDI,
+snimanje/bodovanje, oba basa, profili, programi, dnevnik/replay, podloge,
+favoriti/paginacija, WebMCP, PWA, štampa i postojeći 2D/3D prikazi.
+Vizuelno pregledani 2D/3D raspored i ažurirani korisnikov browser.
+git diff --check prolazi uz postojeća LF/CRLF upozorenja.
+
+Prvi Chromium prolaz imao je jedan timeout pri inicijalizaciji testa
+biblioteke: HTML je ostao neinicijalizovan, bez zabeležene JS greške.
+Ceo skup biblioteke ponovljen je uspešno (13/13); tačan uzrok početnog
+zastoja nije utvrđen. Dodato je beleženje mrežnih grešaka za buduću
+dijagnostiku. Edge je ceo skup završio bez pada. Nema automatskih retry-a
+ili preskočenih testova. Broj 483 računa završni prolaz svakog skupa jednom.
+
+Pomeranje je po podu (levo/desno i napred/nazad); visina i nagib ostaju isti.
+Pomeraji su ograničeni na ±3 jedinice modela po osi. Namerno preklapanje
+delova je dozvoljeno, bez fizičke simulacije sudara.
+MIDI provere su simulirane. Fizički Roland, realna čujna latencija,
+multitouch i sve grafičke kartice nisu praktično provereni; WebGL testovi
+koriste SwiftShader u izolovanim profilima.
+
+DOKAZI
+
+qa/layout-final-results.json — zbir 483 prolaza i 12 browser JSON izveštaja.
+qa/layout-core-results.txt, layout-python-results.txt — modeli i analiza.
+qa/layout-full-chromium.txt — prvi regresioni prolaz, uključujući timeout.
+qa/layout-chromium-continuation.txt — ponovljena biblioteka i oba nova skupa.
+qa/layout-full-edge.txt — svih šest skupova, 128/128.
+qa/artifacts/layout/{chromium,msedge}/results.json — 11 novih scenarija.
+qa/artifacts/layout/chromium/custom-2d.png i custom-3d.png — ručni raspored.
+qa/artifacts/drummer-layout-live.png — otvorena ažurirana aplikacija.
+qa/IZVESTAJ-konfigurator-v1.txt — prethodni izveštaj sa 456 izvršavanja.

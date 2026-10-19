@@ -6,10 +6,15 @@
 <title>Drummer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='white' stroke='black' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='black'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/drummer-192.png">
+<meta name="theme-color" content="#111111">
 </head>
 <body>
 <header class="bar">
+  <div class="bar-primary">
   <div class="brand">Drummer</div>
+  <div class="transport-group">
   <button id="playBtn" class="play" title="Start / stop (razmak)">▶ Start</button>
   <div class="tempo" title="Tempo (strelice gore/dolje, Shift ±5)">
     <button class="tbtn" data-bpm="-5">−5</button>
@@ -19,17 +24,32 @@
     <button class="tbtn" data-bpm="1">+</button>
     <button class="tbtn" data-bpm="5">+5</button>
   </div>
-  <div class="opts">
+  </div>
+  <div class="bar-tools">
+    <button id="scoreView" aria-pressed="false" title="Prikaži samo komande i note; Esc vraća editor">⤢ Samo note</button>
+    <div id="midiStatus" class="status"><span class="dot"></span><span class="txt">MIDI…</span></div>
+    <label class="language-picker" translate="no"><span class="sr-only">Language / Jezik</span><select id="languageSelect" aria-label="Language / Jezik"><option value="sr">SR</option><option value="en">EN</option></select></label>
+  </div>
+  </div>
+  <div class="bar-secondary">
+  <div class="opts timing-options">
     <label class="tog"><input type="checkbox" id="metro"> Metronom</label>
     <select id="clickSub" aria-label="Klik na"></select>
     <label class="tog"><input type="checkbox" id="countIn"> Odbrojavanje</label>
     <label class="tog"><input type="checkbox" id="loop"> Ponavljaj</label>
+  </div>
+  <div class="opts sound-options">
     <label class="tog"><input type="checkbox" id="playPattern"> Sviraj ritam</label>
     <label class="tog"><input type="checkbox" id="liveSound"> Moj zvuk</label>
     <label class="tog rec"><input type="checkbox" id="record"> Snimaj</label>
   </div>
-  <div id="midiStatus" class="status"><span class="dot"></span><span class="txt">MIDI…</span></div>
+  </div>
 </header>
+<div id="storageWarning" class="storage-warning" role="alert" hidden>
+  <span>Čuvanje nije uspelo. Sačuvaj kopiju fajla pre zatvaranja stranice.</span>
+  <button id="backupCurrent">Izvezi trenutni ritam</button>
+  <button id="retryStorage">Pokušaj ponovo</button>
+</div>
 
 <section class="sheet">
   <div class="sheet-head">
@@ -37,16 +57,25 @@
     <span id="patternInfo" class="muted"></span>
     <span id="lastHit" class="lasthit"></span>
   </div>
+  <div id="practiceStatus" class="practice-status" aria-live="polite" hidden></div>
+  <div class="score-options">
+    <span id="patternLesson" class="muted"></span>
+    <label>Redovi nota <select id="scoreRows"><option value="0">Automatski</option><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
+    <button id="resetSheet" title="Vrati podrazumevanu visinu nota">Vrati visinu</button>
+  </div>
   <div id="notation"></div>
   <div id="countOverlay" class="countin" hidden></div>
   <div id="toast" class="toast" hidden></div>
 </section>
+<div id="sheetResize" class="sheet-resize" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="Visina notnog sistema" aria-valuemin="180" aria-valuemax="800" aria-valuenow="300" title="Povuci gore/dole za visinu nota; strelice menjaju visinu"><span></span></div>
 
 <main class="lower">
   <section class="stage">
     <nav class="tabs viewtabs">
       <button data-view="kit" class="active">Bubanj</button>
       <button data-view="editor">Uredi ritam</button>
+      <button data-view="practice">Vežbanje</button>
+      <button data-view="tools">Alati</button>
     </nav>
     <div id="view-kit" class="kitview"></div>
     <div id="view-editor" class="editor" hidden>
@@ -54,9 +83,12 @@
         <label>Naziv <input id="edName" type="text"></label>
         <label>Taktova <select id="edBars"></select></label>
         <label>Doba <select id="edBeats"></select></label>
+        <label>Jedinica <select id="edUnit"><option value="4">/4</option><option value="8">/8</option></select></label>
         <label>Podjela
           <select id="edDiv"><option value="16">šesnaestine</option><option value="12">triole</option></select>
         </label>
+        <label>Grupe doba <input id="edGroups" type="text" placeholder="3+3 ili 2+2+3" size="10"></label>
+        <label>Swing (%) <input id="edSwing" type="number" min="50" max="75" value="50"></label>
         <label class="wide">Ruke (R/L po koraku)
           <input id="edSticking" type="text" placeholder="npr. RLRRLRLL, razmak = ništa" spellcheck="false">
         </label>
@@ -64,7 +96,135 @@
         <button id="edCopyBar">Kopiraj 1. takt</button>
       </div>
       <p class="muted hint">Klik: normalno → akcenat → ghost → prazno. Desni klik briše. Shift-klik akcenat, Alt-klik ghost.</p>
+      <p class="muted hint">BPM označava četvrtinu u svim merama. Grupe određuju akcente klika. Swing: 50% ravno, 67% približno 2:1; u /8 pomera par šesnaestina. Triole imaju fiksnu podelu.</p>
       <div id="grid" class="grid"></div>
+    </div>
+    <div id="view-tools" class="practice-view" hidden>
+      <nav class="tabs practice-tabs" aria-label="Alati"><button data-tool="import" class="active">MIDI uvoz</button><button data-tool="print">Štampa / PDF</button><button data-tool="offline">Offline aplikacija</button><button data-tool="mcp">MCP konektor</button></nav>
+      <section id="tool-import" class="studio-panel">
+        <h2>Uvezi MIDI deonicu</h2>
+        <p class="muted">Standardni MIDI tip 0 ili 1, najviše 10 MB. Izaberi traku, kanal i deo, pa proveri mapu pre uvoza. Originalni fajl se ne menja.</p>
+        <label class="btn">Izaberi MIDI fajl<input id="midiFile" type="file" accept=".mid,.midi,audio/midi" hidden></label>
+        <div class="form-row">
+          <label>Naziv ritma<input id="midiName" type="text" maxlength="200"></label>
+          <label>Traka<select id="midiTrack"><option value="">Sve trake</option></select></label>
+          <label>Kanal<select id="midiChannel"><option value="10">10</option></select></label>
+          <label>Početak (četvrtine, od 0)<input id="midiStart" type="number" min="0" step="0.25" value="0"></label>
+          <label>Taktova<input id="midiBars" type="number" min="1" max="8" value="1"></label>
+          <label>Doba<input id="midiBeats" type="number" min="2" max="7" value="4"></label>
+          <label>Jedinica<select id="midiUnit"><option value="4">/4</option><option value="8">/8</option></select></label>
+          <label>Kvantizacija<select id="midiQuantize"><option value="sixteenth">Šesnaestine</option><option value="eighth">Osmine</option><option value="triplet">Triole po jedinici mere</option></select></label>
+        </div>
+        <div class="row"><button id="midiReadMeter">Preuzmi meru iz dela</button><button id="midiUseProfile">Mapa iz aktivnog profila</button></div>
+        <div id="midiMapping" class="midi-mapping"></div>
+        <p id="midiSummary" aria-live="polite">Izaberi MIDI fajl za pregled.</p>
+        <button id="midiImportApply" class="primary" disabled>Uvezi u editor</button>
+      </section>
+      <section id="tool-print" class="studio-panel" hidden>
+        <h2>Notni list za vežbanje</h2>
+        <div class="form-row">
+          <label>Taktova po redu<select id="printBars"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+          <label>Ponavljanja<input id="printRepeats" type="number" min="1" max="8" value="1"></label>
+          <label class="tog"><input id="printSticking" type="checkbox" checked> Oznake ruku R/L</label>
+          <button id="printRefresh">Osveži pregled</button><button id="printGo" class="primary">Štampaj / Sačuvaj PDF</button>
+        </div>
+        <p id="printSummary" class="muted"></p><div id="printPreview" class="print-preview"></div>
+      </section>
+      <section id="tool-mcp" class="studio-panel" hidden>
+        <h2>Upravljanje Drummerom iz Codexa</h2>
+        <label class="tog"><input id="mcpEnabled" type="checkbox" checked> Dozvoli MCP upravljanje ovom stranicom</label>
+        <p id="mcpStatus" role="status">Pripremam MCP konektor…</p>
+        <p>WebMCP povezuje Codex sa ovom otvorenom stranicom. Nisu potrebni poseban server ni API ključ.</p>
+        <p>Možeš tražiti izbor ritma, promenu tempa, start/stop, fokus A–B, prikaz 2D/3D, jezik i pregled rezultata.</p>
+        <p class="muted">Nesačuvani ritam se ne odbacuje. Konektor ne briše podatke i ne menja MIDI mapu. Za pokretanje zvuka prvo klikni jednom u aplikaciji.</p>
+        <p><span>Dostupnih alata:</span> <strong id="mcpToolCount">0</strong></p>
+        <p class="muted"><span>Poslednji poziv:</span> <span id="mcpLastCall">—</span></p>
+      </section>
+      <section id="tool-offline" class="studio-panel" hidden>
+        <h2>Drummer kao aplikacija</h2>
+        <p id="pwaStatus" aria-live="polite">Pripremam aplikaciju za offline rad…</p><p id="pwaNetwork" class="muted"></p>
+        <div class="row"><button id="pwaInstall" disabled>Instaliraj Drummer</button><button id="pwaCheck" disabled>Proveri ažuriranja</button><button id="pwaUpdate" hidden>Primeni novu verziju</button></div>
+        <p class="muted">Ako dugme za instalaciju nije dostupno, koristi meni browsera: Instaliraj aplikaciju ili Dodaj na početni ekran. Podrška zavisi od browsera.</p>
+        <p class="muted">Prvo učitaj aplikaciju dok server radi. Posle pripreme, ista adresa radi offline sa ugrađenim zvukom, ritmovima i lokalnim podacima. Za proveru novih verzija server mora da radi. Audio podlogu ponovo izaberi posle otvaranja.</p>
+      </section>
+    </div>
+    <div id="view-practice" class="practice-view" hidden>
+      <nav class="tabs practice-tabs" aria-label="Alati za vežbanje">
+        <button data-studio="focus" class="active">Fokus</button>
+        <button data-studio="journal">Dnevnik</button>
+        <button data-studio="backing">Pesma</button>
+        <button data-studio="program">Programi</button>
+        <button data-studio="replay">Replay</button>
+      </nav>
+
+      <section id="studio-focus" class="studio-panel">
+        <h2>Vežbaj deo koji zapinje</h2>
+        <p class="muted">Izaberi taktove i instrumente koji ulaze u rezultat. Start ponavlja izabrani deo kada je uključeno Ponavljaj.</p>
+        <label class="tog"><input id="focusOn" type="checkbox"> Uključi A–B i izbor instrumenata</label>
+        <div class="form-row">
+          <label>Od takta A <select id="focusFrom"></select></label>
+          <label>Do takta B <select id="focusTo"></select></label>
+          <button id="focusSuggest">Predloži iz poslednje sesije</button>
+        </div>
+        <div class="row"><button id="focusAll">Svi</button><button id="focusHands">Ruke</button><button id="focusFeet">Noge</button></div>
+        <fieldset id="focusInstruments" class="instrument-checks"><legend>Instrumenti za ocenjivanje</legend></fieldset>
+        <p id="focusHint" class="muted"></p>
+      </section>
+
+      <section id="studio-journal" class="studio-panel" hidden>
+        <div class="section-heading"><h2>Dnevnik vežbanja</h2><button id="exportJournal">Izvezi dnevnik</button></div>
+        <p class="muted">Svaka vežba se čuva po zaustavljanju. Izaberi sesiju za poređenje i pregled po instrumentu.</p>
+        <label class="field compact">Prikaži <select id="journalFilter"><option value="all">Sve sesije</option><option value="current">Trenutni ritam i fokus</option></select></label>
+        <div id="journalSummary" class="metrics"></div>
+        <svg id="progressChart" class="progress-chart" viewBox="0 0 800 160" role="img" aria-label="Napredak po danima"></svg>
+        <p id="journalEmpty" class="muted"></p>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Sesija</th><th>BPM</th><th>Trajanje</th><th>Tačnost</th></tr></thead><tbody id="sessionList"></tbody></table></div>
+        <div id="sessionDetail"></div>
+      </section>
+
+      <section id="studio-backing" class="studio-panel" hidden>
+        <h2>Sviraj uz pesmu</h2>
+        <div class="row"><label class="btn">Izaberi audio fajl<input id="backingFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac" hidden></label><button id="backingRemove" disabled>Ukloni pesmu</button></div>
+        <p id="backingName" class="muted">Još nema pesme. Audio fajl se ponovo bira posle osvežavanja stranice.</p>
+        <canvas id="waveform" width="1000" height="140" role="img" aria-label="Talasni oblik pesme; klik bira početak prvog takta"></canvas>
+        <div class="form-row">
+          <label>Originalni tempo (BPM)<input id="backingBpm" type="number" min="30" max="260" value="90"></label>
+          <label>Prvi takt u fajlu (s)<input id="backingOffset" type="number" min="0" step="0.01" value="0"></label>
+          <label>Brzina<select id="backingSpeed"><option value="0.5">50%</option><option value="0.75">75%</option><option value="1" selected>100%</option><option value="1.25">125%</option></select></label>
+          <label>Glasnoća<input id="backingVolume" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+        </div>
+        <label class="tog"><input id="backingOn" type="checkbox" disabled> Sviraj pesmu uz vežbu</label>
+        <p id="backingHint" class="muted">Klik na talasni oblik postavlja prvi takt. A–B bira deo pesme. Start poravnava pesmu, note i odbrojavanje. Promena brzine menja i visinu tona.</p>
+      </section>
+
+      <section id="studio-program" class="studio-panel" hidden>
+        <div class="section-heading"><h2>Programi vežbanja</h2><button id="programNew">Novi program</button></div>
+        <label class="field compact">Sačuvani programi<select id="programSelect"><option value="">Izaberi program…</option></select></label>
+        <div class="form-row"><label>Naziv programa<input id="programName" type="text" value="Moj program" maxlength="100"></label><button id="programSave">Sačuvaj program</button><button id="programDelete">Obriši program</button></div>
+        <p class="muted">Dodaj trenutni ritam i fokus, pa zadaj trajanje, tempo, cilj i pauzu. Program čuva sopstvene kopije ritmova.</p>
+        <button id="programAdd">Dodaj trenutni ritam</button>
+        <ol id="programEntries" class="program-entries"></ol>
+        <div class="row"><button id="programStart" class="primary">Pokreni program</button><button id="programStop" disabled>Prekini program</button></div>
+        <p id="programStatus" aria-live="polite"></p>
+        <div id="programResults"></div>
+      </section>
+
+      <section id="studio-replay" class="studio-panel" hidden>
+        <h2>Ponovo poslušaj izvođenje</h2>
+        <label class="field">Sesija<select id="replaySession"><option value="">Izaberi snimljenu sesiju…</option></select></label>
+        <div class="form-row">
+          <button id="replayPlay" class="primary" disabled>▶ Slušaj</button><button id="replayStop" disabled>Stop</button>
+          <label>Brzina<select id="replaySpeed"><option value="0.5">50%</option><option value="0.75">75%</option><option value="1" selected>100%</option><option value="1.25">125%</option></select></label>
+          <label class="tog"><input id="replayReference" type="checkbox"> Dodaj očekivani ritam</label>
+          <label>Prikaz prolaza<select id="replayPass"><option value="all">Svi prolazi</option></select></label>
+        </div>
+        <label class="field">Pozicija <input id="replaySeek" type="range" min="0" max="1" step="1" value="0" disabled></label>
+        <p id="replayTime" class="muted">0:00 / 0:00</p>
+        <div class="row"><button id="replayMidi" disabled>Izvezi MIDI</button><button id="replayJson" disabled>Izvezi sesiju</button></div>
+        <p class="muted">Sive crte su očekivane note; krugovi su stvarni udarci. Zeleno: tačno, sivo: skoro, crveno: višak. Prazan crveni krug: promašeno. MIDI izvoz čuva originalne note, jačinu i tajming.</p>
+        <svg id="replayChart" class="replay-chart" viewBox="0 0 1000 390" role="img" aria-label="Stvarni i očekivani udarci po instrumentu"></svg>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Vreme</th><th>Instrument</th><th>Nota</th><th>Jačina</th><th>Odstupanje</th></tr></thead><tbody id="replayHits"></tbody></table></div>
+      </section>
     </div>
   </section>
 
@@ -81,14 +241,35 @@
         <button id="saveAsBtn">Kao novi</button>
         <button id="newBtn">Novi ritam</button>
       </div>
+      <div class="library-favorites">
+        <button id="favoritesOnly" aria-pressed="false"><span aria-hidden="true">★</span> <span>Favoriti</span> <span id="favoriteCount" class="favorite-count">0</span></button>
+        <span id="favoritesHint" class="muted">Označi omiljene ritmove zvezdicom.</span>
+      </div>
+      <p id="favoritesEmpty" class="muted" hidden>Nema favorita. Dodaj ritam klikom na ☆.</p>
       <h3>Moji ritmovi</h3>
       <ul id="mine" class="list"></ul>
+      <nav id="minePager" class="pagination" aria-label="Stranice mojih ritmova" hidden>
+        <button id="minePrev" aria-label="Prethodna stranica mojih ritmova">← <span>Prethodna</span></button>
+        <span id="minePageInfo" aria-live="polite"></span>
+        <button id="mineNext" aria-label="Sledeća stranica mojih ritmova"><span>Sledeća</span> →</button>
+      </nav>
       <div class="row">
         <button id="exportBtn">Izvezi sve</button>
         <label class="btn">Uvezi fajl<input id="importFile" type="file" accept=".json,application/json" hidden></label>
       </div>
       <h3>Gotovi ritmovi</h3>
+      <div class="preset-filters">
+        <label>Kategorija <select id="presetCategory"><option value="all">Sve kategorije</option><option value="basics">Osnovni</option><option value="latin">Latino</option><option value="rock">Rock</option><option value="jazz">Jazz</option><option value="three-eight">3/8</option></select></label>
+        <label>Pretraga <input id="presetSearch" type="search" placeholder="Naziv, stil ili mera…"></label>
+        <span id="presetCount" class="muted" aria-live="polite"></span>
+      </div>
+      <p id="presetEmpty" class="muted" hidden>Nema ritmova za ovaj izbor.</p>
       <ul id="presets" class="list"></ul>
+      <nav id="presetsPager" class="pagination" aria-label="Stranice gotovih ritmova" hidden>
+        <button id="presetsPrev" aria-label="Prethodna stranica gotovih ritmova">← <span>Prethodna</span></button>
+        <span id="presetsPageInfo" aria-live="polite"></span>
+        <button id="presetsNext" aria-label="Sledeća stranica gotovih ritmova"><span>Sledeća</span> →</button>
+      </nav>
     </div>
 
     <div id="panel-stats" class="panel" hidden>
@@ -102,6 +283,16 @@
     </div>
 
     <div id="panel-settings" class="panel" hidden>
+      <section id="deviceProfiles">
+        <h3>Profili uređaja</h3>
+        <label class="field">Profil <select id="profileSelect"></select></label>
+        <label class="field">Naziv profila <input id="profileName" type="text" maxlength="100"></label>
+        <label class="field">Uređaj <select id="profileDevice"></select></label>
+        <label class="field">Velocity kriva <select id="profileCurve"><option value="linear">Linearna</option><option value="soft">Meka — lakši jaki udarci</option><option value="hard">Tvrda — više kontrole tihih udaraca</option></select></label>
+        <label class="field">Pojačanje jačine <input id="profileGain" type="number" min="0.5" max="2" step="0.05" value="1"></label>
+        <div class="row"><button id="profileSave">Sačuvaj profil</button><button id="profileNew">Novi profil</button><button id="profileDelete">Obriši profil</button><button id="profileMatch">Profil za povezani uređaj</button></div>
+        <p class="muted">Profil čuva sastav bubnja, raspored, MIDI mapu, kalibraciju i velocity krivu.</p>
+      </section>
       <h3>MIDI</h3>
       <p id="midiInfo" class="muted"></p>
       <p class="muted">Zadnja primljena nota: <b id="lastNote">–</b></p>
@@ -143,6 +334,7 @@
     </div>
   </aside>
 </main>
+<div id="printOutput" class="print-output"></div>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

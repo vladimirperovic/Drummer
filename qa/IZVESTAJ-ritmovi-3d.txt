@@ -1,0 +1,100 @@
+DRUMMER — RITMOVI, RASPORED NOTA I DETALJNI 2D/3D BUBANJ
+Datum: 19. oktobar 2026.
+
+ISHOD
+
+372 izvršavanja, 372 prolaza, 0 padova, 0 preskočenih slučajeva.
+191 JavaScript test + 7 Python testova + 87 browser scenarija u dva browsera.
+285 različitih test-slučajeva. Chromium 151.0.7922.34 i Microsoft Edge
+(verzije i pojedinačni rezultati su u priloženim JSON izveštajima).
+
+Sve izmene su lokalne u C:\github\Drummer; bez commita, pusha ili PR-a.
+Otvorena aplikacija http://127.0.0.1:8123/ ažurirana je kroz PWA kontrolu,
+sačuvane preference su zadržane, a detaljni 3D prikaz je otvoren.
+Service worker: 2026-10-19-v3-3.
+
+DODATO I PROMENJENO
+
+1. Biblioteka: 20 Latino + 20 Rock + 20 Jazz + 20 vežbi u 3/8.
+   Uz postojećih 14 ukupno 94 ritma. Originalne vežbe za set,
+   kategorija, nivo, kratko uputstvo i pretraga po oba jezika/meri.
+   Različiti dvotaktni/četvorotaktni aranžmani sa ghost notama,
+   sinkopama, različitim merama, swingom, triolama i prelazima.
+   Latino nazivi označavaju adaptacije za set, ne pune perkusione ansamble.
+
+2. Editor i donji Ritmovi / Rezultat / Podešavanja pune širine.
+   Uređene dve trake gornjih komandi. Povlačiva granica visine nota,
+   pristupačno podešavanje tastaturom, izbor redova 1/2/4/Auto,
+   Samo note, povratak preko Esc i automatsko praćenje aktivnog reda.
+   Promene pogleda ne zaustavljaju sviranje. Preference se pamte.
+
+3. 2D: manje vidljivi prstenovi činela, manji floor tom, desni crash
+   bliže floor tomu, HH papučica istog oblika kao kick, zarotirana.
+   Uklonjeni krugovi koji se smanjuju. Crni centri opni menjaju boju,
+   činele dobijaju isti puni obojeni krug; spoljašnji obruč i dalje
+   prikazuje rezultat udarca. Ponovljeni udarci ne gomilaju animacije.
+
+4. Detaljni 3D: originalna proceduralna geometrija, bez tuđeg modela.
+   Crno-beli linijski stil sa skrivenim zadnjim linijama, beli korpusi,
+   crni centri opni. Dvostruki obruči, šrafovi, zatezači, nosači,
+   zvona činela, spojevi i oslonci stalaka, papučice sa oprugama.
+   Rotacija mišem, zum točkićem, kontrolna dugmad i tastatura.
+   OrbitControls podržava prevlačenje i pinch na dodir.
+   Izbor 2D/3D, reset ugla, isti događaji i boje za svih 13 instrumenata.
+   Samo boja se menja: nema promene veličine geometrije pri udarcu.
+   Lenjo učitavanje, pauza renderovanja kada je skriveno, čišćenje
+   GPU resursa i povratak na 2D pri nedostupnom/izgubljenom WebGL-u.
+   Three.js 0.186.1 i OrbitControls uključeni lokalno uz MIT licencu;
+   svi potrebni moduli su deo offline keša.
+
+5. SR/EN za nove ritmove, uputstva, dugmad, poruke i pristupačne nazive.
+   Dopunjena oba README uputstva i dokumentacija testova.
+
+PROVERE
+
+- Model i vremenska matematika svih 94 ritma; nove kategorije po 20,
+  jedinstvenost sadržaja, najviše dve ruke istovremeno, 3/8 trajanje,
+  prevodi, pretraga i kopiranje bez izmene ugrađenih ritmova.
+- Svi raniji regresioni slučajevi za devet problema, vežbanje, dnevnik,
+  A–B, program, replay, MIDI import/export, profile, velocity, audio,
+  swing, /8, PDF i offline ažuriranje ponovo prolaze u oba browsera.
+- Raspored pune širine na desktopu i telefonu; povlačenje i tastatura,
+  čuvanje visine, više redova, režim samo nota, Esc i nastavak sviranja.
+- Pretraga ne pokreće prečice bubnja; strelice na ručici/3D platnu
+  menjaju pogled, bez neželjenog menjanja BPM-a.
+- Svih 13 instrumenata boji odgovarajuće 3D delove i vraća osnovnu boju.
+  Provereni miš, tastatura, zoom, reset, promene prikaza, ponovno
+  otvaranje, engleski nazivi i mobile raspored.
+- Stvarni service worker: potpuno offline ponovno otvaranje i prvo
+  učitavanje 3D modula tek nakon isključivanja mreže.
+- Simuliran nedostupan WebGL i stvarni gubitak grafičkog konteksta:
+  oba vraćaju funkcionalni 2D bez neuhvaćenih grešaka.
+- Vizuelno pregledani desktop/telefon i detalji 3D, kao i konačni
+  prikaz u korisnikovom otvorenom in-app browseru.
+- git diff --check: bez grešaka razmaka; samo obaveštenje o CRLF-u.
+
+LOGOVI I SLIKE
+
+qa/core-results.txt
+qa/python-results.txt
+qa/browser-results.txt i qa/edge-results.txt
+qa/expansion-browser-results.txt i qa/expansion-edge-results.txt
+qa/catalog-browser-results.txt i qa/catalog-edge-results.txt
+qa/artifacts/catalog/chromium/results.json
+qa/artifacts/catalog/msedge/results.json
+qa/artifacts/catalog/*/kit-3d.png, phone-3d.png, kit-2d.png, notes-only.png
+qa/artifacts/drummer-final-3d.png
+
+OGRANIČENJA PROVERE
+
+Web MIDI je simuliran u automatizovanim testovima. Fizički TD-17,
+EZdrummer, zvučna kartica i stvarna latencija nisu provereni.
+WebGL testovi koriste SwiftShader; konačni izgled je pregledan i u
+korisnikovom browseru, ali nisu testirane sve GPU/driver kombinacije.
+Fizički multitouch/pinch nije ručno testiran. Ugrađeni model je
+stilizovan, detaljan linijski prikaz; nije fotorealističan sken seta.
+Stariji failure screenshot-ovi su razvojni; merodavni su završni JSON-i.
+
+Prethodna nadogradnja i predlozi sačuvani su u
+qa/IZVESTAJ-druga-nadogradnja.txt. Nove mogućnosti ovog kruga opisane
+su u README.md / README.en.md i qa/README.md.

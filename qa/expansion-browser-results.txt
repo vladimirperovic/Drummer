@@ -1,0 +1,22 @@
+PASS Expansion: editor changes 6/8 and 7/8 with correct grid, grouping and notation
+PASS Expansion: 7/8 scheduler accents 2+2+3, ends after seven eighths and saves a pass
+PASS Expansion: swung scheduler records unequal subdivisions and count-in retains duration
+PASS Expansion: swung recording quantizes at the swung grid rather than straight time
+PASS Expansion: MIDI import previews channel, meter, mapping and dynamic hits then saves
+PASS Expansion: MIDI track/channel and start selection can be changed before importing
+PASS Expansion: malformed MIDI is rejected without replacing the current pattern
+PASS Expansion: MIDI import reports empty selection and can use active device mapping
+PASS Expansion: two device profiles restore independent maps, calibration and velocity curves
+PASS Expansion: profile device match, deletion and quota failure are explicit
+PASS Expansion: velocity curve affects live sound/scoring but recording keeps raw velocity
+PASS Expansion: profile controls are locked during exercise and program
+PASS Expansion: English covers all static screens, instrument labels and accessibility text
+PASS Expansion: language persists, toggles back, and does not change notes or custom names
+PASS Expansion: English translates live errors, score counts, journal and confirmations
+PASS Expansion: print preview paginates 7/8, preserves sticking and produces an English PDF
+PASS Expansion: print controls remove sticking and retain user title safely
+PASS Expansion: new screens and English fit phone, tablet and desktop
+PASS Expansion: PWA manifest, icons and all app modules are cached for offline reload
+PASS Expansion: PWA shows install invitation and update checks without forced reload
+PASS Expansion: a real PWA update protects edits and storage failures, then preserves saved data
+{"passed":21,"failed":0}

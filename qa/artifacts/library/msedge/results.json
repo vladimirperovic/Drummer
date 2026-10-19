@@ -1,0 +1,61 @@
+{
+  "browser": "msedge",
+  "browserVersion": "155.0.4283.62",
+  "generatedAt": "2026-10-19T14:50:32.694Z",
+  "passed": 13,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Library: pagination reaches all 94 unique presets; category and search reset pages",
+      "status": "PASS"
+    },
+    {
+      "name": "Library: starring does not load or edit a rhythm; favorites and filter survive reload",
+      "status": "PASS"
+    },
+    {
+      "name": "Library: saved favorites retain IDs through renaming; copies are separate and deletion clears favorite",
+      "status": "PASS"
+    },
+    {
+      "name": "Library: favorites pagination clamps after removal and saved patterns paginate independently",
+      "status": "PASS"
+    },
+    {
+      "name": "Library: keyboard stars do not start playback; SR/EN labels and mobile layout fit",
+      "status": "PASS"
+    },
+    {
+      "name": "Library: failed storage leaves favorite unchanged and reports an actionable warning",
+      "status": "PASS"
+    },
+    {
+      "name": "MCP: all tools register; live catalog pagination, favorites and note reads agree with UI",
+      "status": "PASS"
+    },
+    {
+      "name": "MCP: pattern, tempo, options, focus, view and language update real application controls",
+      "status": "PASS"
+    },
+    {
+      "name": "MCP: bounded playback creates one journal entry; stop and repeated start are safe",
+      "status": "PASS"
+    },
+    {
+      "name": "MCP: dirty edits stay intact, invalid calls do not mutate and disabling survives reload",
+      "status": "PASS"
+    },
+    {
+      "name": "MCP: unsupported browser keeps ordinary controls usable and displays guidance",
+      "status": "PASS"
+    },
+    {
+      "name": "MCP: registration failure is shown without breaking the rhythm library",
+      "status": "PASS"
+    },
+    {
+      "name": "Library: favorites and pagination work offline and survive offline reload",
+      "status": "PASS"
+    }
+  ]
+}

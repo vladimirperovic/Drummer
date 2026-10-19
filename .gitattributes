@@ -1,0 +1,3 @@
+# Preserve upstream formatting and verbatim test output when checking diffs.
+js/vendor/** -whitespace
+qa/*.txt -whitespace

@@ -1,0 +1,115 @@
+DRUMMER — PRVA VERZIJA KONFIGURATORA BUBNJA
+Datum: 19. oktobar 2026.
+
+ISHOD
+
+456 uspešnih izvršavanja, 0 padova u završnim rezultatima.
+215 JavaScript + 7 Python testova + 117 browser scenarija u dva browsera.
+339 različitih test-slučajeva. Chromium 151.0.7922.34 i Edge 155.0.4283.62.
+Zbirni rezultat i hash-evi izvora: qa/config-final-results.json.
+
+Izmene su lokalne u C:\github\Drummer, bez commita, pusha ili objave.
+Otvorena aplikacija ažurirana je PWA kontrolom na 2026-10-19-v5-2.
+Otvoren je Bubanj > Moj bubanj sa standardnim setom i jednim bas bubnjem.
+Zadržani su korisnikov ritam i tempo. Testovi koriste izolovane profile;
+korisnički ritmovi i dnevnik nisu brisani.
+
+NOVO
+
+1. Izbor delova: 0–3 viseća toma, 0–2 floor toma, 1–2 doboša, 1–2 bas
+   bubnja, 0–3 crash činele i 0–1 ride činela, uz hi-hat i njegovu pedalu.
+   Mali, standardni i prošireni set; automatski i levoruki raspored.
+   Trenutni izbor pamti se lokalno.
+2. Zajednički model položaja za 2D i 3D. Standardni 2D ostaje naš crtež
+   iz proceduralnog 3D modela. Prilagođeni set crta se kao originalni SVG
+   bez WebGL-a, sa jednostavnijim detaljima nego u 3D. 3D se ponovo sklapa
+   i prilagođava kadar pri promeni delova. Rotacija, zoom i reset rade.
+3. MIDI učenje: Nauči, pa udarac po padu. Svih 19 artikulacija ima svoju
+   mapu i boju. Novi delovi nemaju unapred dodeljene ulazne note, kako
+   postojeća TD-17 mapa ne bi bila pokvarena. UI objašnjava da učenje
+   može premestiti notu sa drugog instrumenta.
+4. Dva bas bubnja imaju odvojene mape, pedale, boje, trake u editoru,
+   note, bodovanje i snimanje. Drugi bas nosi K2, drugi doboš S2; glave
+   nota istog položaja su razdvojene. Oba basa su u fokusu za noge.
+   Dodate su tastaturne prečice za nove delove.
+5. Profili čuvaju sastav, raspored, MIDI mapu, kalibraciju, pojačanje i
+   velocity krivu. Dostupni su čuvanje, izbor, novi profil i JSON izvoz/uvoz.
+   Stari profili dobijaju standardni set. Loš uvoz ne prepisuje postojeće
+   profile; greška upisa se jasno prikazuje.
+6. Editor i MIDI kontrole prate uključene delove. Isključivanje dela ne
+   briše njegove postojeće note: traka ostaje vidljiva, a Start objašnjava
+   da deo treba uključiti ili izmeniti ritam. Konfigurator i primena profila
+   blokirani su tokom sviranja, kalibracije, programa i replay-a.
+7. SR/EN, telefon i offline rad. Novi moduli su u PWA cache-u; i prvo
+   otvaranje 3D radi bez mreže nakon pripreme offline kopije. WebMCP stanje
+   sadrži kitConfig; broj alata ostaje 13.
+
+PROVERE
+
+- Svih 768 dozvoljenih kombinacija modela: identitet delova, konačne
+  koordinate, levoruko preslikavanje i normalizacija neispravnih vrednosti.
+- Migracija starih profila, izolacija kopija, dodatne trake, kompatibilnost
+  potpisa ritmova i poređenja prethodnih sesija.
+- Jedan/dva basa, svih 19 MIDI learn odredišta i samo odgovarajuće 2D boje.
+  Svih 18 fizičkih meta u 3D: otvoren/zatvoren hi-hat dele površinu.
+- Zasebno bodovanje i snimanje oba basa, uključujući stvarnu promenu
+  dinamike postojećih nota; različite boje, oznake S2/K2 i dve glave doboša.
+- Profili: delovi, leva/desna ruka, mapa, gain i kalibracija posle reload-a;
+  JSON round-trip, neispravan fajl i neuspešan upis.
+- Minimalni/prošireni set, otkazano učenje, osam brzih 3D promena, jedan
+  aktivan canvas, kadar bez odsecanja, obe orijentacije rasporeda.
+- SR/EN, mobilna širina 390 px, nedostupan WebGL, offline reload i prvo
+  otvaranje prilagođenog 3D bez mreže.
+- Regresija prethodnih funkcija: devet popravki, obe nadogradnje, 94 ritma,
+  favoriti/paginacija, MIDI import/export, zvuk svih 19 artikulacija,
+  programi, dnevnik, replay, podloge, štampa, PWA i WebMCP.
+- Vizuelno pregledani konfigurator, prošireni 2D i 3D. U korisnikovom
+  browseru potvrđeni novi panel i opcije 1/2 bas bubnja.
+- git diff --check prolazi, uz upozorenja o LF/CRLF konverziji.
+
+ISPRAVKE I PONOVLJENI PROLAZI
+
+Početni prolazi otkrili su nedostajući EN prevod naziva profila i različit
+početni/reset kadar 3D zbog merenja skrivenog panela. Oba su popravljena;
+odgovarajući skupovi ponovljeni su uspešno. Default naziv profila prati
+SR/EN dok korisnik ne unese svoj naziv.
+
+Prvi paralelni Edge prolaz imao je tri timeout-a pri učitavanju, bez JS
+greške. Zaseban kompletan Edge prolaz: 117/117 uspešno. Tačan uzrok tih
+početnih timeout-a nije utvrđen.
+
+Test dva basa prvobitno je koristio fiksno čekanje od 220 ms, nepouzdano uz
+promenljivu izlaznu latenciju. Sada čeka stvarnu audio granicu i osvežen
+editor; proverava promenu nota sa različitih početnih dinamika. Završnih
+15 konfiguratorskih scenarija ponovljeno je u oba browsera: 15/15 Chromium
++ 15/15 Edge. Ponavljanja nisu dodatno sabrana u 456.
+
+OGRANIČENJA
+
+MIDI je simuliran kroz stvarne putanje aplikacije. Fizički Roland, čujna
+latencija, multitouch i sve grafičke kartice nisu testirani. WebGL testovi
+koriste SwiftShader u izolovanim browser profilima.
+Za nezavisna dva basa modul mora slati različite MIDI note. V1 mapira broj
+note, ne kombinaciju porta/kanala; dve pedale sa istom notom se ne razlikuju.
+Novi delovi koriste postojeće sintetičke porodice zvuka, bez novog zasebnog
+akustičkog sample pack-a za drugi bas/doboš. Raspored je automatski; ručno
+pomeranje pojedinačnih delova nije deo prve verzije.
+
+DOKAZI
+
+qa/config-final-results.json — zbir, putanje deset završnih JSON skupova.
+qa/config-core-results.txt — 215 JS prolaza.
+qa/config-python-results.txt — 7 Python prolaza.
+qa/config-full-edge.txt — kompletnih 117 Edge prolaza.
+qa/config-browser-results.txt / config-browser-edge-results.txt — završnih
+15 scenarija konfiguratora posle poslednjih UI i test-fixture izmena.
+qa/config-full-chromium.txt sadrži raniji pad kadra; merodavni su noviji
+pojedinačni JSON rezultati navedeni u config-final-results.json.
+qa/config-full-chromium-initial.txt i config-full-edge-initial.txt čuvaju
+početne rezultate. Stare failure slike nisu završni status aplikacije.
+
+qa/artifacts/config/chromium/configurator.png — panel i prošireni 2D.
+qa/artifacts/config/chromium/expanded-3d.png — prošireni 3D sa dva basa.
+qa/artifacts/config/{chromium,msedge}/ — levoruki i mobilni prikazi.
+qa/artifacts/drummer-configurator-live.png — ažuriran korisnikov browser.
+qa/IZVESTAJ-favoriti-mcp.txt — prethodni izveštaj sa 417 izvršavanja.

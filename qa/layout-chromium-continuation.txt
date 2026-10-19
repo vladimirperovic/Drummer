@@ -1,0 +1,42 @@
+PASS Library: pagination reaches all 94 unique presets; category and search reset pages
+PASS Library: starring does not load or edit a rhythm; favorites and filter survive reload
+PASS Library: saved favorites retain IDs through renaming; copies are separate and deletion clears favorite
+PASS Library: favorites pagination clamps after removal and saved patterns paginate independently
+PASS Library: keyboard stars do not start playback; SR/EN labels and mobile layout fit
+PASS Library: failed storage leaves favorite unchanged and reports an actionable warning
+PASS MCP: all tools register; live catalog pagination, favorites and note reads agree with UI
+PASS MCP: pattern, tempo, options, focus, view and language update real application controls
+PASS MCP: bounded playback creates one journal entry; stop and repeated start are safe
+PASS MCP: dirty edits stay intact, invalid calls do not mutate and disabling survives reload
+PASS MCP: unsupported browser keeps ordinary controls usable and displays guidance
+PASS MCP: registration failure is shown without breaking the rhythm library
+PASS Library: favorites and pagination work offline and survive offline reload
+{"passed":13,"failed":0}
+PASS Configurator: standard defaults and every count including one/two bass drums
+PASS Configurator: left-handed positions mirror with stable hit targets
+PASS Configurator: all nineteen MIDI learn targets flash only their own 2D surfaces
+PASS Configurator: both bass drums score and record separately, with distinct editor colors
+PASS Configurator: expanded 3D has all targets, independent colors, and survives rebuilds
+PASS Configurator: profile save/load restores parts, handedness, map, gain and calibration
+PASS Configurator: profile export/import round trip and invalid input preserve existing data
+PASS Configurator: legacy profiles migrate to the original kit
+PASS Configurator: unavailable pattern lanes remain intact and playback explains missing parts
+PASS Configurator: controls and profile application are blocked during playback
+PASS Configurator: storage failure keeps the prior kit and does not claim a saved profile
+PASS Configurator: English labels, mobile layout and 2D fallback without WebGL
+PASS Configurator: saved custom kit and both renderers are available fully offline
+PASS Configurator: minimum kit, canceled learning and rapid 3D rebuilds do not leak renderers
+PASS Configurator: two snares have distinct notation heads and both kicks belong to foot focus
+{"passed":15,"failed":0}
+PASS Layout: mouse drag in 2D persists, preserves other parts and matches 3D
+PASS Layout: second bass and hi-hat pedals move with their own assemblies
+PASS Layout: real 3D picking moves a part without orbiting; 2D and hit colors stay in sync
+PASS Layout: Escape and pointer cancellation roll back previews without saving
+PASS Layout: releasing outside the kit saves once and bounds the position
+PASS Layout: named profiles and JSON export/import retain separate custom arrangements
+PASS Layout: handedness, removing/readding parts and reset preserve the chosen kit
+PASS Layout: failed storage rolls back visible positions and never reports a saved move
+PASS Layout: starting playback cancels an active gesture and disables layout edits
+PASS Layout: custom positions survive offline reload and first 3D opening
+PASS Layout: English/mobile controls and no-WebGL fallback retain moved parts
+{"passed":11,"failed":0}

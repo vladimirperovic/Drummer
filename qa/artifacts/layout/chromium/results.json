@@ -1,0 +1,52 @@
+{
+  "browserVersion": "151.0.7922.34",
+  "generatedAt": "2026-10-19T14:48:24.399Z",
+  "passed": 11,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Layout: mouse drag in 2D persists, preserves other parts and matches 3D",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: second bass and hi-hat pedals move with their own assemblies",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: real 3D picking moves a part without orbiting; 2D and hit colors stay in sync",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: Escape and pointer cancellation roll back previews without saving",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: releasing outside the kit saves once and bounds the position",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: named profiles and JSON export/import retain separate custom arrangements",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: handedness, removing/readding parts and reset preserve the chosen kit",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: failed storage rolls back visible positions and never reports a saved move",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: starting playback cancels an active gesture and disables layout edits",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: custom positions survive offline reload and first 3D opening",
+      "status": "PASS"
+    },
+    {
+      "name": "Layout: English/mobile controls and no-WebGL fallback retain moved parts",
+      "status": "PASS"
+    }
+  ]
+}

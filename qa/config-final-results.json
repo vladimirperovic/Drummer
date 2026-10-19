@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-10-19T14:31:55.583210+00:00",
+  "serviceWorker": "2026-10-19-v5-2",
+  "passed": 456,
+  "failed": 0,
+  "distinctCases": 339,
+  "javascriptUnit": {
+    "file": "qa/config-core-results.txt",
+    "passed": 215,
+    "failed": 0
+  },
+  "pythonUnit": {
+    "file": "qa/config-python-results.txt",
+    "passed": 7,
+    "failed": 0
+  },
+  "browserSuites": [
+    {
+      "file": "qa/artifacts/browser-results.json",
+      "generatedAt": "2026-10-19T14:21:59.496Z",
+      "browserVersion": "151.0.7922.34",
+      "passed": 53,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/msedge/msedge-browser-results.json",
+      "generatedAt": "2026-10-19T14:25:46.226Z",
+      "browserVersion": "155.0.4283.62",
+      "passed": 53,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/expansion/chromium/results.json",
+      "generatedAt": "2026-10-19T14:22:21.024Z",
+      "browserVersion": "151.0.7922.34",
+      "passed": 21,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/expansion/msedge/results.json",
+      "generatedAt": "2026-10-19T14:26:12.969Z",
+      "browserVersion": "155.0.4283.62",
+      "passed": 21,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/catalog/chromium/results.json",
+      "generatedAt": "2026-10-19T14:23:34.880Z",
+      "browserVersion": "151.0.7922.34",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/catalog/msedge/results.json",
+      "generatedAt": "2026-10-19T14:26:25.848Z",
+      "browserVersion": "155.0.4283.62",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/library/chromium/results.json",
+      "generatedAt": "2026-10-19T14:23:41.479Z",
+      "browserVersion": "151.0.7922.34",
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/library/msedge/results.json",
+      "generatedAt": "2026-10-19T14:26:34.913Z",
+      "browserVersion": "155.0.4283.62",
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/config/chromium/results.json",
+      "generatedAt": "2026-10-19T14:30:59.807Z",
+      "browserVersion": "151.0.7922.34",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "file": "qa/artifacts/config/msedge/results.json",
+      "generatedAt": "2026-10-19T14:31:16.286Z",
+      "browserVersion": "155.0.4283.62",
+      "passed": 15,
+      "failed": 0
+    }
+  ],
+  "note": "Latest successful result per suite; earlier failure logs are retained. Configurator scenarios were rerun in both browsers after the final UI and test-fixture fixes.",
+  "sourceSha256": {
+    "index.html": "8276e0ffa01db686d2f798706a48b76a34135d276d68a2247fbff46fde87840d",
+    "style.css": "28753560a3eb576898bb0898b3cf97708c1e4776785a921f09fabca50015cf9e",
+    "sw.js": "ecacc692528e1ff23a0bc296e746ae3f1521e9c20b7edd9a98bead5cb4410114",
+    "js/agent-tools.js": "50cb4a75abb7f94ac7ac7a680de64a74683ea1cf7ecbecd0d38f8e4881dda8b2",
+    "js/audio.js": "dafbcb0c5b5a29574c44d1a414608eeaa6bdf61f0b62576034a28f077477385d",
+    "js/backing.js": "dbd0bbcc7b47c9a71e774ea8376c0ba2734630a60e9f9aec8326d2fce230ebc2",
+    "js/i18n.js": "35cc9abf5bda8fe173d2a9240dbca0b1821c2af757e31edbfb9367be83a5a88e",
+    "js/kit-3d.js": "78818e2f2261b4e0e0bc1295604e4d203086a1d9f0da927bfc4c37cf0f2223a2",
+    "js/kit-art-data.js": "f10780319437d551d1efbe77f811fd236215f7805d7ff29fc96176883f841da7",
+    "js/kit-config-2d.js": "6523530a8c91dc02bd6893a8e4d96a2ce1f4ba6839e1350cab3ce37edc294b08",
+    "js/kit-config-ui.js": "46c0dd7f1472826fdf7a84adf31c527978f4023345e016e792220f7121bf5992",
+    "js/kit-config.js": "4a1577e77e153c406385a821b133a29742cee1a309ed0ddc7b381a308328dfcd",
+    "js/kit-view.js": "2922cf242add691075c5da6b3a909048f1b9cf54ba21395c8481e37e7711816b",
+    "js/kit.js": "5a2d152b1aa19fcaee8917fac15cd6dd2c6c324fbb23e37381d425839cfa3d14",
+    "js/main.js": "0fd56ec25aab81205467ff6a12df58f4bb0e4b92f76e2b19a60c915f789e9e3d",
+    "js/midi-file.js": "5095ec4d432806c1ca89bb40fca9815671706fe4fc62604a54e4ede8dcc98448",
+    "js/midi.js": "b656861a8bf28812546f763bd80c448ea1a7b455a26b264c200d0fd1d15436bc",
+    "js/notation.js": "591c3af3faeda1e825c9d734427e61f7fd2c5919c1d4a1d2d3a632d219f5c2e2",
+    "js/patterns.js": "2bdf0ec065f971b7ee11286acff3220b6381b53964345a5a94a1c0f715b7f145",
+    "js/practice.js": "fdf87bbf7a8eaf59991ec8aad18aa9a5d37f1fb16220c901e360582c13d24b7c",
+    "js/preset-catalog.js": "58c3aea83f7e3ebb272a035ecd771a0712e89412b5546e806b33d4bb6d43f7dc",
+    "js/printing.js": "ea27298f8c38b87dcf902094ce9f84751a239284cd596068edd4abea8f7bf53c",
+    "js/profiles.js": "f7e8dce2a56d16e3e2cdd9bca022e9a18ca120d2cf34f23f0ffc5b88a173a2ba",
+    "js/pwa.js": "94d534b8f2ee47a84f41edc917e28f7a6b67f691b50fcace4b1a883d1d3fc164",
+    "js/replay.js": "abe8a2eccfb2f1811f33f3a964a22e87a8fd98bad7d178061ab4150193693d65",
+    "js/scoring.js": "a6ad4c6d40bf73052ffb9c6b6ddfe7a777fa4b536d36fd81ccebcd5867288104",
+    "js/storage.js": "208cd7191e5c6fa14ff6e2832c3b5e2c8ef62a4a60ce30c83d685b05cf9d5973",
+    "js/studio.js": "6ff355f50a5ca6c2dcd0bf650a20b7903d247f913b8d0be2c4724e0126a78b27",
+    "js/workbench.js": "b5255238260d30c93e7c1f5e02291d4e1167477b1b598cbbd7aab167b42dcf1e",
+    "js/workspace-view.js": "260326b540a5eb90eb01de5209c46aa2bd54f3e04bec065c5d2ab7d140a2c17c"
+  }
+}

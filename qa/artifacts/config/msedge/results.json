@@ -1,0 +1,68 @@
+{
+  "browserVersion": "155.0.4283.62",
+  "generatedAt": "2026-10-19T14:50:44.064Z",
+  "passed": 15,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Configurator: standard defaults and every count including one/two bass drums",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: left-handed positions mirror with stable hit targets",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: all nineteen MIDI learn targets flash only their own 2D surfaces",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: both bass drums score and record separately, with distinct editor colors",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: expanded 3D has all targets, independent colors, and survives rebuilds",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: profile save/load restores parts, handedness, map, gain and calibration",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: profile export/import round trip and invalid input preserve existing data",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: legacy profiles migrate to the original kit",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: unavailable pattern lanes remain intact and playback explains missing parts",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: controls and profile application are blocked during playback",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: storage failure keeps the prior kit and does not claim a saved profile",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: English labels, mobile layout and 2D fallback without WebGL",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: saved custom kit and both renderers are available fully offline",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: minimum kit, canceled learning and rapid 3D rebuilds do not leak renderers",
+      "status": "PASS"
+    },
+    {
+      "name": "Configurator: two snares have distinct notation heads and both kicks belong to foot focus",
+      "status": "PASS"
+    }
+  ]
+}

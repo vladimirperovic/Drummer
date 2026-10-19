@@ -2,3 +2,6 @@
 alati/midirec
 *.jsonl
 .claude/
+node_modules/
+__pycache__/
+*.py[cod]

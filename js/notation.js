@@ -36,9 +36,9 @@ function beatEvents(p, voice, start, spb) {
   return events;
 }
 
-export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
+export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine: requestedBars, barOffset = 0, finalBar = true, pageWidth } = {}) {
   container.innerHTML = '';
-  const pixelW = Math.max(340, container.clientWidth || 900);
+  const pixelW = pageWidth || Math.max(340, container.clientWidth || 900);
   const spb = slotsPerBeat(p), spBar = slotsPerBar(p), total = totalSlots(p);
   const minBar = spBar * (p.division === 12 ? 30 : 23) + PAD_L + PAD_R;
   const up = INSTRUMENTS.filter(i => i.voice === 'up');
@@ -52,10 +52,10 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
   for (;; scale -= 0.05) {
     width = pixelW / scale;
     const fit = Math.max(1, Math.floor((width - HEADER - 8) / minBar));
-    linesCount = Math.ceil(p.bars / Math.min(p.bars, fit));
+    linesCount = Math.ceil(p.bars / Math.min(p.bars, requestedBars || fit));
     if ((linesCount * LINE_H + 6) * scale <= maxHeight || scale <= 0.75) break;
   }
-  const barsPerLine = Math.ceil(p.bars / linesCount);
+  const barsPerLine = requestedBars || Math.ceil(p.bars / linesCount);
   const barW = (width - HEADER - 8) / barsPerLine;
   const slotW = (barW - PAD_L - PAD_R) / spBar;
   const height = linesCount * LINE_H + 6;
@@ -80,13 +80,13 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
     el('rect', { x: x0 + 21, y: y0 + SP, width: 4.5, height: 2 * SP, class: 'ink' }, staffLayer);
     if (L === 0) {
       el('text', { x: x0 + 44, y: y0 + 2 * SP - 1, class: 'timesig' }, staffLayer).textContent = p.beats;
-      el('text', { x: x0 + 44, y: y0 + 4 * SP - 1, class: 'timesig' }, staffLayer).textContent = '4';
+      el('text', { x: x0 + 44, y: y0 + 4 * SP - 1, class: 'timesig' }, staffLayer).textContent = p.beatUnit || 4;
     }
     for (let b = 0; b < nBars; b++) {
       const bar = firstBar + b;
       const bx = HEADER + (b + 1) * barW;
-      if (p.bars > 1) el('text', { x: HEADER + b * barW + 4, y: y0 - 66, class: 'barnum' }, staffLayer).textContent = bar + 1;
-      if (bar === p.bars - 1) {
+      if (p.bars > 1 || barOffset) el('text', { x: HEADER + b * barW + 4, y: y0 - 66, class: 'barnum' }, staffLayer).textContent = bar + 1 + barOffset;
+      if (bar === p.bars - 1 && finalBar) {
         el('circle', { cx: bx - 14, cy: y0 + 1.5 * SP, r: 2.2, class: 'ink' }, staffLayer);
         el('circle', { cx: bx - 14, cy: y0 + 2.5 * SP, r: 2.2, class: 'ink' }, staffLayer);
         el('line', { x1: bx - 8, x2: bx - 8, y1: y0, y2: y0 + 4 * SP, class: 'barline' }, staffLayer);
@@ -106,12 +106,14 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
   const noteEls = Array.from({ length: total }, () => []);
 
   // Simboli trajanja: beams = broj greda/zastavica (0 četvrtina, 1 osmina, 2 šesnaestina)
-  const durSym = d => (p.division === 12
+  const durSym = d => (p.beatUnit === 8 ? (p.division === 12
+    ? { 1: { beams: 2 }, 2: { beams: 1 }, 3: { beams: 1 } }[d]
+    : { 1: { beams: 2 }, 2: { beams: 1 } }[d]) : p.division === 12
     ? { 1: { beams: 1 }, 2: { beams: 0 }, 3: { beams: 0 } }[d]
     : { 1: { beams: 2 }, 2: { beams: 1 }, 3: { beams: 1, dot: true }, 4: { beams: 0 } }[d]);
 
   function drawHead(inst, x, y, dyn, slot, y0) {
-    const g = el('g', { class: `head dyn${dyn}`, 'data-inst': inst.id }, notesLayer);
+    const g = el('g', { class: `head dyn${dyn}`, 'data-inst': inst.id, 'data-x': x, 'data-y': y }, notesLayer);
     for (let lp = -2; lp >= inst.pos; lp -= 2) el('line', { x1: x - 10, x2: x + 10, y1: y0 + lp * HALF, y2: y0 + lp * HALF, class: 'ledger' }, g);
     if (inst.head === 'normal') {
       el('ellipse', { cx: x, cy: y, rx: HEAD_W, ry: 4.4, transform: `rotate(-20 ${x} ${y})`, class: 'fillhead' }, g);
@@ -125,6 +127,7 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
       el('text', { x: x - 12, y: y + 4.5, class: 'paren' }, g).textContent = '(';
       el('text', { x: x + 8, y: y + 4.5, class: 'paren' }, g).textContent = ')';
     }
+    if (inst.badge) el('text', { x: x - 7, y: y + 17, class: 'kit-note-badge' }, g).textContent = inst.badge;
     noteEls[slot].push(g);
     return g;
   }
@@ -188,8 +191,8 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
       const sorted = [...n.insts].sort((a, b) => b.pos - a.pos);
       let prev = null, prevShifted = false;
       for (const inst of sorted) {
-        const shift = dir < 0 && prev && prev.pos - inst.pos === 1 && !prevShifted;
-        drawHead(inst, x + (shift ? 2 * HEAD_W - 1 : 0), yOf(inst.pos), n.dyn[inst.id], n.slot, y0);
+        const shift = prev && prev.pos - inst.pos <= 1 && !prevShifted;
+        drawHead(inst, x + (shift ? (dir < 0 ? 1 : -1) * (2 * HEAD_W - 1) : 0), yOf(inst.pos), n.dyn[inst.id], n.slot, y0);
         if (n.sym.dot) {
           const dy = inst.pos % 2 === 0 ? -HALF : 0;
           el('circle', { cx: x + HEAD_W + 5, cy: yOf(inst.pos) + dy, r: 1.8, class: 'ink' }, notesLayer);
@@ -242,7 +245,15 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
     }
   }
 
-  let marks = [];
+  // Skrati prazne margine prema stvarnom crtežu, uz prostor za obruče udaraca
+  // i liniju sviranja. Akcenti, otvoreni hi-hat i oznake ruku ostaju vidljivi.
+  const ink = [staffLayer, notesLayer].map(layer => layer.getBBox()).filter(b => b.width || b.height);
+  const top = Math.max(0, Math.min(...ink.map(b => b.y), lines[0].y0 - 32) - 12);
+  const bottom = Math.min(height, Math.max(...ink.map(b => b.y + b.height), lines.at(-1).y0 + 72) + 12);
+  svg.setAttribute('viewBox', `0 ${top} ${width} ${bottom - top}`);
+  svg.setAttribute('height', (bottom - top) * scale);
+
+  let marks = [], lastFollowedLine = null;
   return {
     total,
     slotPos,
@@ -251,6 +262,12 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
       const { x, line } = slotPos(s);
       playhead.setAttribute('x', x - 1);
       playhead.setAttribute('y', line.y0 - 32);
+      if (lastFollowedLine !== line) {
+        lastFollowedLine = line;
+        const y = (line.y0 - 32 - top) * scale;
+        if (y < container.scrollTop || y + 104 * scale > container.scrollTop + container.clientHeight)
+          container.scrollTop = Math.max(0, y - 18);
+      }
     },
     flashSlot(slot) {
       for (const g of noteEls[slot] || []) {
@@ -262,7 +279,8 @@ export function renderNotation(container, p, { maxHeight = Infinity } = {}) {
     mark(s, instId, kind, loop) {
       const { x, line, bar } = slotPos(s);
       const inst = INST[instId];
-      const c = el('circle', { cx: x, cy: line.y0 + inst.pos * HALF, r: kind === 'extra' ? 3.6 : 9.5, class: `mark ${kind}` }, markLayer);
+      const head = noteEls[s]?.find(g => g.dataset.inst === instId);
+      const c = el('circle', { cx: head?.dataset.x ?? x, cy: head?.dataset.y ?? line.y0 + inst.pos * HALF, r: kind === 'extra' ? 3.6 : 9.5, class: `mark ${kind}` }, markLayer);
       marks.push({ c, bar, loop });
     },
     clearBar(bar, loop) {

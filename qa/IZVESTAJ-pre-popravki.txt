@@ -1,0 +1,198 @@
+DRUMMER — IZVEŠTAJ O TESTIRANJU I PREDLOZI
+Datum: 19. oktobar 2026.
+
+REPOZITORIJUM I IZMENA IZGLEDA
+
+Repozitorijum: https://github.com/vladimirperovic/Drummer
+Lokalna putanja: C:\github\Drummer
+Preuzet je ceo repozitorijum sa istorijom; remote ima jednu granu main i nema tagova.
+HEAD: b9199e027af2c76b99e67a5dc48835f87daac57f
+git fsck --full: bez prijavljenih problema.
+
+Po naknadnom zahtevu smanjene su prazne margine iznad i ispod notnog sistema.
+Promena je u js/notation.js:245–252. Visina SVG prikaza sada prati stvarni
+crtež, uz prostor za akcente, otvoreni hi-hat, oznake ruku i indikatore sviranja.
+Veličina nota i horizontalni razmak ostaju isti. Kod osnovnog rok ritma na
+1440x1000, SVG je približno 74 px niži. Prikaz ne raste u odnosu na prethodni.
+Vizuelno pregledani: osnovni rok, disko sa otvorenim hi-hatom, fill sa R/L;
+automatizovano renderovani svi preseti i svih 96 kombinacija strukture.
+
+U produkcionom kodu promenjen je samo raspored margina. Dole navedene greške
+su dokumentovane, nisu popravljane u okviru zahteva za testiranje i predloge.
+Testovi i dokazi dodati su u qa/. Nema commit-a ni push-a.
+
+REZULTATI
+
+Oblast                         Ukupno    Prošlo    Palo
+JavaScript core                    52        49       3
+Chromium browser scenariji          33        24       9
+Python analiza                      7         7       0
+Microsoft Edge smoke                4         4       0
+UKUPNO                             96        84      12
+
+To su 92 osnovna test-slučaja i 4 ponovljena smoke scenarija u Edge-u.
+Tri neuspešna core testa ponavljaju nalaze iz browser testova: ukupno je
+potvrđeno DEVET različitih problema, a ne dvanaest različitih grešaka.
+Neuspešni testovi namerno proveravaju očekivano ponašanje; rezultat je crven
+zato što aplikacija to ponašanje trenutno ne ispunjava.
+Sintaksa svih osam JS modula i git diff --check: prošli.
+
+ŠTA JE PROVERENO
+
+- Svih 14 ugrađenih ritmova, 13 instrumenata i njihove MIDI/keyboard mape.
+- Svih 96 kombinacija: 1–8 taktova, 2–7 doba, šesnaestine ili triole.
+- Ograničenja BPM-a i strukture, nezavisnost kopija, proširenje/skraćenje
+  ritma, promena podele, očuvanje jačeg udarca pri sudaru koraka.
+- Strogo/normalno/lagano bodovanje na obe granice, rano i kasno; najbliža
+  nota; promašaji; višak; isti hi-hat pad; odvojene crash činele; dinamika;
+  pozitivna i negativna kalibracija; prosek, rasipanje i ponderisana tačnost.
+- Tastatura svih instrumenata, Shift/Alt dinamika, fokus tekstualnih polja,
+  BPM kontrole; editor, modifikatori, desni klik, kopiranje prvog takta.
+- Čuvanje, dupliranje, izvoz, ponovni reload i tri oblika JSON uvoza.
+- MIDI poruke na svih 16 kanala, note-off i nulta jačina, učenje mape,
+  reset, CC4, aftertouch/choke, izlazni kanal 10 i vremena note-on/note-off.
+- Simulirani nedostupan/odbijen/prazan MIDI i isključivanje/priključivanje.
+- Metronom, podele klika, tihi taktovi, automatski stop, više prolaza,
+  kvantizovano snimanje udaraca, trener tempa i gornja granica BPM-a.
+- Osam uzastopnih prolaza na 260 BPM bez rasta reda zakazanih događaja.
+- Algoritam kalibracije sa poznatim kašnjenjem +37 ms i nedovoljno udaraca.
+- Energija svih sintetičkih instrumenata kroz OfflineAudioContext;
+  učitavanje generisanog WAV sempla i fallback kada kit nedostaje.
+- Širine ekrana 1440, 1024, 768, 390 i 360 px bez horizontalnog overflow-a
+  u osnovnom prikazu. Fotografije prikaza su u qa/artifacts/.
+- Python: prazan i pojedinačan snimak, dupli okidači, crosstalk, CC4,
+  tajming, segmenti i upozorenje na zasićenje jačine.
+
+POTVRĐENI PROBLEMI I KORACI ZA PONAVLJANJE
+
+1. Visok prioritet — Crash 2 nema ugrađeni zvuk.
+   Uključi Moj zvuk, izaberi ugrađeni sintetički kit i pritisni U.
+   Udarac se vizuelno registruje, ali nema zvuka. Isto važi za slušanje
+   ritma koji sadrži crash2, bez spoljnog MIDI izlaza ili crash2 sempla.
+   Dokaz: audio-energy.json daje crash2 RMS=0, ostalih 12 instrumenata >0.
+   Uzrok: js/audio.js:193, tabela SYNTH nema crash2.
+   Predlog popravke: dodati drugi crash zvuk ili eksplicitni fallback na crash.
+
+2. Visok prioritet — Neispravan tip sticking ruši prikaz nota.
+   Uvezi {"name":"Bad sticking","sticking":123,"steps":{}} i učitaj ritam.
+   Uvoz uspeva, a prikaz nota nestaje uz "p.sticking?.trim is not a function".
+   Pošto se trenutni ritam čuva, problem može opstati posle osvežavanja.
+   Uzrok: js/patterns.js:32 prihvata tip bez validacije; js/notation.js:48
+   očekuje string.
+   Predlog: validirati kompletan model pre dodavanja u biblioteku.
+
+3. Srednji prioritet — Neispravan tip naziva ruši izvoz.
+   Uvezi {"name":123,"steps":{}} i izaberi Izvezi uz taj ritam.
+   Rezultat: "name.toLowerCase is not a function", fajl se ne preuzima.
+   Uzrok: js/main.js:456 i nedostatak validacije naziva u normalize().
+   Predlog: normalizovati ili odbiti ne-string naziv pri uvozu.
+
+4. Visok prioritet — Pogrešna struktura lokalne biblioteke blokira startup.
+   U izolovanom profilu upiši {} u localStorage ključ trener.ritmovi.v1
+   i osveži aplikaciju. Biblioteka/preseti se ne inicijalizuju.
+   Rezultat: "read(...).map is not a function" u js/storage.js:21.
+   Neispravan JSON već ima fallback; validan JSON pogrešnog tipa ga nema.
+   Predlog: proveriti Array.isArray i validnost svakog elementa.
+
+5. Visok prioritet — Neuspešno čuvanje se prikazuje kao uspešno.
+   Test simulira QuotaExceededError iz Storage.setItem, zatim Sačuvaj.
+   Aplikacija ipak prikazuje "Sačuvano: ..." i uklanja oznaku izmena.
+   Podaci postoje samo u memoriji i ne preživljavaju novo učitavanje.
+   Uzrok: js/storage.js:17 guta grešku; js/main.js:478–483 uvek potvrđuje.
+   Predlog: vratiti status ili proslediti grešku; zadržati dirty stanje
+   i ponuditi JSON izvoz kada trajno čuvanje nije uspelo.
+
+6. Srednji prioritet — Klikovi u editoru menjaju dinamiku pogrešnim redom.
+   Na praznoj ćeliji klikni četiri puta.
+   Opis obećava normalno → akcenat → ghost → prazno [2,3,1,0].
+   Stvarni niz je normalno → ghost → akcenat → prazno [2,1,3,0].
+   Uzrok: js/main.js:342, NEXT=[2,3,1,0] se koristi kao mapa po vrednosti.
+   Predlog: mapa treba da odgovara prelazima 0→2, 2→3, 3→1, 1→0.
+
+7. Srednji prioritet — Udarci tokom odbrojavanja kažnjavaju rezultat.
+   Ostaviti Odbrojavanje uključeno, Start, pritisnuti F pre prve note.
+   Udarac dobija oznaku višak i ulazi u rezultat prve vežbe.
+   Uzrok: js/main.js:189 boduje svaki udarac dok je play.on=true.
+   Predlog: slobodne udarce tokom count-in faze izuzeti iz ocenjivanja.
+
+8. Srednji prioritet — Istorija ne prikazuje završen pojedinačni prolaz.
+   Isključi Ponavljaj i Odbrojavanje, pokreni ritam i sačekaj automatski kraj.
+   Zbirna statistika je ispravna (osnovni rok: 12 promašaja bez sviranja),
+   ali lista/graf prolaza ostaje prazna.
+   Uzrok: finishLoop se poziva samo na početku sledećeg prolaza
+   (js/main.js:141), a automatski kraj na liniji 165 samo poziva stop().
+   Predlog: finalizovati poslednji prolaz pre automatskog zaustavljanja.
+
+9. Srednji prioritet — Dva Start zahteva mogu pokrenuti dva tajmera.
+   Dok prvi start čeka audio.ensure(), drugi start takođe vidi play.on=false.
+   Test sa kontrolisanim čekanjem potvrđuje dva setInterval poziva.
+   Može se izazvati brzim ponovljenim pokretanjem pri inicijalizaciji zvuka.
+   Stop pamti samo poslednji ID; drugi tajmer ostaje i utiče na naredne startove.
+   Uzrok: js/main.js:45–58 proverava stanje samo pre await-a.
+   Predlog: starting zastavica/promise ili ponovna provera posle await-a.
+
+DODATNA ZAPAŽANJA
+
+- Python testovi prolaze, ali alati/analiza.py:45 daje ResourceWarning zbog
+  fajla otvorenog bez context manager-a; preporučeno with open(..., encoding='utf-8').
+- README ne navodi taster U/crash2 među prečicama i instrumentima za kit.
+- pokreni.command i midirec.swift su macOS alati; ne postoji Windows launcher.
+- kits/index.json je prazan: nema stvarnih WAV kitova u preuzetom repozitorijumu.
+
+OGRANIČENJA
+
+Fizički Roland TD-17, USB transport, stvarna izlazna latencija, subjektivni
+kvalitet zvuka i EZdrummer nisu provereni. MIDI je simuliran, a audio računat
+u browseru. Nije testirano aktivno mikrofon/snimačko okruženje.
+Swift/CoreMIDI alat nije kompajliran ni pokrenut na Windowsu. Safari/Firefox
+nisu testirani. Browser testovi pokrivaju Chromium i četiri smoke scenarija
+u instaliranom Edge-u. Nije rađen višesatni test trajanja.
+
+PREDLOG PET NOVIH FUNKCIJA — REDOSLED PREPORUČENE IZRADE
+
+1. Dnevnik vežbanja i napredak.
+   Čuvanje svake sesije: ritam, trajanje, BPM, tačnost, rano/kasno po
+   instrumentu i dinamika. Graf po danima i najbolji BPM iznad 90% tačnosti.
+   Postojeća statistika traje samo tokom tekuće sesije; ovo dodaje istoriju.
+   Obim: srednji. Kriterijum: sesija ostaje dostupna posle reload-a i može
+   da se uporedi sa ranijim sviranjem istog ritma.
+
+2. Vežbanje problematičnog dela i pojedinačnih udova.
+   Obeleži taktove A–B, izaberi koje instrumente vežbaš i ponavljaj taj deo.
+   Aplikacija može da predloži segment sa najviše promašaja i zaseban sporiji
+   tempo za njega. Dopunjuje postojeći trener koji samo podiže ukupan BPM.
+   Obim: srednji. Kriterijum: boduju se samo izabrani instrumenti/segment.
+
+3. Prateća pesma uz bubnjeve.
+   Uvoz audio fajla, waveform, ručno poravnanje prvog takta i loop sekcije.
+   Ritam i metronom prate pesmu; opciono usporavanje radi vežbe.
+   Obim: veliki. Kriterijum: restart i A–B ponavljanje čuvaju sinhronizaciju
+   audio podloge, notnog sistema i rezultata.
+
+4. Programi vežbanja i automatske liste vežbi.
+   Složi npr. 3 minuta rudimenata, 5 minuta groove-a i 2 minuta fill-ova,
+   sa ciljem BPM-a/tačnosti, pauzama i automatskim prelazom na sledeću vežbu.
+   Obim: srednji. Kriterijum: jedna Start komanda pokrene celu rutinu i
+   sačuva rezultat svake stavke u dnevnik.
+
+5. Ponovno slušanje i analiza stvarnog izvođenja.
+   Sačuvaj originalne timestamp-ove, velocity i MIDI note, prikaži stvarne
+   udarce preko očekivanih i omogući usporeno slušanje plus MIDI izvoz.
+   Postojeće Snimaj kvantizuje udarce u ritam i gubi originalna odstupanja;
+   nova funkcija bi ih sačuvala za analizu i poređenje izvođenja.
+   Obim: srednji do veliki. Kriterijum: replay zadržava stvarni tajming i
+   dinamiku, nezavisno od originalnog uređaja i sledećih sesija.
+
+Pre novih funkcija prednost bih dao zvuku crash2, validaciji uvoza i
+pouzdanom čuvanju, jer direktno utiču na osnovni rad i korisničke podatke.
+
+PONAVLJANJE I DOKAZI
+
+Komande i objašnjenje testnog okruženja: qa/README.md.
+Logovi: qa/core-results.txt, qa/browser-results.txt, qa/edge-results.txt,
+qa/python-results.txt.
+Strukturirani nalazi: qa/artifacts/browser-results.json i
+qa/artifacts/msedge-browser-results.json.
+Audio dokaz: qa/artifacts/audio-energy.json.
+Izgled pre/posle: qa/artifacts/desktop-before.png i qa/artifacts/desktop.png.
+Ostali screenshot-ovi i probni JSON izvoz nalaze se u qa/artifacts/.

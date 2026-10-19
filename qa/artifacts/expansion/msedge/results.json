@@ -1,0 +1,93 @@
+{
+  "browser": "msedge",
+  "browserVersion": "155.0.4283.62",
+  "generatedAt": "2026-10-19T14:50:10.936Z",
+  "passed": 21,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Expansion: editor changes 6/8 and 7/8 with correct grid, grouping and notation",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: 7/8 scheduler accents 2+2+3, ends after seven eighths and saves a pass",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: swung scheduler records unequal subdivisions and count-in retains duration",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: swung recording quantizes at the swung grid rather than straight time",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: MIDI import previews channel, meter, mapping and dynamic hits then saves",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: MIDI track/channel and start selection can be changed before importing",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: malformed MIDI is rejected without replacing the current pattern",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: MIDI import reports empty selection and can use active device mapping",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: two device profiles restore independent maps, calibration and velocity curves",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: profile device match, deletion and quota failure are explicit",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: velocity curve affects live sound/scoring but recording keeps raw velocity",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: profile controls are locked during exercise and program",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: English covers all static screens, instrument labels and accessibility text",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: language persists, toggles back, and does not change notes or custom names",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: English translates live errors, score counts, journal and confirmations",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: print preview paginates 7/8, preserves sticking and produces an English PDF",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: print controls remove sticking and retain user title safely",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: new screens and English fit phone, tablet and desktop",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: PWA manifest, icons and all app modules are cached for offline reload",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: PWA shows install invitation and update checks without forced reload",
+      "status": "PASS"
+    },
+    {
+      "name": "Expansion: a real PWA update protects edits and storage failures, then preserves saved data",
+      "status": "PASS"
+    }
+  ]
+}

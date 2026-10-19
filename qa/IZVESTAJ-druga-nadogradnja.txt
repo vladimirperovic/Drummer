@@ -1,0 +1,213 @@
+DRUMMER — DRUGA NADOGRADNJA, SR/EN I ZAVRŠNO TESTIRANJE
+Datum: 19. oktobar 2026.
+
+ISHOD
+
+Dodatih svih pet funkcija iz prethodnog predloga:
+1. Uvoz MIDI fajlova u editor.
+2. Swing, mere /8 (uključujući 6/8 i 7/8) i grupe doba.
+3. Profili MIDI uređaja sa kalibracijom i velocity krivama.
+4. Offline PWA sa kontrolisanim ažuriranjem.
+5. Višestrana štampa i PDF notnog zapisa.
+
+Dodat je izbor SR/EN gore desno, sa engleskim interfejsom, porukama,
+pomoći, ugrađenim nazivima ritmova, dijalozima i štampom. Jezik se pamti.
+Dodata je i engleska dokumentacija README.en.md.
+Ranije popravke devet problema, pet funkcija vežbanja i kompaktne margine
+oko nota ostaju uključene i prošle su ponovljene regresione provere.
+
+Završni skup: 259 izvršavanja, 259 prolaza, 0 padova.
+185 različitih test-slučajeva; 74 browser scenarija se izvršavaju dvaput,
+u Chromium-u i Microsoft Edge-u. Nema preskočenih testova.
+
+Repozitorijum: https://github.com/vladimirperovic/Drummer
+Radna kopija: C:\github\Drummer
+Osnovni commit: b9199e027af2c76b99e67a5dc48835f87daac57f
+Izmene su lokalne. Nisu napravljeni commit, push ili PR.
+Otvorena aplikacija http://127.0.0.1:8123/ je osvežena i prikazana na EN.
+
+NOVE FUNKCIJE I GDE SE NALAZE
+
+1. Alati / Tools → MIDI uvoz / MIDI import
+   Bounded SMF parser čita MIDI tipove 0/1 sa PPQ vremenom, running status,
+   tempo, meru, imena traka i kanale; preskače SysEx i nevažne događaje.
+   Limit: 10 MB, 256 traka i 200.000 događaja. Neispravni/prekinuti fajlovi
+   daju poruku i ne zamenjuju postojeći ritam.
+   Izbor trake, kanala, početka u četvrtinama, 1–8 taktova, mere i podele.
+   MIDI 10 je početni kanal kada postoji. Mapa se menja po noti ili kopira
+   iz aktivnog profila. Podržane kvantizacije: osmine, šesnaestine, triole.
+   Pregled broji uvezene/preskočene/spojene udarce; sudari zadržavaju jači.
+   Tempo dela se čita na početku; promene tempa i ograničenje 30–260 BPM
+   imaju upozorenje. Deo sa promenom mere odbija se uz jasno uputstvo.
+   SMPTE i tip 2 nisu podržani. Import u editor zahteva naknadno Save.
+
+2. Uredi ritam / Edit pattern → Beat unit, Beat groups, Swing
+   /4 i /8, 2–7 doba. Podrazumevane grupe 6/8=3+3, 7/8=2+2+3.
+   Grupe mogu da se promene ako im je zbir jednak broju doba; određuju
+   akcente klika. BPM uvek označava četvrtinu, ne tačkastu četvrtinu.
+   Swing 50–75% menja odnos dve polovine dobe bez promene dužine takta.
+   U /4 pomera par osmina; u /8 par šesnaestina. Triole imaju fiksnu podelu.
+   Scheduler, playhead, snimanje u mrežu, ocenjivanje, A–B, audio podloga,
+   potpisi uporedivih sesija i štampa koriste proširen model vremena.
+   Zadržana kompatibilnost sa starim ritmovima: /4 i 50% swing.
+
+3. Podešavanja / Settings → Profili uređaja / Device profiles
+   Sačuvane MIDI mape, kalibracija, linearna/meka/tvrda velocity kriva,
+   gain 0,5–2 i opciono ime povezanog MIDI uređaja.
+   Sačuvaj, novi profil, izbor, brisanje i izbor prema povezanom uređaju.
+   Automatski se ne prepisuju trenutne nesnimljene korekcije pri reload-u.
+   Snimak/izvoz zadržavaju originalnu velocity; ocena i živi zvuk koriste
+   korigovanu. Kontrole se zaključavaju tokom vežbe, programa i kalibracije.
+   Neuspešno čuvanje ne menja listu profila i prikazuje storage upozorenje.
+
+4. Alati / Tools → Offline aplikacija / Offline app
+   Manifest, 192/512 ikone, instalacioni poziv i service worker.
+   Prvo učitavanje priprema HTML/CSS, sve JS module i ugrađene ritmove/zvuk.
+   Keš je vezan za putanju aplikacije. Kasnije učitani lokalni WAV kitovi
+   mogu se koristiti iz keša. Audio podloga se ponovo bira nakon otvaranja.
+   Check for updates preuzima novu verziju. Apply new version odbija
+   aktivaciju dok ima nesačuvanih ritmova/programa ili aktivne vežbe.
+   Pre aktivacije čuva podešavanja, biblioteku, dnevnik, programe, profile
+   i MIDI mapu. Neuspešan upis sprečava reload. Stari keš se uklanja tek
+   nakon aktivacije. Verzija ove nadogradnje: 2026-10-19-v2-3.
+
+5. Alati / Tools → Štampa / PDF / Print / PDF
+   A4 pregled sa nazivom, tempom, merom, grupama/swingom, brojevima taktova
+   i opcionim R/L oznakama. 1–4 takta po redu, 1–8 ponavljanja, tri reda
+   po stranici. Dugme otvara browser print dijalog; Save as PDF pravi PDF.
+   Proverena su tri A4 lista sa ukupno 16 taktova 7/8 i 224 R/L oznake.
+   PDF fajlovi iz oba browsera renderovani su Poppler-om za vizuelni pregled.
+
+SR / EN
+
+Prevod se menja bez reload-a i pamti u lokalnom browser profilu. Obuhvata
+transport, editor, biblioteku, instrumente, podešavanja, vežbanje, dnevnik,
+programe, replay, alate, poruke grešaka, potvrde, unos naziva, pomoćne
+natpise, pristupačne oznake i štampu. Prevod ne menja notne podatke.
+Nazivi koje korisnik unese zadržavaju se u editoru i biblioteci; za njih
+se ne primenjuje prevod ugrađenih naziva ritmova. SR/EN radi i offline.
+
+PROBLEMI OTKRIVENI I POPRAVLJENI TOKOM OVE PROVERE
+
+- Brz reload mogao je prethoditi odloženom čuvanju trenutnog ritma ili
+  kalibracije/profila. pagehide sada odmah upisuje podešavanja.
+- Početno usklađivanje audio sata moglo je pomeriti očekivane timestamp-ove
+  i zapisano trajanje. Vremenska osa se vezuje za prvi stvarni zakazani
+  korak; provere 7/8 i swinga potvrđuju odgovarajuće trajanje.
+- Native prompt za naziv ritma sada koristi izabrani jezik, kao i confirm.
+- Preimenovan preset više se ne tretira kao ugrađeni naziv pri promeni
+  jezika. Provereno je i ime koje sadrži reč iz prevodnog rečnika.
+
+Ispravljeni su i testni detalji: native dijalozi eksplicitno se prihvataju
+ili odbijaju, test resize-a čeka postojeći debounce, a offline provera
+zahteva neuspeh nekeshiranog zahteva umesto oslanjanja na navigator.onLine.
+PWA update scenario koristi stvarni novi worker na privremenom localhost
+serveru, bez menjanja korisnikove otvorene aplikacije ili njenog keša.
+
+ZAVRŠNI REZULTATI
+
+Oblast                                      Ukupno    Prošlo    Palo
+JavaScript modeli i logika                      104       104       0
+Python analiza                                   7         7       0
+Chromium: prethodne regresije/funkcije            53        53       0
+Chromium: nova nadogradnja i jezik                21        21       0
+Microsoft Edge: prethodne regresije/funkcije      53        53       0
+Microsoft Edge: nova nadogradnja i jezik          21        21       0
+UKUPNO                                         259       259       0
+
+Chromium: 151.0.7922.34
+Microsoft Edge: 155.0.4283.62
+Sintaksa svih 18 produkcionih modula i sw.js: prošla.
+git diff --check: prošao.
+
+OBIM PROVERE
+
+- Svih devet ranijih regresija, 14 preseta, 13 instrumenata i postojeći
+  editor, MIDI, scoring, kalibracija, transport, dnevnik, A–B, audio,
+  programi, replay i izvoz. Detalji prve nadogradnje su u arhiviranom izveštaju.
+- Swing transformacija i njen inverz za /4, /8, ravne podele/triole,
+  negativne pozicije odbrojavanja i više različitih swing odnosa.
+- Stvarno Web Audio zakazivanje, 7/8 akcenti 2+2+3, jedan prolaz od 1,75 s,
+  swing sa odbrojavanjem, nejednake podele i kvantizacija snimka.
+- MIDI track/channel/running status, meta/SysEx, PPQ, note-on velocity 0,
+  izbor dela, nepoznate note, sudari, tempo/meter promene, granice formata,
+  nedostajući završni događaj, neispravni VLQ i svi odsečeni prefiksi fixture-a.
+- Dva nezavisna profila, mapa/kalibracija/krivulja, reload, match/delete,
+  pun storage i očuvana originalna velocity. Monotone i ograničene krive.
+- Engleski tekst na svim statičkim panelima, instrumenti, title/aria,
+  dinamičke greške, rezultat, dnevnik, potvrde i prompt. SR→EN→reload→SR.
+- Očuvanje sopstvenog naziva sa dijakriticima i rečju iz rečnika; neizmenjene
+  note nakon promene jezika. Bez preostalih proveravanih srpskih izraza
+  u statičkim ekranima na EN.
+- PDF paginacija, R/L uključeno/isključeno, brojevi taktova i bezbedan naslov
+  koji sadrži HTML. PDF: tri stranice A4 u oba browsera, bez odsečenih nota.
+- Širine 1440, 768, 390 i 360 px: editor, profili i sva tri nova alata bez
+  horizontalnog overflow-a dokumenta. Vizuelni pregled desktopa i telefona.
+- PWA manifest/PNG ikone, keš svih modula, offline reload, EN i vežba/dnevnik
+  bez mreže; nekeshirani zahtev mora da padne. Instalacioni poziv, check
+  bez nove verzije i stvarna nova verzija sa zaštitom izmene/storage greške.
+- Korisnikov otvoreni prikaz osvežen, izabran EN i prikazani editor/profili.
+
+OGRANIČENJA
+
+- MIDI je simuliran u automatizovanim testovima. Fizički Roland TD-17,
+  USB, stvarna čujna latencija, kvalitet zvuka i EZdrummer nisu testirani.
+- PWA keš/offline/update su stvarno izvršeni. OS instalacija nije izvršena;
+  poziv instalacionog prompt-a je simuliran. Podrška zavisi od browsera.
+- PDF je generisan browser print mehanizmom. Fizički štampač i ručni
+  sistemski dijalog nisu automatizovani.
+- Swift/CoreMIDI alat zahteva macOS i nije kompajliran na Windowsu.
+  Safari/Firefox i višesatni rad nisu deo ovog testiranja.
+- Uvoz ritmova ostaje ograničen na 8 taktova i podržane mere; tempo-mapa
+  MIDI pesme nije zadržana. Triole u /8 dele osminsku dobu na tri dela.
+- Audio podloga i dalje menja visinu tona pri promeni brzine. Ne ostaje
+  nakon reload-a. Replay čuva udarce, ne snimljeni miks ili kontinuirani CC4.
+- Lokalni backup uključuje nove profile, mapu i jezik, ali potpuni restore
+  dnevnika/programa/profila još nije deo interfejsa.
+
+SLEDEĆIH PET PREDLOGA — NISU IMPLEMENTIRANI U OVOM KORAKU
+
+1. Potpuni backup i vraćanje podataka
+   Jedan fajl za ritmove, dnevnik, programe, profile i podešavanja, uz
+   pregled sadržaja pre uvoza i izbor spajanja ili zamene.
+
+2. Usporavanje audio podloge bez promene visine tona
+   Time-stretch za vežbanje uz pesmu u originalnom tonalitetu, sa istim
+   A–B rasponom i sinhronizacijom metronoma.
+
+3. WAV izvoz izvođenja
+   Render stvarnog snimka u audio fajl, sa zasebnim izborom klika,
+   očekivanog ritma i podloge, za slanje nastavniku ili dalju obradu.
+
+4. Aranžman cele pesme
+   Sastavljanje duže pesme od ritam sekcija, sa nazivima strofa/refren/fill,
+   ponavljanjima i promenama tempa ili mere između sekcija.
+
+5. Direktno poređenje dve sesije
+   Preklop stvarnih udaraca i odstupanja, po instrumentu i taktu, uz
+   poređenje dinamike i mogućnost da se oba izvođenja preslušaju.
+
+DOKAZI I PONAVLJANJE
+
+qa/README.md — sve komande za ponavljanje.
+qa/core-results.txt, qa/python-results.txt — modeli i analiza.
+qa/browser-results.txt, qa/edge-results.txt — ranijih 53 scenarija po browseru.
+qa/expansion-browser-results.txt, qa/expansion-edge-results.txt — novih 21.
+qa/artifacts/browser-results.json
+qa/artifacts/msedge/msedge-browser-results.json
+qa/artifacts/expansion/chromium/results.json
+qa/artifacts/expansion/msedge/results.json
+qa/artifacts/expansion/{chromium,msedge}/practice-sheet.pdf
+qa/artifacts/expansion/{chromium,msedge}/print-page-{1,2,3}.png
+qa/artifacts/expansion/app-english.png — otvorena korisnička aplikacija.
+README.md i README.en.md — uputstva za korišćenje.
+qa/IZVESTAJ-prva-nadogradnja.txt — prethodni izveštaj sa 190 prolaza.
+qa/IZVESTAJ-pre-popravki.txt — početni audit.
+
+Slike/logovi sa failure u nazivu čuvaju istoriju razvoja. Merodavna su
+četiri završna JSON izveštaja i završni logovi navedeni iznad.
+
+Korišćene primarne tehničke reference:
+https://midi.org/standard-midi-files-specification
+https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers
+https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable

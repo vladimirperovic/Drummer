@@ -3,6 +3,7 @@
 // kit.json: { "name": "...", "license": "...", "instruments": { "snare": [ { "file": "sn_v1.wav", "lo": 1, "hi": 60 }, ... ] } }
 // Više fajlova u istom rasponu jačine se smjenjuju (round robin).
 
+const SOUND_FAMILY = { kick2: 'kick', snare2: 'snare', xstick2: 'xstick', crash3: 'crash2' };
 const CHOKE = { hho: 'hihat' };
 
 export class AudioEngine {
@@ -12,6 +13,7 @@ export class AudioEngine {
     this.vol = { click: 0.7, pattern: 0.6, live: 0.9 };
     this.voices = [];
     this.offset = null;
+    this.sources = new Set();
   }
 
   async ensure() {
@@ -37,6 +39,18 @@ export class AudioEngine {
   }
 
   get ready() { return this.ctx?.state === 'running'; }
+  track(source) {
+    this.sources.add(source);
+    source.onended = () => { this.sources.delete(source); source.disconnect(); };
+    return source;
+  }
+
+  stopScheduled() {
+    for (const source of this.sources) { try { source.stop(); } catch {} }
+    this.sources.clear();
+    for (const voice of this.voices) voice.out.disconnect();
+    this.voices = [];
+  }
   get time() { return this.ctx.currentTime; }
   latencyMs() { return this.ctx ? ((this.ctx.baseLatency || 0) + (this.ctx.outputLatency || 0)) * 1000 : 0; }
 
@@ -57,7 +71,7 @@ export class AudioEngine {
 
   click(t, accent, level = 1) {
     const ctx = this.ctx;
-    const o = ctx.createOscillator(), g = ctx.createGain();
+    const o = this.track(ctx.createOscillator()), g = ctx.createGain();
     o.type = 'sine';
     o.frequency.value = accent ? 1760 : 1180;
     g.gain.setValueAtTime(0, t);
@@ -75,7 +89,7 @@ export class AudioEngine {
     const out = this.ctx.createGain();
     out.connect(this.buses[bus]);
     const sample = this.kit && this.pickSample(instId, v);
-    const end = sample ? this.playSample(sample, t, v, out) : SYNTH[instId]?.(this, t, v, out) ?? t;
+    const end = sample ? this.playSample(sample, t, v, out) : SYNTH[SOUND_FAMILY[instId] || instId]?.(this, t, v, out) ?? t;
     this.voices.push({ instId, out, end });
     this.voices = this.voices.filter(x => x.end > this.ctx.currentTime);
   }
@@ -108,8 +122,8 @@ export class AudioEngine {
   useSynth() { this.kit = null; }
 
   pickSample(instId, v) {
-    const list = this.kit.layers[instId];
-    if (!list) return null;
+    const list = this.kit.layers[instId] || this.kit.layers[SOUND_FAMILY[instId]];
+    if (!list?.length) return null;
     const vel = Math.max(1, Math.round(v * 127));
     const fits = list.filter(s => vel >= s.lo && vel <= s.hi);
     const pool = fits.length ? fits : list;
@@ -118,7 +132,7 @@ export class AudioEngine {
   }
 
   playSample(s, t, v, out) {
-    const src = this.ctx.createBufferSource();
+    const src = this.track(this.ctx.createBufferSource());
     src.buffer = s.buf;
     const g = this.ctx.createGain();
     g.gain.value = s.gain * (0.35 + 0.65 * v);
@@ -140,7 +154,7 @@ function env(ctx, t, peak, decay) {
 
 function noise(a, t, dur, filters, peak, decay, out) {
   const ctx = a.ctx;
-  const src = ctx.createBufferSource();
+  const src = a.track(ctx.createBufferSource());
   src.buffer = a.noise;
   let node = src;
   for (const [type, freq, q = 0.7] of filters) {
@@ -158,7 +172,7 @@ function noise(a, t, dur, filters, peak, decay, out) {
 
 function tone(a, t, type, f0, f1, sweep, peak, decay, out) {
   const ctx = a.ctx;
-  const o = ctx.createOscillator();
+  const o = a.track(ctx.createOscillator());
   o.type = type;
   o.frequency.setValueAtTime(f0, t);
   if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + sweep);
@@ -175,7 +189,7 @@ function metal(a, t, peak, decay, hp, out) {
   const g = env(ctx, t, peak, decay);
   f.connect(g).connect(out);
   for (const r of [2, 3, 4.16, 5.43, 6.79, 8.21]) {
-    const o = ctx.createOscillator();
+    const o = a.track(ctx.createOscillator());
     o.type = 'square';
     o.frequency.value = 40 * r * 1.7;
     o.connect(f);
@@ -229,7 +243,14 @@ const SYNTH = {
     metal(a, t, 0.08 * v, 1.2, 4500, out);
     return t + 2;
   },
+  crash2: (a, t, v, out) => {
+    noise(a, t, 2, [['highpass', 3200]], 0.6 * v, 1.8, out);
+    metal(a, t, 0.09 * v, 1.4, 3900, out);
+    return t + 2;
+  },
   tom1: tom(210),
   tom2: tom(165),
   tom3: tom(110),
+  tom4: tom(140),
+  floor2: tom(85),
 };

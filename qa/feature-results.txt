@@ -1,0 +1,22 @@
+
+> test:browser
+> node browser.mjs
+
+PASS Feature: A-B scores only chosen bars and instruments while retaining other raw hits
+PASS Feature: empty instrument selection prevents starting with an explanation
+PASS Feature: weak segment suggestion uses the last session and lowers tempo
+PASS Feature: journal stores session, statistics and completed passes across reload
+PASS Feature: original MIDI zone, velocity and fractional timing survive capture and reload
+PASS Feature: journal compares matching sessions and reports the best 90-percent BPM
+PASS Feature: failed journal save retains the performance and retry persists it
+PASS Feature: replay renders expected notes, real hits and misses without quantization
+PASS Feature: replay slows original timing, pauses, seeks and stops independently
+PASS Feature: MIDI and JSON exports retain recorded notes and velocity
+PASS Feature: backing WAV, A-B, first beat and half-speed share the audio clock
+PASS Feature: backing starts after count-in and repeats selected audio segment
+PASS Feature: invalid backing file and out-of-file loop fail without starting playback
+PASS Feature: program persists snapshots, runs sequentially and stores both outcomes
+PASS Feature: stopping a program during its break cancels the next exercise
+PASS Feature: canceling pending audio initialization cannot start a stale session
+PASS Feature: all five studio panels fit desktop, tablet and phone widths
+{"passed":17,"failed":0}

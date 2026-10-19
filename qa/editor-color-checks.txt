@@ -1,0 +1,4 @@
+PASS BUG: editor clicks follow normal -> accent -> ghost -> empty
+PASS Editor modifiers, erase, resize and copy first bar
+PASS Recording quantizes live hits and preserves dynamic accents
+{"passed":3,"failed":0}

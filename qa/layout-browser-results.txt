@@ -1,0 +1,11 @@
+PASS Layout: mouse drag in 2D persists, preserves other parts and matches 3D
+PASS Layout: second bass and hi-hat pedals move with their own assemblies
+PASS Layout: real 3D picking moves a part without orbiting; 2D and hit colors stay in sync
+PASS Layout: Escape and pointer cancellation roll back previews without saving
+PASS Layout: named profiles and JSON export/import retain separate custom arrangements
+PASS Layout: handedness, removing/readding parts and reset preserve the chosen kit
+PASS Layout: failed storage rolls back visible positions and never reports a saved move
+PASS Layout: starting playback cancels an active gesture and disables layout edits
+PASS Layout: custom positions survive offline reload and first 3D opening
+PASS Layout: English/mobile controls and no-WebGL fallback retain moved parts
+{"passed":10,"failed":0}

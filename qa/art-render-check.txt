@@ -1,0 +1,2 @@
+PASS Kit: original 2D image and all visibility masks have visible, unclipped matching pixels
+{"passed":1,"failed":0}

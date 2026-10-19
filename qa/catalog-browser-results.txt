@@ -1,0 +1,16 @@
+PASS Catalog: category counts, bilingual search and typing without drum shortcuts
+PASS Catalog: all eighty new presets load their correct meter, notes and English lesson
+PASS Workspace: editor and library occupy full width and stack at desktop and phone sizes
+PASS Workspace: drag and keyboard resize persist without changing tempo
+PASS Workspace: two/four notation rows, focus mode, auto-scroll and Escape preserve playback
+PASS Kit: 2D fixed-size center flashes, full cymbal discs and repeated-hit cleanup
+PASS Kit: original 2D image and all visibility masks have visible, unclipped matching pixels
+PASS Kit: original 2D requires no WebGL and its artwork stays available offline
+PASS Kit: 3D loads lazily and keeps white shells, black spots and twelve hit targets
+PASS Kit: all thirteen live instruments and reference playback color the 3D targets without scaling
+PASS Kit: mouse rotation, zoom, reset and keyboard controls work without tempo conflicts
+PASS Kit: view switching reuses one renderer and remembers 3D after reload
+PASS Kit: English controls, mobile sizing and translated fallback when WebGL is unavailable
+PASS Kit: phone 3D fits, English labels translate and lost graphics context returns to 2D
+PASS Kit: 3D and new presets load offline even when 3D was never opened online
+{"passed":15,"failed":0}

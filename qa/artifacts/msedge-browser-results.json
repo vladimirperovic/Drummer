@@ -1,0 +1,27 @@
+{
+  "browser": "msedge",
+  "browserVersion": "155.0.4283.62",
+  "generatedAt": "2026-10-19T09:50:14.737Z",
+  "sourceCommit": "b9199e027af2c76b99e67a5dc48835f87daac57f",
+  "localChange": "Notation vertical margins",
+  "passed": 4,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Startup: notation, 14 presets, simulated MIDI, assets",
+      "status": "PASS"
+    },
+    {
+      "name": "All presets render valid note coordinates",
+      "status": "PASS"
+    },
+    {
+      "name": "MIDI unsupported: keyboard fallback still works",
+      "status": "PASS"
+    },
+    {
+      "name": "Single pass automatically stops and counts all 12 missed notes",
+      "status": "PASS"
+    }
+  ]
+}

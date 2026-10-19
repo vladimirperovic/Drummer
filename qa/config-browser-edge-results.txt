@@ -1,0 +1,16 @@
+PASS Configurator: standard defaults and every count including one/two bass drums
+PASS Configurator: left-handed positions mirror with stable hit targets
+PASS Configurator: all nineteen MIDI learn targets flash only their own 2D surfaces
+PASS Configurator: both bass drums score and record separately, with distinct editor colors
+PASS Configurator: expanded 3D has all targets, independent colors, and survives rebuilds
+PASS Configurator: profile save/load restores parts, handedness, map, gain and calibration
+PASS Configurator: profile export/import round trip and invalid input preserve existing data
+PASS Configurator: legacy profiles migrate to the original kit
+PASS Configurator: unavailable pattern lanes remain intact and playback explains missing parts
+PASS Configurator: controls and profile application are blocked during playback
+PASS Configurator: storage failure keeps the prior kit and does not claim a saved profile
+PASS Configurator: English labels, mobile layout and 2D fallback without WebGL
+PASS Configurator: saved custom kit and both renderers are available fully offline
+PASS Configurator: minimum kit, canceled learning and rapid 3D rebuilds do not leak renderers
+PASS Configurator: two snares have distinct notation heads and both kicks belong to foot focus
+{"passed":15,"failed":0}

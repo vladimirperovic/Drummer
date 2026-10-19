@@ -1,4 +1,5 @@
 // Instrumenti, model ritma i gotovi ritmovi.
+import { CATALOG_DEFINITIONS, PRESET_CATEGORIES } from './preset-catalog.js';
 //
 // Ritam je mreža: za svaki instrument niz jačina po koraku (0 nema, 1 ghost, 2 normalno, 3 akcenat).
 // division 16 = šesnaestine (4 koraka po dobi), 12 = osminske triole (3 koraka po dobi).
@@ -19,26 +20,63 @@ export const INSTRUMENTS = [
   { id: 'tom3', label: 'Floor tom', pos: 5, head: 'normal', voice: 'up', midiIn: [43, 58], midiOut: 43, color: '#cf7dff', keys: ['KeyL'], target: 'tom3' },
   { id: 'kick', label: 'Kick', pos: 7, head: 'normal', voice: 'down', midiIn: [36], midiOut: 36, color: '#ffa94d', keys: ['KeyV', 'KeyB', 'KeyN'], target: 'kick' },
   { id: 'hhp', label: 'Hi-hat nogom', pos: 9, head: 'x', voice: 'down', midiIn: [44], midiOut: 44, color: '#74c0fc', keys: ['KeyA'], target: 'hhpedal' },
+  { id: 'tom4', label: 'Tom 3', pos: 4, head: 'normal', voice: 'up', midiIn: [], midiOut: 47, color: '#a66ee8', keys: ['KeyY'], target: 'tom4', optional: true },
+  { id: 'floor2', label: 'Floor tom 2', pos: 6, head: 'normal', voice: 'up', midiIn: [], midiOut: 41, color: '#b35ee8', keys: ['KeyM'], target: 'floor2', optional: true },
+  { id: 'snare2', label: 'Dobos 2', pos: 3, head: 'normal', voice: 'up', midiIn: [], midiOut: 40, color: '#f04779', keys: ['KeyR'], target: 'snare2', optional: true, badge: 'S2' },
+  { id: 'xstick2', label: 'Cross-stick 2', pos: 3, head: 'circlex', voice: 'up', midiIn: [], midiOut: 31, color: '#ed86a4', keys: ['KeyT'], target: 'rim2', optional: true, badge: 'S2' },
+  { id: 'kick2', label: 'Kick 2', pos: 8, head: 'normal', voice: 'down', midiIn: [], midiOut: 35, color: '#ed8736', keys: ['KeyZ'], target: 'kick2', optional: true, badge: 'K2' },
+  { id: 'crash3', label: 'Crash 3', pos: -4, head: 'x', voice: 'up', midiIn: [], midiOut: 52, color: '#deb53c', keys: ['KeyQ'], target: 'crash3', optional: true },
 ];
 export const INST = Object.fromEntries(INSTRUMENTS.map(i => [i.id, i]));
 export const DYN_VEL = [0, 40, 92, 122];
 
-export const slotsPerBeat = p => (p.division === 12 ? 3 : 4);
+export const slotsPerBeat = p => (p.division === 12 ? 3 : p.beatUnit === 8 ? 2 : 4);
 export const slotsPerBar = p => p.beats * slotsPerBeat(p);
 export const totalSlots = p => p.bars * slotsPerBar(p);
+export const beatMs = p => 60000 / p.bpm * 4 / (p.beatUnit || 4);
+export const barMs = p => p.beats * beatMs(p);
+export const groupStarts = p => {
+  let beat = 0;
+  return (p.groups || [p.beats]).map(size => { const start = beat; beat += size; return start; });
+};
+
+// BPM always denotes quarter notes. Swing stretches the first half of each
+// numbered beat; the beat/bar duration stays fixed. This also handles count-in.
+export function slotOffsetMs(p, slot) {
+  const spb = slotsPerBeat(p), beat = Math.floor(slot / spb), part = slot / spb - beat;
+  const ratio = p.division === 12 ? .5 : (p.swing || 50) / 100;
+  const warped = part <= .5 ? part * 2 * ratio : ratio + (part - .5) * 2 * (1 - ratio);
+  return (beat + warped) * beatMs(p);
+}
+export const slotDurationMs = (p, slot) => slotOffsetMs(p, slot + 1) - slotOffsetMs(p, slot);
+export function slotAtMs(p, ms) {
+  const position = ms / beatMs(p), beat = Math.floor(position), part = position - beat;
+  const ratio = p.division === 12 ? .5 : (p.swing || 50) / 100;
+  return (beat + (part <= ratio ? part / (2 * ratio) : .5 + (part - ratio) / (2 * (1 - ratio)))) * slotsPerBeat(p);
+}
 
 const clampDyn = v => (v >= 1 && v <= 3 ? Math.round(v) : 0);
 
-export function normalize(p) {
+export function normalize(p = {}) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) p = {};
   const q = { name: 'Novi ritam', bpm: 90, beats: 4, bars: 1, division: 16, sticking: '', ...p };
+  q.name = typeof q.name === 'string' && q.name.trim() ? q.name.slice(0, 200) : 'Novi ritam';
+  q.sticking = typeof q.sticking === 'string' ? q.sticking.toUpperCase().replace(/[^RL .]/g, '').slice(0, 224) : '';
+  q.id = typeof q.id === 'string' ? q.id : null;
+  q.preset = q.preset === true;
   q.bars = Math.min(8, Math.max(1, q.bars | 0));
   q.beats = Math.min(7, Math.max(2, q.beats | 0));
   q.division = q.division === 12 ? 12 : 16;
+  q.beatUnit = q.beatUnit === 8 ? 8 : 4;
+  q.swing = q.division === 12 ? 50 : Math.min(75, Math.max(50, Math.round(Number(q.swing)) || 50));
+  const groups = typeof q.groups === 'string' ? q.groups.split('+').map(Number) : q.groups;
+  q.groups = Array.isArray(groups) && groups.every(n => Number.isInteger(n) && n > 0) && groups.reduce((a, b) => a + b, 0) === q.beats
+    ? [...groups] : q.beatUnit === 8 && q.beats === 6 ? [3, 3] : q.beatUnit === 8 && q.beats === 7 ? [2, 2, 3] : [q.beats];
   q.bpm = Math.min(260, Math.max(30, Math.round(q.bpm) || 90));
   const n = totalSlots(q);
   const steps = {};
   for (const inst of INSTRUMENTS) {
-    const src = p.steps?.[inst.id] || [];
+    const src = Array.isArray(p.steps?.[inst.id]) ? p.steps[inst.id] : [];
     steps[inst.id] = Array.from({ length: n }, (_, i) => clampDyn(src[i]));
   }
   return { ...q, steps };
@@ -47,8 +85,8 @@ export function normalize(p) {
 export const blankPattern = (over = {}) => normalize({ id: null, ...over });
 
 // Mijenja broj taktova, doba ili podjelu, a postojeće udarce prenosi na najbliži korak.
-export function resize(p, { bars = p.bars, beats = p.beats, division = p.division }) {
-  const q = normalize({ ...p, bars, beats, division, steps: {} });
+export function resize(p, { bars = p.bars, beats = p.beats, division = p.division, beatUnit = p.beatUnit, swing = p.swing, groups = (beats === p.beats && beatUnit === p.beatUnit ? p.groups : null) }) {
+  const q = normalize({ ...p, bars, beats, division, beatUnit, swing, groups, steps: {} });
   const oldSpb = slotsPerBeat(p), newSpb = slotsPerBeat(q);
   const oldBar = slotsPerBar(p), newBar = slotsPerBar(q);
   for (const inst of INSTRUMENTS) {
@@ -61,14 +99,14 @@ export function resize(p, { bars = p.bars, beats = p.beats, division = p.divisio
       q.steps[inst.id][j] = Math.max(q.steps[inst.id][j], v);
     });
   }
-  q.sticking = division === p.division && beats === p.beats ? p.sticking || '' : '';
+  q.sticking = division === p.division && beats === p.beats && beatUnit === p.beatUnit ? p.sticking || '' : '';
   return q;
 }
 
 export function patternInfo(p) {
   const div = p.division === 12 ? 'triole' : 'šesnaestine';
   const bars = p.bars === 1 ? '1 takt' : p.bars < 5 ? `${p.bars} takta` : `${p.bars} taktova`;
-  return `${p.beats}/4 · ${bars} · ${div} · ${p.bpm} BPM`;
+  return `${p.beats}/${p.beatUnit || 4} · ${bars} · ${div} · ${p.bpm} BPM${p.swing > 50 ? ` · swing ${p.swing}%` : ''}${p.beatUnit === 8 ? ` · ${p.groups.join('+')}` : ''}`;
 }
 
 // Gotovi ritmovi: '.' nema, 'g' ghost, 'x' normalno, 'X' akcenat; razmaci i | su samo radi čitljivosti.
@@ -157,3 +195,15 @@ export const PRESETS = [
     kick: 'x... .... x... .... | x... x... x... x...',
   }),
 ];
+
+for (const definition of CATALOG_DEFINITIONS) {
+  const { key, tracks, ...options } = definition;
+  const shape = blankPattern(options);
+  for (const [id, track] of Object.entries(tracks)) {
+    const symbols = track.replace(/[\s|]/g, '');
+    if (!INST[id] || symbols.length !== totalSlots(shape) || /[^.gxX]/.test(symbols))
+      throw new Error(`Invalid authored preset track: ${key}/${id} (${symbols.length}/${totalSlots(shape)})`);
+  }
+  const category = PRESET_CATEGORIES.find(c => c.id === definition.category);
+  PRESETS.push({ ...preset(definition.name, options, tracks), id: `preset-${key}`, lesson: category.lesson });
+}

@@ -1,7 +1,8 @@
 // MIDI ulaz sa bubnja (Web MIDI: Chrome, Edge, Brave). Svaka nota se pretvara u instrument
 // prema mapi; fabrička mapa odgovara TD-17, a "Nauči" dodjeljuje sljedeći udareni pad.
 
-import { INSTRUMENTS } from './patterns.js';
+import { INSTRUMENTS, INST } from './patterns.js';
+import { saveMidiMap } from './storage.js';
 
 const MAP_KEY = 'trener.midiMapa.v1';
 
@@ -10,6 +11,10 @@ export function defaultMap() {
   for (const inst of INSTRUMENTS) for (const n of inst.midiIn) m[n] = inst.id;
   return m;
 }
+export function normalizeMidiMap(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return defaultMap();
+  return Object.fromEntries(Object.entries(value).filter(([note, inst]) => /^\d+$/.test(note) && Number(note) <= 127 && Object.hasOwn(INST, inst)));
+}
 
 export class MidiInput {
   constructor(handlers) {
@@ -17,7 +22,7 @@ export class MidiInput {
     this.access = null;
     this.learn = null;
     this.outId = '';
-    try { this.map = JSON.parse(localStorage.getItem(MAP_KEY)) || defaultMap(); } catch { this.map = defaultMap(); }
+    try { this.map = normalizeMidiMap(JSON.parse(localStorage.getItem(MAP_KEY))); } catch { this.map = defaultMap(); }
   }
 
   get supported() { return !!navigator.requestMIDIAccess; }
@@ -45,6 +50,7 @@ export class MidiInput {
       ok: inputs.length > 0,
       text: inputs.length ? inputs.map(i => i.name).join(', ') : 'Nema MIDI uređaja. Poveži TD-17 USB kablom i upali ga.',
       outputs,
+      inputs,
     });
   }
 
@@ -61,7 +67,7 @@ export class MidiInput {
         return;
       }
       const inst = this.map[d1];
-      if (inst) this.h.onHit(inst, d2, e.timeStamp, 'midi');
+      if (inst) this.h.onHit(inst, d2, e.timeStamp, 'midi', d1);
     } else if (type === 0xb0 && d1 === 4) {
       this.h.onPedal?.(d2);
     } else if (type === 0xa0 && d2 > 0) {
@@ -88,7 +94,7 @@ export class MidiInput {
     this.save();
   }
 
-  save() { try { localStorage.setItem(MAP_KEY, JSON.stringify(this.map)); } catch {} }
+  save() { return saveMidiMap(this.map); }
 
   notesFor(instId) {
     return Object.entries(this.map).filter(([, v]) => v === instId).map(([k]) => Number(k)).sort((a, b) => a - b);
@@ -98,8 +104,16 @@ export class MidiInput {
   send(note, vel, perfTime) {
     const out = this.outId && this.access?.outputs.get(this.outId);
     if (!out) return false;
-    out.send([0x99, note, vel], perfTime);
-    out.send([0x89, note, 0], perfTime + 80);
-    return true;
+    try {
+      out.send([0x99, note, vel], perfTime);
+      out.send([0x89, note, 0], perfTime + 80);
+      return true;
+    } catch { return false; }
+  }
+
+  stopOutput() {
+    const out = this.outId && this.access?.outputs.get(this.outId);
+    if (!out) return;
+    try { out.clear?.(); out.send([0xb9, 123, 0]); } catch {}
   }
 }

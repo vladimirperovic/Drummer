@@ -1,0 +1,33 @@
+DRUMMER — ORIGINAL 2D ARTWORK
+Generated 19 October 2026.
+
+Source: the procedural geometry in js/kit-3d.js from this repository.
+Part layout: js/kit-config.js. The stored source hash covers both files.
+Generator: qa/generate-kit-art.mjs.
+Command: node qa/generate-kit-art.mjs (requires the local app server).
+
+drummer-2d.png is a fixed orthographic rendering of that scene, with
+opaque white surfaces, dark contours/hardware and black drumhead centers.
+The camera looks down at approximately 66 degrees above the horizontal,
+preserving some shell depth while exposing more of the heads and cymbals.
+mask-*.png files are visibility masks rendered with the same camera and
+depth buffer. They contain the exposed instrument surfaces used for hit
+colors. No reference photograph, downloaded drum illustration, external
+3D model, logo or scanned instrument artwork was used in this export.
+
+js/kit-art-data.js records camera-projected targets and the SHA-256 of
+the source model with LF-normalized line endings. Regenerate assets when changing model geometry; the
+source-consistency test detects stale artwork. The previous js/kit.js
+illustration was replaced and is not embedded in these files.
+
+The geometry uses Three.js and OrbitControls as rendering infrastructure.
+Their MIT license is retained in js/vendor/THREE-LICENSE.txt. This file
+records asset provenance; it does not choose a license for Drummer's
+own source code or override any third-party license.
+
+Custom configurations use the original SVG renderer in js/kit-config-2d.js
+with positions from the same kit-config.js layout as the 3D scene. They do
+not reuse or modify an external illustration and need no server rendering.
+Manual floor-position offsets are stored in the kit configuration and consumed
+by both renderers. Stands and pedals belong to their instrument assemblies.
+Entering layout-edit mode also uses the SVG renderer for a standard kit.

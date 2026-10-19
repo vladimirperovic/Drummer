@@ -1,0 +1,214 @@
+DRUMMER — POPRAVKE, NOVE FUNKCIJE I ZAVRŠNO TESTIRANJE
+Datum: 19. oktobar 2026.
+
+ISHOD
+
+Popravljeno je svih devet problema iz početnog audita. Dodato je svih pet
+predloženih funkcija. Zadržane su smanjene margine iznad i ispod nota.
+Završni automatizovani skup: 190 izvršavanja, 190 prolaza, 0 padova.
+
+Repozitorijum: https://github.com/vladimirperovic/Drummer
+Radna kopija: C:\github\Drummer
+Osnovni commit: b9199e027af2c76b99e67a5dc48835f87daac57f
+Izmene su lokalne; nisu napravljeni commit, push ili PR.
+Aplikacija je dostupna na http://127.0.0.1:8123/.
+Otvoreni prikaz je osvežen i prikazana je nova kartica Vežbanje.
+
+POPRAVLJENIH DEVET PROBLEMA
+
+1. Crash 2 sada ima svoj sintetički zvuk. OfflineAudioContext potvrđuje
+   nenultu energiju svih 13 instrumenata; Crash 2 RMS je približno 0,0983.
+   Taster U i naziv crash2 dopisani su u README.
+   Kod: js/audio.js, README.md.
+
+2. Neispravan sticking pri JSON uvozu više ne ruši note. Normalizacija
+   prihvata tekst, filtrira oznake ruku i koristi prazan zapis za druge tipove.
+   Kod: js/patterns.js.
+
+3. Neispravan tip naziva ritma više ne ruši izvoz. Naziv dobija bezbednu
+   podrazumevanu vrednost i ograničenu dužinu.
+   Kod: js/patterns.js.
+
+4. Pogrešan oblik lokalne biblioteke više ne blokira pokretanje. Čitač
+   proverava niz i pojedinačne zapise. Validacija je primenjena i na nove
+   podatke dnevnika i programa; neispravni brojevi ne ruše replay.
+   Kod: js/storage.js, js/practice.js.
+
+5. Neuspešno čuvanje više se ne prikazuje kao uspešno. Izmene ostaju u
+   memoriji, pojavljuje se trajno upozorenje, ponuđeni su JSON izvoz svih
+   podataka i ponovni pokušaj. Promene biblioteke primenjuju se nakon
+   uspešnog upisa. Testovi simuliraju QuotaExceededError i oporavak dnevnika.
+   Kod: js/storage.js, js/main.js, js/studio.js, index.html.
+
+6. Editor sada menja ćeliju redom normalno → akcenat → ghost → prazno,
+   odnosno 2 → 3 → 1 → 0. Provereni su i Shift, Alt i brisanje.
+   Kod: js/main.js.
+
+7. Udarci tokom odbrojavanja više ne umanjuju rezultat. Bodovanje se
+   uključuje sa početkom vežbe; slobodni udarci u count-in fazi ostaju van ocene.
+   Kod: js/main.js.
+
+8. Završeni pojedinačni prolaz ulazi u istoriju i dnevnik. Granice prolaza
+   finalizuju se jednom, uključujući poslednji prolaz pri automatskom Stop.
+   Kod: js/main.js, js/studio.js.
+
+9. Istovremeni Start zahtevi više ne stvaraju više tajmera. Stanje starting
+   i token otkazivanja sprečavaju dupliranje i naknadni start nakon Stop.
+   Stop prekida zakazani zvuk i MIDI izlaz; isti princip važi i za replay.
+   Kod: js/main.js, js/audio.js, js/midi.js, js/replay.js.
+
+DODATIH PET FUNKCIJA
+
+Sve se nalaze u kartici Vežbanje ispod nota.
+
+1. Dnevnik vežbanja i napredak
+   Automatski čuva sesije, ritam, trajanje, početni/završni BPM, tačnost,
+   rezultate po instrumentu, tajming i dinamiku. Graf prikazuje dane.
+   Poređenje koristi isti ritam, taktove, izbor instrumenata i strogost.
+   Najbolji BPM zahteva završen prolaz sa najmanje 90% tačnosti.
+   Dostupni su izbor, brisanje pojedinačne sesije i JSON izvoz dnevnika.
+
+2. Fokus na taktove A–B i instrumente
+   Bira se uključivi raspon taktova i instrumenti za bodovanje, uz prečice
+   Svi/Ruke/Noge. Ostali udarci čuju se i snimaju bez kazne za višak.
+   Predlog iz poslednje sesije bira slabiji takt/instrument i spušta BPM
+   za 10, do minimuma 30. Ponavljaj kontroliše ponavljanje odabranog dela.
+
+3. Prateća pesma
+   Lokalni audio fajl, waveform, originalni BPM, pomeranje prvog takta,
+   A–B segment, kontrola glasnoće tokom sviranja i četiri brzine.
+   Audio podloga i klik koriste isti AudioContext i zakazani početak.
+   Provereni su count-in, ponavljanje, kratki/neispravni fajlovi, uklanjanje
+   tokom učitavanja i zabrana brzina koje izlaze iz 30–260 BPM.
+
+4. Programi vežbanja
+   Svaka stavka čuva kopiju ritma i fokusa, trajanje, BPM, cilj tačnosti
+   i pauzu. Stavke mogu da se pomeraju i uklanjaju, a program sačuva/učita.
+   Jedno pokretanje izvršava listu, pravi sesiju za svaku vežbu i prikazuje
+   ostvaren/neostvaren cilj. Prekid tokom pauze otkazuje narednu vežbu.
+
+5. Replay stvarnog izvođenja i MIDI izvoz
+   Čuvaju se originalni timestamp, velocity i MIDI nota/zonа svakog udarca.
+   Replay podržava brzinu, pauzu, poziciju i opciono očekivani ritam.
+   Graf prikazuje očekivane/stvarne udarce i promašaje, uz izbor prolaza.
+   JSON čuva vremena sa decimalama. Standardni MIDI type-0, kanal 10,
+   čuva originalne note i velocity, sa preciznošću 1 ms; nema kvantizacije
+   na notnu mrežu. Note-off se šalje 80 ms posle svakog udarca.
+
+Novi moduli: js/practice.js, js/studio.js, js/backing.js, js/replay.js.
+Prošireni su transport, zvuk, MIDI, čuvanje i HTML/CSS interfejs.
+Python analiza sada zatvara ulazni fajl kroz with open(...).
+
+ZAVRŠNI REZULTATI
+
+Oblast                            Ukupno    Prošlo    Palo
+JavaScript modeli i logika             77        77       0
+Chromium browser scenariji             53        53       0
+Microsoft Edge, isti skup              53        53       0
+Python analiza                         7         7       0
+UKUPNO                               190       190       0
+
+To je 137 test-slučajeva, uz još 53 izvršavanja istih browser scenarija
+u Edge-u. Pojedini scenariji proveravaju više kombinacija, npr. svih
+96 podržanih kombinacija strukture ritma.
+
+Chromium: 151.0.7922.34
+Microsoft Edge: 155.0.4283.62
+Sintaksa svih 12 produkcionih JS modula i git diff --check: prošli.
+Nema preskočenih/očekivano neuspešnih testova u završnom skupu.
+
+OBIM PROVERE
+
+- Svih 14 preseta i 13 instrumenata; 96 kombinacija taktova, doba i podele.
+- Normalizacija uvoza, granice BPM-a, promena strukture, kopiranje taktova,
+  dinamika, editor, čuvanje/izvoz/uvoz i ponovno učitavanje.
+- Granice strogog/normalnog/laganog bodovanja, ranije/kasnije, promašaji,
+  višak, hi-hat artikulacije, zasebni crash padovi, dinamika i kalibracija.
+- MIDI kanali, note-off/nulta jačina, mapiranje, učenje, reset, pedala,
+  choke, hot-plug, nedostupan/odbijen/prazan MIDI i izlazne poruke.
+- Count-in, podele metronoma, tihi taktovi, jedan prolaz, ponavljanje,
+  osam brzih uzastopnih prolaza, trener tempa i kvantizovano snimanje.
+- Svih devet regresija iz početnog audita.
+- A–B i instrumenti, slobodni udarci van fokusa, prazna selekcija i predlog.
+- Dnevnik nakon reload-a, poređenje sesija, najbolji BPM, neuspešan upis
+  i ponovni pokušaj, oštećeni zapisi i očuvanje decimalnih vremena.
+- Waveform/WAV, pomeraj prvog takta, pola brzine, isti sat klika i podloge,
+  count-in i loop, granice fajla/BPM-a, jačina u toku reprodukcije.
+- Program od dve različite vežbe, čuvanje kopija, oba ishoda cilja,
+  dnevnik za svaku stavku i otkazivanje sledeće vežbe tokom pauze.
+- Replay očekivanih/stvarnih nota, promašaji, pola brzine, pause/seek/stop,
+  originalne MIDI zone 40 i 52, velocity i JSON/MIDI preuzimanje.
+- Binarni MIDI parser proverava zaglavlje, dužinu trake, tempo, VLQ,
+  simultane udarce, duge pauze i završetak trake.
+- Osnovni prikaz na 1440, 1024, 768, 390 i 360 px; svih pet novih panela
+  na 1440, 768, 390 i 360 px bez horizontalnog overflow-a dokumenta.
+- Vizuelno pregledani desktop, telefon, dnevnik, pesma, program i replay;
+  otvorena korisnička aplikacija osvežena i prikazana nova kartica.
+- Python: prazni i pojedinačni snimci, dupli triggeri, crosstalk, CC4,
+  tajming, segmenti i zasićenje jačine.
+
+Tokom završavanja ispravljen je i test koji je proveravao <option> preko
+Playwright isDisabled(), umesto njegove DOM disabled osobine. Jedan Edge
+prolaz zastao je pri inicijalnom učitavanju testa; završni samostalni prolaz
+svih 53 scenarija je uspešan. Rok za učitavanje testnog mosta je 15 sekundi.
+Produkcioni kod nije menjan da bi se zaobišle ove provere.
+
+OGRANIČENJA I PRAKTIČNE NAPOMENE
+
+- Fizički Roland TD-17, USB transport, stvarna izlazna latencija, subjektivni
+  kvalitet zvuka i EZdrummer nisu testirani. MIDI je simuliran, a audio
+  računat/pokretan u browseru. Savršen rezultat koristi poznate timestamp-ove.
+- Swift/CoreMIDI alat zahteva macOS i nije kompajliran na Windowsu.
+  Safari/Firefox i višesatni rad nisu obuhvaćeni.
+- Audio podloga se dekodira u memoriju, ne šalje se na server i ne ostaje
+  posle reload-a. Podržani formati zavise od browser dekodera; automatski
+  testovi koriste WAV. Brzina menja i visinu tona; time-stretch nije dodat.
+- Replay čuva MIDI udarce, ne audio izlaz bubnja/pesme niti kontinuirani
+  CC4/aftertouch snimak. Reprodukuje ih izabranim kitom u aplikaciji.
+- Dnevnik i programi su lokalni za browser profil/adresu. Kada se popuni
+  localStorage, upozorenje nudi izvoz i retry; nema tihog brisanja istorije.
+  Interfejs uvoza dnevnika/programa još nije dodat; JSON izvozi su arhive
+  dostupne za dalju analizu i ručni oporavak. Uvoz ritmova radi kao ranije.
+- Trajanje programa označava vreme same vežbe. Odbrojavanje, završni prozor
+  za kasne udarce i pauze produžavaju ukupno zidno vreme.
+- U kits/index.json nema preuzetih stvarnih WAV kitova; postoji synth fallback.
+
+NAREDNIH PET PREDLOGA
+
+1. Uvoz standardnih MIDI fajlova u editor
+   Izdvajanje bubanj kanala, izbor dela pesme, mapiranje nota i izbor
+   kvantizacije pre pretvaranja u ritam. Time bi MIDI izvoz dobio i ulazni par.
+
+2. Swing i složenije mere
+   Kontrola swing odnosa i podrška za 6/8, 7/8 i grupisanje doba.
+   Notacija, metronom, editor i bodovanje treba da dele isti vremenski model.
+
+3. Profili za različite bubanj module
+   Sačuvani paketi MIDI mapa, kalibracije i velocity krivih, sa izborom
+   profila po uređaju. Korisno za prelazak između TD-17, drugog seta i tastature.
+
+4. Instalacija kao offline PWA
+   Lokalno keširanje aplikacije i preseta, instalacija kao samostalne
+   aplikacije i jasan postupak ažuriranja. MIDI i audio proveriti u tom režimu.
+
+5. Štampa i PDF notnog zapisa
+   Čist višestrani prikaz ritma sa nazivom, tempom, merom i R/L oznakama,
+   uz izbor broja taktova po redu i pripremu listova za vežbanje.
+
+DOKAZI I PONAVLJANJE
+
+qa/README.md — komande i objašnjenje testnog okruženja.
+qa/core-results.txt, qa/python-results.txt — logovi modela/Python-a.
+qa/browser-results.txt, qa/edge-results.txt — završni browser logovi.
+qa/artifacts/browser-results.json — Chromium: 53 PASS, 0 FAIL.
+qa/artifacts/msedge/msedge-browser-results.json — Edge: 53 PASS, 0 FAIL.
+qa/artifacts/audio-energy.json — nenulta energija svih sintetičkih instrumenata.
+qa/artifacts/performance.mid i performance.json — probni izvozi izvođenja.
+qa/artifacts/app-preview.png — osvežena korisnička aplikacija.
+qa/artifacts/journal.png, backing.png, replay.png, program.png,
+studio-phone.png — prikazi novih funkcija.
+qa/IZVESTAJ-pre-popravki.txt — sačuvan početni audit.
+
+Slike sa failure u nazivu i stari Edge smoke izveštaj u korenu artifacts/
+su istorijski razvojni dokazi. Merodavni završni rezultati su dva gore
+navedena JSON izveštaja i završni logovi.

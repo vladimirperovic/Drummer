@@ -1,0 +1,250 @@
+{
+  "browser": "msedge",
+  "browserVersion": "155.0.4283.62",
+  "generatedAt": "2026-10-19T14:49:44.076Z",
+  "sourceCommit": "b9199e027af2c76b99e67a5dc48835f87daac57f",
+  "localChange": "Nine bug fixes and five practice features",
+  "passed": 53,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Startup: notation, 94 presets, simulated MIDI, assets",
+      "status": "PASS"
+    },
+    {
+      "name": "All presets render valid note coordinates",
+      "status": "PASS"
+    },
+    {
+      "name": "All 96 supported meter/bar/subdivision combinations render",
+      "status": "PASS"
+    },
+    {
+      "name": "Keyboard: all 13 instruments, normal/accent/ghost",
+      "status": "PASS"
+    },
+    {
+      "name": "Keyboard shortcuts do not trigger when editing text",
+      "status": "PASS"
+    },
+    {
+      "name": "Tempo UI enforces 30-260 BPM and keyboard increments",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: editor clicks follow normal -> accent -> ghost -> empty",
+      "status": "PASS"
+    },
+    {
+      "name": "Editor modifiers, erase, resize and copy first bar",
+      "status": "PASS"
+    },
+    {
+      "name": "Save, duplicate, export and reload preserve an edited rhythm",
+      "status": "PASS"
+    },
+    {
+      "name": "JSON upload accepts valid patterns and rejects malformed JSON",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: imported non-string sticking must not crash pattern loading",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: imported non-string name must not break export",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: corrupted library shape must recover on startup",
+      "status": "PASS"
+    },
+    {
+      "name": "MIDI learn, input, choke, pedal and reset through UI",
+      "status": "PASS"
+    },
+    {
+      "name": "MIDI unsupported: keyboard fallback still works",
+      "status": "PASS"
+    },
+    {
+      "name": "MIDI denied: keyboard fallback still works",
+      "status": "PASS"
+    },
+    {
+      "name": "MIDI empty: keyboard fallback still works",
+      "status": "PASS"
+    },
+    {
+      "name": "MIDI hot-plug updates connection status",
+      "status": "PASS"
+    },
+    {
+      "name": "Scheduler: metronome subdivisions, quiet bars and MIDI output",
+      "status": "PASS"
+    },
+    {
+      "name": "Single pass automatically stops and counts all 12 missed notes",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: completed single pass is shown in pass history",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: count-in strikes do not reduce exercise accuracy",
+      "status": "PASS"
+    },
+    {
+      "name": "Recording quantizes live hits and preserves dynamic accents",
+      "status": "PASS"
+    },
+    {
+      "name": "Trainer increases tempo for 90%+ pass and clamps maximum",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: concurrent Start requests create only one playback timer",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: all 19 instruments produce non-silent synthesized audio",
+      "status": "PASS",
+      "detail": {
+        "crash": 0.10343046234743186,
+        "crash2": 0.09866002949379872,
+        "ride": 0.018763741765916882,
+        "bell": 0.04027837229133705,
+        "hh": 0.00808964360648517,
+        "hho": 0.025768971515636348,
+        "tom1": 0.07174249402992777,
+        "tom2": 0.07142026512975452,
+        "snare": 0.016272557393505242,
+        "xstick": 0.00665669712536141,
+        "tom3": 0.07092177520979528,
+        "kick": 0.07211988736501282,
+        "hhp": 0.008952926042613198,
+        "tom4": 0.0710379561437458,
+        "floor2": 0.07140573529577539,
+        "snare2": 0.016272803671959404,
+        "xstick2": 0.006654887063540759,
+        "kick2": 0.07211846966729968,
+        "crash3": 0.09856178155243091
+      }
+    },
+    {
+      "name": "Desktop and tablet layouts fit viewport without document overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "Phone layout at 390px fits viewport",
+      "status": "PASS"
+    },
+    {
+      "name": "Narrow phone layout at 360px fits viewport",
+      "status": "PASS"
+    },
+    {
+      "name": "Calibration estimates latency and rejects insufficient hits",
+      "status": "PASS"
+    },
+    {
+      "name": "WAV sample kit loads and missing kit falls back to synth",
+      "status": "PASS"
+    },
+    {
+      "name": "BUG: failed persistent save must not report success",
+      "status": "PASS"
+    },
+    {
+      "name": "Continuous playback completes eight loops without growing pending queue",
+      "status": "PASS",
+      "detail": {
+        "loops": 8,
+        "pending": 3,
+        "queued": 2,
+        "misses": 99
+      }
+    },
+    {
+      "name": "Feature: A-B scores only chosen bars and instruments while retaining other raw hits",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: empty instrument selection prevents starting with an explanation",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: weak segment suggestion uses the last session and lowers tempo",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: journal stores session, statistics and completed passes across reload",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: original MIDI zone, velocity and fractional timing survive capture and reload",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: journal compares matching sessions and reports the best 90-percent BPM",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: failed journal save retains the performance and retry persists it",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: replay renders expected notes, real hits and misses without quantization",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: replay slows original timing, pauses, seeks and stops independently",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: MIDI and JSON exports retain recorded notes and velocity",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: backing WAV, A-B, first beat and half-speed share the audio clock",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: backing starts after count-in and repeats selected audio segment",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: invalid backing file and out-of-file loop fail without starting playback",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: program persists snapshots, runs sequentially and stores both outcomes",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: stopping a program during its break cancels the next exercise",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: canceling pending audio initialization cannot start a stale session",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: all five studio panels fit desktop, tablet and phone widths",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: Space operates focused controls without unexpectedly starting a session",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: corrupt journal fields remain readable and safe after reload",
+      "status": "PASS"
+    },
+    {
+      "name": "Feature: backing volume changes live and speed choices respect tempo limits",
+      "status": "PASS"
+    }
+  ]
+}

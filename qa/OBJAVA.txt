@@ -1,0 +1,71 @@
+DRUMMER — PREGLED PRE JAVNE BETA-VERZIJE
+19. oktobar 2026. Lokalni radni direktorijum C:\github\Drummer.
+
+Zaključak pregleda: nije identifikovana očigledna tehnička zabrana za
+javnu beta-verziju. Aplikacija još nije objavljena na javnom hostingu.
+Ovo je pregled trenutnih fajlova i ponašanja, ne potpuna revizija istorije
+repozitorijuma, svih prava, zaštitnih znakova ili bezbednosti hostinga.
+
+SADRŽAJ I POREKLO
+
+- Prethodna 2D ilustracija zamenjena je izvozom našeg proceduralnog 3D
+  modela iz js/kit-3d.js. Slika i 12 maski imaju isti pogled i dubinu.
+  Nema fotografije iz priloga, tuđeg 3D modela ili logotipa u izvozu.
+  Generator i poreklo: qa/generate-kit-art.mjs, assets/kit/PROVENANCE.txt.
+- Ugrađeni zvukovi sintetizuju se u js/audio.js. kits/index.json je
+  prazan: u distribuciji nema EZdrummer ili drugih komercijalnih WAV kitova.
+  Podrška za reprodukciju sopstvenih semplova nije dozvola za objavljivanje
+  tuđih semplova; licenca svakog budućeg dodatog paketa proverava se posebno.
+- Three.js i OrbitControls su lokalne biblioteke sa MIT licencom u
+  js/vendor/THREE-LICENSE.txt. Tu licencu zadržati u javnoj distribuciji.
+- Izvorni projekat nema izabranu glavnu LICENSE datoteku. To samo po sebi
+  ne sprečava nosioca prava da objavi svoju aplikaciju, ali javni GitHub
+  repo nije automatski dozvola drugima da preuzimaju i distribuiraju kod.
+  Izbor licence za Drummer ostaje odluka vlasnika; nije automatski dodat MIT.
+
+TEHNIČKA PRIPREMA
+
+- Objaviti samo potrebne aplikacione fajlove: index.html, style.css,
+  manifest.webmanifest, sw.js, js/, icons/, assets/kit/ i kits/.
+  Testni izveštaji, screenshot-ovi, qa/node_modules i .git nisu deo sajta.
+- Koristiti HTTPS statički hosting. Postojeći Python server služi za
+  lokalni razvoj i vezan je za 127.0.0.1; ne izlagati ceo radni direktorijum.
+  Web MIDI zahteva siguran kontekst, podržan browser i dozvolu korisnika.
+- Sačuvati ispravne JS MIME tipove, putanje i keširanje. Proveriti PWA
+  instalaciju/ažuriranje i MIDI na stvarnoj produkcionoj adresi.
+- Podaci iz localhost profila ne prelaze automatski na novi domen.
+  JSON izvoz/uvoz prenosi ritmove; puna obnova dnevnika/programa/favorita
+  iz backup fajla još nije gotova funkcija interfejsa.
+- Objaviti kratko objašnjenje privatnosti: ritmovi, podešavanja, favoriti
+  i vežbe čuvaju se u lokalnom browseru; audio podloga je lokalni fajl.
+  Nisu nađeni ugrađeni analytics/telemetry servisi ili serverska prijava.
+  Hosting može voditi sopstvene pristupne logove; to proveriti pri izboru.
+- Ciljana pretraga trenutnih fajlova nije pronašla tipične obrasce API
+  ključeva, pristupnih tokena ili privatnih ključeva. To nije kompletan
+  automatski secret audit cele Git istorije.
+- WebMCP radi u pojedinačnoj otvorenoj stranici, može se isključiti i
+  ne otvara javni HTTP endpoint. Ne daje pristup drugim korisnicima.
+- Fizički MIDI bubanj, čujna latencija i sve kombinacije browsera/OS-a
+  nisu provereni. Rezultati automatizacije su u IZVESTAJ.txt.
+
+KORISNE SLEDEĆE FUNKCIJE (PREDLOG, NISU IMPLEMENTIRANE)
+
+1. Vođena škola: lekcije po nivoima, ciljevi i provera napredovanja.
+2. Sastavljanje pesme od intro/strofa/refren/fill blokova, sa izvozom.
+3. Pretraga ritma odsviravanjem kratkog primera, slično Tap2Find.
+4. Mikser po instrumentu i legalno licenciran akustični paket zvukova.
+   Već postoji loader WAV semplova, ali nema uključenog akustičnog paketa
+   niti zasebnih kanala sa pan/EQ/reverb kontrolama.
+5. Prepoznavanje akustičnih bubnjeva preko mikrofona; složeniji projekat.
+
+Izvori provereni 19. oktobra 2026:
+https://www.toontrack.com/product/ezdrummer-3/
+https://support.melodics.com/en/articles/8044669-how-to-subscribe-to-melodics
+https://support.melodics.com/en/articles/8641253-guide-to-calibrating-acoustic-drums-with-melodics
+https://choosealicense.com/no-permission/
+https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API
+https://www.copyright.gov/help/faq/faq-fairuse.html
+
+Sama promena par detalja tuđe ilustracije nije potvrda prava korišćenja.
+Zato je stari prikaz u ovoj nadogradnji zamenjen generisanjem iz našeg
+modela, a ne samo daljim precrtavanjem ili menjanjem krugova.

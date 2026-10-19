@@ -1,0 +1,45 @@
+{
+  "type": "drummer-kit-profile",
+  "version": 1,
+  "profile": {
+    "id": "",
+    "name": "Portable kit",
+    "device": "",
+    "calib": 0,
+    "curve": "linear",
+    "gain": 1,
+    "kitConfig": {
+      "racks": 3,
+      "floors": 2,
+      "snares": 2,
+      "kicks": 2,
+      "crashes": 3,
+      "rides": 1,
+      "leftHanded": false
+    },
+    "map": {
+      "22": "hh",
+      "26": "hho",
+      "36": "kick",
+      "37": "xstick",
+      "38": "snare",
+      "40": "snare",
+      "42": "hh",
+      "43": "tom3",
+      "44": "hhp",
+      "45": "tom2",
+      "46": "hho",
+      "47": "tom2",
+      "48": "tom1",
+      "49": "crash",
+      "50": "tom1",
+      "51": "ride",
+      "52": "crash2",
+      "53": "bell",
+      "55": "crash",
+      "57": "crash2",
+      "58": "tom3",
+      "59": "ride"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+test_crosstalk (test_analysis.AnalysisTests.test_crosstalk) ... ok
+test_double_trigger (test_analysis.AnalysisTests.test_double_trigger) ... ok
+test_empty_capture (test_analysis.AnalysisTests.test_empty_capture) ... ok
+test_hi_hat_pedal (test_analysis.AnalysisTests.test_hi_hat_pedal) ... ok
+test_saturation_warning_and_segments (test_analysis.AnalysisTests.test_saturation_warning_and_segments) ... ok
+test_single_hit (test_analysis.AnalysisTests.test_single_hit) ... ok
+test_timing_against_click (test_analysis.AnalysisTests.test_timing_against_click) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.021s
+
+OK

@@ -1,0 +1,23 @@
+{
+  "browser": "Chromium",
+  "browserVersion": "151.0.7922.34",
+  "generatedAt": "2026-10-19T14:00:05.184Z",
+  "sourceCommit": "b9199e027af2c76b99e67a5dc48835f87daac57f",
+  "localChange": "Nine bug fixes and five practice features",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "name": "BUG: editor clicks follow normal -> accent -> ghost -> empty",
+      "status": "PASS"
+    },
+    {
+      "name": "Editor modifiers, erase, resize and copy first bar",
+      "status": "PASS"
+    },
+    {
+      "name": "Recording quantizes live hits and preserves dynamic accents",
+      "status": "PASS"
+    }
+  ]
+}

@@ -42,7 +42,8 @@ def vel_summary(vels):
 
 
 def main(path):
-    events = [json.loads(line) for line in open(path) if line.strip()]
+    with open(path, encoding="utf-8") as source:
+        events = [json.loads(line) for line in source if line.strip()]
     hits = sorted((e for e in events if e.get("type") == "on"), key=lambda e: e["t"])
     beats = sorted((e for e in events if e.get("type") == "beat"), key=lambda e: e["t"])
     ccs = [e for e in events if e.get("type") == "cc"]

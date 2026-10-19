@@ -1,0 +1,87 @@
+
+> test:browser
+> node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs
+
+PASS Startup: notation, 94 presets, simulated MIDI, assets
+PASS All presets render valid note coordinates
+PASS All 96 supported meter/bar/subdivision combinations render
+PASS Keyboard: all 13 instruments, normal/accent/ghost
+PASS Keyboard shortcuts do not trigger when editing text
+PASS Tempo UI enforces 30-260 BPM and keyboard increments
+PASS BUG: editor clicks follow normal -> accent -> ghost -> empty
+PASS Editor modifiers, erase, resize and copy first bar
+PASS Save, duplicate, export and reload preserve an edited rhythm
+PASS JSON upload accepts valid patterns and rejects malformed JSON
+PASS BUG: imported non-string sticking must not crash pattern loading
+PASS BUG: imported non-string name must not break export
+PASS BUG: corrupted library shape must recover on startup
+PASS MIDI learn, input, choke, pedal and reset through UI
+PASS MIDI unsupported: keyboard fallback still works
+PASS MIDI denied: keyboard fallback still works
+PASS MIDI empty: keyboard fallback still works
+PASS MIDI hot-plug updates connection status
+PASS Scheduler: metronome subdivisions, quiet bars and MIDI output
+PASS Single pass automatically stops and counts all 12 missed notes
+PASS BUG: completed single pass is shown in pass history
+PASS BUG: count-in strikes do not reduce exercise accuracy
+PASS Recording quantizes live hits and preserves dynamic accents
+PASS Trainer increases tempo for 90%+ pass and clamps maximum
+PASS BUG: concurrent Start requests create only one playback timer
+PASS BUG: all 19 instruments produce non-silent synthesized audio
+PASS Desktop and tablet layouts fit viewport without document overflow
+PASS Phone layout at 390px fits viewport
+PASS Narrow phone layout at 360px fits viewport
+PASS Calibration estimates latency and rejects insufficient hits
+PASS WAV sample kit loads and missing kit falls back to synth
+PASS BUG: failed persistent save must not report success
+PASS Continuous playback completes eight loops without growing pending queue
+PASS Feature: A-B scores only chosen bars and instruments while retaining other raw hits
+PASS Feature: empty instrument selection prevents starting with an explanation
+PASS Feature: weak segment suggestion uses the last session and lowers tempo
+PASS Feature: journal stores session, statistics and completed passes across reload
+PASS Feature: original MIDI zone, velocity and fractional timing survive capture and reload
+PASS Feature: journal compares matching sessions and reports the best 90-percent BPM
+PASS Feature: failed journal save retains the performance and retry persists it
+PASS Feature: replay renders expected notes, real hits and misses without quantization
+PASS Feature: replay slows original timing, pauses, seeks and stops independently
+PASS Feature: MIDI and JSON exports retain recorded notes and velocity
+PASS Feature: backing WAV, A-B, first beat and half-speed share the audio clock
+PASS Feature: backing starts after count-in and repeats selected audio segment
+PASS Feature: invalid backing file and out-of-file loop fail without starting playback
+PASS Feature: program persists snapshots, runs sequentially and stores both outcomes
+PASS Feature: stopping a program during its break cancels the next exercise
+PASS Feature: canceling pending audio initialization cannot start a stale session
+PASS Feature: all five studio panels fit desktop, tablet and phone widths
+PASS Feature: Space operates focused controls without unexpectedly starting a session
+PASS Feature: corrupt journal fields remain readable and safe after reload
+PASS Feature: backing volume changes live and speed choices respect tempo limits
+{"passed":53,"failed":0}
+PASS Expansion: editor changes 6/8 and 7/8 with correct grid, grouping and notation
+PASS Expansion: 7/8 scheduler accents 2+2+3, ends after seven eighths and saves a pass
+PASS Expansion: swung scheduler records unequal subdivisions and count-in retains duration
+PASS Expansion: swung recording quantizes at the swung grid rather than straight time
+PASS Expansion: MIDI import previews channel, meter, mapping and dynamic hits then saves
+PASS Expansion: MIDI track/channel and start selection can be changed before importing
+PASS Expansion: malformed MIDI is rejected without replacing the current pattern
+PASS Expansion: MIDI import reports empty selection and can use active device mapping
+PASS Expansion: two device profiles restore independent maps, calibration and velocity curves
+PASS Expansion: profile device match, deletion and quota failure are explicit
+PASS Expansion: velocity curve affects live sound/scoring but recording keeps raw velocity
+PASS Expansion: profile controls are locked during exercise and program
+FAIL Expansion: English covers all static screens, instrument labels and accessibility text: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   'Profile uređaja'
++ ]
+- []
+
+PASS Expansion: language persists, toggles back, and does not change notes or custom names
+PASS Expansion: English translates live errors, score counts, journal and confirmations
+PASS Expansion: print preview paginates 7/8, preserves sticking and produces an English PDF
+PASS Expansion: print controls remove sticking and retain user title safely
+PASS Expansion: new screens and English fit phone, tablet and desktop
+PASS Expansion: PWA manifest, icons and all app modules are cached for offline reload
+PASS Expansion: PWA shows install invitation and update checks without forced reload
+PASS Expansion: a real PWA update protects edits and storage failures, then preserves saved data
+{"passed":20,"failed":1}

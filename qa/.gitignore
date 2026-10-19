@@ -1,0 +1,7 @@
+node_modules/
+__pycache__/
+
+# Keep source, reports and final visual evidence; omit transient debug captures.
+artifacts/**/*failure*.png
+artifacts/*-before.png
+artifacts/*-debug.png
