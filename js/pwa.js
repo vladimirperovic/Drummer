@@ -17,10 +17,11 @@ export async function setupPwa(host) {
     catch { status('Server nije dostupan. Nastavi offline i proveri kasnije.'); }
     $('pwaUpdate').hidden = !registration?.waiting;
   };
-  $('pwaUpdate').onclick = () => {
+  $('pwaUpdate').onclick = async () => {
     if (!registration?.waiting) return;
     if (!host.canReload()) { status('Zaustavi vežbu i sačuvaj izmene ritma i programa pre ažuriranja.'); return; }
-    if (!host.flush()) { status('Sačuvaj kopiju podataka pre ažuriranja.'); return; }
+    if (!await host.flush()) { status('Sačuvaj kopiju podataka pre ažuriranja.'); return; }
+    if (!host.canReload()) { status('Zaustavi vežbu i sačuvaj izmene ritma i programa pre ažuriranja.'); return; }
     reloadForUpdate = true; registration.waiting.postMessage({ type: 'ACTIVATE_UPDATE' });
   };
   const connectivity = () => { $('pwaNetwork').textContent = navigator.onLine ? 'Browser je online.' : 'Browser je offline.'; };

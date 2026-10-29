@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="performance-report.css">
 <link rel="stylesheet" href="score-import.css">
+  <link rel="stylesheet" href="rhythm-capture.css">
+  <link rel="stylesheet" href="ai-tools.css">
+<link rel="stylesheet" href="editor-tools.css">
+<link rel="stylesheet" href="studio-next.css">
 <meta name="description" content="Practice drums with MIDI, readable sheet music, timing feedback and a customizable 2D/3D kit. Free, open source and offline-ready.">
 <meta property="og:title" content="Drummer — Drum practice in your browser">
 <meta property="og:description" content="MIDI drum practice, MusicXML scores, timing reports and an interactive drum kit. No account required.">
@@ -21,7 +25,7 @@
 <body>
 <header class="bar">
   <div class="bar-primary">
-  <div class="brand">Drummer</div>
+  <a class="brand" id="homeLink" href="./" aria-label="Početni prikaz">Drummer</a>
   <div class="transport-group">
   <button id="playBtn" class="play" title="Start / stop (razmak)">▶ Start</button>
   <div class="tempo" title="Tempo (strelice gore/dolje, Shift ±5)">
@@ -35,6 +39,7 @@
   <div class="hit-feedback"><span class="hit-caption">Poslednji udarac</span><output id="lastHit" class="lasthit free" aria-live="off">Spremno za sviranje</output></div>
   </div>
   <div class="bar-tools">
+    <button id="captureRhythm">Snimaj novi ritam</button>
     <button id="importSong" title="Otvori MusicXML notni zapis">Uvezi partituru</button>
     <input id="scoreFile" type="file" accept=".musicxml,.xml,.mxl" hidden>
     <button id="scoreView" aria-pressed="false" title="Prikaži samo komande i note; Esc vraća editor">⤢ Samo note</button>

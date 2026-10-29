@@ -1,0 +1,17 @@
+export default {
+  'MIDI pravila po uređaju i kanalu': 'MIDI routing by device and channel',
+  'Posebno pravilo ima prednost nad osnovnom mapom. Uređaj + kanal, zatim uređaj, zatim kanal; ostale note koriste osnovnu mapu.': 'Specific rules override the base map: device + channel first, then device, then channel. Other notes use the base map.',
+  'Ulazni uređaj': 'Input device', 'Ulazni kanal': 'Input channel', 'MIDI nota': 'MIDI note',
+  'Svi kanali': 'All channels', 'Svi uređaji': 'All devices', 'Svi': 'All', 'Instrument': 'Instrument', 'Nota': 'Note', 'Radnja': 'Action',
+  'Dodaj ulazno pravilo': 'Add input rule', 'Nauči uređaj i kanal': 'Learn device and channel', 'Otkaži učenje': 'Cancel learning',
+  'Nauči beleži stvarni uređaj, kanal i notu sledećeg udarca.': 'Learn captures the actual device, channel and note of the next hit.',
+  'Udari pad na željenom uređaju i kanalu.': 'Strike a pad on the desired device and channel.',
+  'Ulazno pravilo je naučeno.': 'Input rule learned.', 'Obriši ulazno pravilo': 'Delete input rule',
+  'MIDI pravila su sačuvana.': 'MIDI routing saved.',
+  'MIDI pravila nisu sačuvana. Oslobodi prostor i pokušaj ponovo.': 'MIDI routing was not saved. Free some storage and try again.',
+  'Nema posebnih pravila. Osnovna mapa važi za sve uređaje i kanale.': 'No specific rules. The base map applies to all devices and channels.',
+  'Nezavisna izlazna mapa': 'Independent output mapping',
+  'Podrazumevano koristi izabrani MIDI izlaz, kanal 10 i GM notu. Izaberi drugi uređaj, kanal ili notu za pojedini instrument.': 'The default uses the selected MIDI output, channel 10 and the GM note. Choose a different device, channel or note for each instrument.',
+  'MIDI izlaz': 'MIDI output', 'MIDI izlaz za': 'MIDI output for', 'Izlazni kanal za': 'Output channel for', 'Izlazna nota za': 'Output note for',
+  'Izabrani MIDI izlaz': 'Selected MIDI output', 'Podrazumevano': 'Default', 'nije povezan': 'disconnected',
+};

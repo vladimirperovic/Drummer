@@ -116,7 +116,10 @@ await scenario('Pointer: live clicks keep playback running, score once and do no
   const hits = await p.evaluate(() => __pointerQA.studio.capture.hits);
   assert.equal(hits.length, 12); assert.ok(hits.every(h => h.source === 'mouse')); assert.ok(hits.every(h => h.kind !== 'free'));
   await p.locator('#playBtn').click();
-  assert.equal(await p.evaluate(() => __pointerQA.studio.sessions.at(-1).hits.length), 12);
+  assert.equal(await p.evaluate(async () => {
+    await __pointerQA.studio.flushJournal();
+    return (await __pointerQA.studio.loadSession(__pointerQA.studio.sessions.at(-1).id)).hits.length;
+  }), 12);
 });
 await scenario('Pointer: Record writes the clicked instrument and dynamics only during playback', async p => {
   await p.locator('#record').check();

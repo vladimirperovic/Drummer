@@ -20,11 +20,22 @@ import { setupAgentTools, ToolError } from './agent-tools.js';
 import { normalizeKit, kitInstruments, missingKitInstruments } from './kit-config.js';
 import { KitConfigurator } from './kit-config-ui.js';
 import { createScoreImporter } from './score-import.js';
+import { RhythmCapture } from './rhythm-capture.js';
+import { createEditorTools } from './editor-tools.js';
+import { appendLibraryPreview } from './library-preview.js';
+import { createAiTools } from './ai-tools.js';
+import { candidateArrangement } from './ai-reference.js';
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+const debounce = (fn, ms) => {
+  let timer, args = [];
+  const run = (...a) => { args = a; clearTimeout(timer); timer = setTimeout(() => { timer = null; fn(...args); }, ms); };
+  run.cancel = () => { clearTimeout(timer); timer = null; };
+  run.flush = () => { run.cancel(); return fn(...args); };
+  return run;
+};
 
 const settings = store.loadSettings({
   metro: true, clickSub: 1, countIn: true, loop: true, playPattern: false, liveSound: false, record: false,
@@ -36,6 +47,7 @@ const settings = store.loadSettings({
 });
 settings.record = false;
 settings.kitConfig = normalizeKit(settings.kitConfig);
+let activeInstrumentIds = new Set(kitInstruments(settings.kitConfig).map(i => i.id));
 settings.level = LEVELS[settings.level] ? settings.level : 'normalno';
 settings.calib = bounded(settings.calib, -1000, 1000, 0);
 for (const bus of ['click', 'pattern', 'live']) settings.vol[bus] = bounded(settings.vol[bus], 0, 1, .7);
@@ -56,7 +68,7 @@ midi.outId = settings.midiOut;
 
 let library = store.loadLibrary();
 let favorites = new Set(store.loadFavorites());
-const libraryPages = { mine: 1, presets: 1 }, PAGE_SIZE = 12;
+const libraryPages = { mine: 1, presets: 1 }, PAGE_SIZE = 20;
 settings.favoritesOnly = settings.favoritesOnly === true;
 let pattern = normalize(settings.current || structuredClone(PRESETS[0]));
 // Recover the draft status too: otherwise reloading makes an unsaved rhythm
@@ -65,7 +77,7 @@ const savedPattern = [...library, ...PRESETS].find(p => p.id && p.id === pattern
 const draftContent = p => JSON.stringify(['name', 'bars', 'beats', 'beatUnit', 'division', 'swing', 'groups', 'sticking', 'steps'].map(key => p[key]));
 let dirty = settings.currentDirty === true || (settings.currentDirty == null && !!settings.current && (!savedPattern || draftContent(pattern) !== draftContent(normalize(savedPattern))));
 settings.currentDirty = dirty;
-let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator;
+let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator, editorTools, rhythmCapture, aiTools;
 let edCells = [];
 let calibration = null;
 
@@ -89,6 +101,7 @@ const perfForAudio = time => play.on && play.firstAudio != null ? play.firstPerf
 // ---------- Sviranje ----------
 
 async function start(options = {}) {
+  if (rhythmCapture?.busy || studio?.backupRestore?.running || aiTools?.busy) return false;
   if (play.on || play.starting) return false;
   if (missingKitInstruments(pattern, settings.kitConfig).length) { toast('Ritam koristi delove koji nisu u tvom setu. Uključi ih u Moj bubanj ili izmeni ritam.'); return false; }
   if (calibration) { toast('Sačekaj da se kalibracija završi.'); return false; }
@@ -98,54 +111,68 @@ async function start(options = {}) {
   try {
     const range = practiceRange(pattern, studio?.focus);
     if (!range.instruments.length) throw new Error('Izaberi bar jedan instrument za vežbanje.');
-    studio?.backing.validate(pattern, range);
+    const continuousSong=!!(options.arrangement && studio.backing.enabled && studio.backing.arrangementId===studio.run?.id);
+    if(continuousSong){
+      if(new Set(studio.run.entries.map(e=>e.bpm)).size>1)throw new Error('Use one tempo for an arrangement linked to an audio song.');
+      if(!studio.backing.buffer || studio.backing.offset>=studio.backing.buffer.duration)throw new Error('Load the audio song again.');
+    }else studio?.backing.validate(pattern, range);
     await audio.ensure();
     if (token !== play.token) return false;
     showLatency(); scorer.reset(); scorer.currentLoop = 0;
     scorer.level = settings.level; scorer.calib = settings.calib; notation.clearMarks();
     Object.assign(play, { on: true, queue: [], cur: null, firstAudio: null, endAt: 0, loopScores: [], range,
-      completed: new Set(), loopBpms: new Map(), boundaries: [], durationSeconds: Number(options.durationSeconds) || 0 });
-    play.countIn = settings.countIn ? slotsPerBar(pattern) : 0;
-    play.n = -play.countIn; play.nextTime = audio.time + 0.15;
-    play.firstPerf = audio.ctxToPerf(play.nextTime + play.countIn / slotsPerBeat(pattern) * beatMs(pattern) / 1000);
+      completed: new Set(), loopBpms: new Map(), boundaries: [], durationSeconds: Number(options.durationSeconds) || 0,
+      durationSlots: options.durationBars ? Math.round(options.durationBars) * slotsPerBar(pattern) : 0,
+      preScheduledSlots: options.preScheduledSlots || 0, nextSection: null, transitioning: false,
+      continuousSong, continuingSong:!!options.preserveScheduled });
+    if (play.durationSlots) play.durationSeconds = slotOffsetMs(pattern,play.durationSlots)/1000;
+    if (settings.record) editorTools?.begin('record');
+    play.countIn = (options.countIn ?? settings.countIn) ? slotsPerBar(pattern) : 0;
+    play.n = -play.countIn; play.nextTime = options.startAtAudio ?? audio.time + 0.15;
+    play.firstPerf = options.startAtPerf ?? audio.ctxToPerf(play.nextTime + play.countIn / slotsPerBeat(pattern) * beatMs(pattern) / 1000);
+    if(options.startAtPerf!=null)play.firstAudio=options.startAtAudio;
     play.exerciseEndPerf = play.durationSeconds ? play.firstPerf + play.durationSeconds * 1000 : 0;
-    studio?.beginSession(pattern, range, play.firstPerf, settings);
+    studio?.beginSession(pattern, range, play.firstPerf, {...settings,preserveScheduled:options.preserveScheduled});
     play.timer = setInterval(schedule, 25); schedule(); renderStats();
     return true;
   } catch (error) { if (play.on) stop('error'); toast(error.message || 'Zvuk nije mogao da se pokrene.'); return false; }
   finally { if (token === play.token) { play.starting = false; renderTransport(); } }
 }
 
-function stop(reason = 'manual') {
+function stop(reason = 'manual', {preserveScheduled = false, boundaryPerf} = {}) {
   play.token++; play.starting = false;
   if (!play.on) { studio?.stopped(reason, null); renderTransport(); return; }
   const now = performance.now();
-  const endPerf = ['complete', 'duration'].includes(reason) && play.exerciseEndPerf ? Math.min(now, play.exerciseEndPerf) : now;
+  const endPerf = boundaryPerf ?? (['complete', 'duration'].includes(reason) && play.exerciseEndPerf ? Math.min(now, play.exerciseEndPerf) : now);
+  if(!preserveScheduled)for(const hit of play.nextSection?.hits || [])onHit(...hit,true);
   play.on = false;
   clearInterval(play.timer);
   // Ne ocenjuj note zakazane unapred koje se nisu ni čule pre Stop.
   scorer.pending = scorer.pending.filter(n => n.perf <= endPerf);
   for (const r of scorer.sweep(Infinity)) { notation.mark(r.note.slot, r.inst, 'miss', r.note.loop); showLastHit(r.inst, null, r); }
   for (const boundary of play.boundaries) if (boundary.perf <= endPerf) finishLoop(boundary.loop, false);
-  audio.stopScheduled(); midi.stopOutput(); studio?.backing.stop();
-  play.queue = []; play.boundaries = [];
+  if (!preserveScheduled) { audio.stopScheduled(); midi.stopOutput(); studio?.backing.stop(); }
+  play.queue = []; play.boundaries = []; play.nextSection = null;
   notation.setPlayhead(null);
   $('#countOverlay').hidden = true;
   setNowColumn(-1);
   renderTransport(); renderStats();
+  editorTools?.end();
   const session = studio?.finishSession(scorer.stats(), scorer.results, endPerf, reason);
   if (session && !studio.run && ['manual', 'complete', 'duration'].includes(reason) && workspaceView?.focus) workspaceView.toggle(false);
   studio?.stopped(reason, session);
 }
 
-const toggle = () => (play.on || play.starting ? stop() : start());
+const toggle = () => rhythmCapture?.busy ? rhythmCapture.finish() : (play.on || play.starting ? stop() : start());
 
 function schedule() {
+  if (play.transitioning) return;
   const total = play.range.length;
   while (play.on && play.nextTime < audio.time + 0.12) {
     const nextPerf = perfForAudio(play.nextTime);
-    if ((!repeats() && play.n >= total) || (play.durationSeconds && nextPerf >= play.exerciseEndPerf)) {
+    if ((!repeats() && play.n >= total) || (play.durationSlots ? play.n >= play.durationSlots : (play.durationSeconds && nextPerf >= play.exerciseEndPerf))) {
       if (!play.exerciseEndPerf) play.exerciseEndPerf = nextPerf;
+      if (studio?.run?.kind === 'arrangement' && studio.peekNextSection()) { prepareArrangementAudio(play.nextTime, nextPerf); return; }
       if (!play.endAt) play.endAt = play.exerciseEndPerf + lateGrace();
       return;
     }
@@ -170,6 +197,7 @@ function scheduleSlot(n, t) {
   const range = activeRange();
   const spb = slotsPerBeat(pattern), spBar = slotsPerBar(pattern), total = range.length;
   const perf = perfForAudio(t);
+  const sound = n < 0 || n >= (play.preScheduledSlots || 0);
   if (n < 0) {
     const k = n + play.countIn;
     if (k % spb === 0) {
@@ -187,9 +215,10 @@ function scheduleSlot(n, t) {
   }
   if (n % total === 0) {
     play.loopBpms.set(loop, pattern.bpm);
-    studio?.backing.schedule(t, pattern, range);
+    if(play.continuousSong){if(n===0&&!play.continuingSong)studio.backing.scheduleSong(t,pattern.bpm/studio.backing.bpm);}
+    else studio?.backing.schedule(t, pattern, range);
   }
-  if (settings.metro && !quietBar(Math.floor(n / spBar))) {
+  if (sound && settings.metro && !quietBar(Math.floor(n / spBar))) {
     if (inBar % spb === 0) audio.click(t, groupStarts(pattern).includes(inBar / spb));
     else if (inBar % clickStep() === 0) audio.click(t, false, 0.4);
   }
@@ -198,7 +227,7 @@ function scheduleSlot(n, t) {
     const v = pattern.steps[inst.id][slot];
     if (!v) continue;
     insts.push(inst.id);
-    if (settings.playPattern && !midi.send(inst.midiOut, DYN_VEL[v], perf)) audio.play(inst.id, t, DYN_VEL[v] / 127, 'pattern');
+    if (sound && settings.playPattern && !midi.sendInstrument(inst.id, DYN_VEL[v], perf)) audio.play(inst.id, t, DYN_VEL[v] / 127, 'pattern');
     if (acceptsInstrument(range, inst.id)) {
       const note = { id: `${loop}:${slot}:${inst.id}`, perf, inst: inst.id, dyn: v, slot, loop, durationMs: slotMs(slot) };
       scorer.expect(note); studio?.expect(note);
@@ -229,6 +258,7 @@ function frame() {
   requestAnimationFrame(frame);
   if (!play.on) return;
   const now = performance.now();
+  if (play.nextSection && now >= play.nextSection.perf && !play.transitioning) { advanceArrangement(); return; }
   while (play.queue.length && play.queue[0].perf <= now) reach(play.queue.shift());
   const cur = play.cur;
   if (!cur) return;
@@ -261,13 +291,13 @@ function finishLoop(loop, train = true) {
 
 // ---------- Udarci ----------
 
-function onHit(instId, vel, perf, source = 'keyboard', midiNote) {
-  if (!kitInstruments(settings.kitConfig).some(i => i.id === instId)) return;
+function onHit(instId, vel, perf, source = 'keyboard', midiNote, metadata, deferred = false) {
+  if (!activeInstrumentIds.has(instId)) return;
   const rawVelocity = vel;
   vel = velocityFor(vel, settings.velocityCurve, settings.velocityGain);
   // Virtual pads must be audible even when MIDI monitoring is off (a common
   // setting when the connected module already produces its own sound).
-  if ((settings.liveSound && !calibration) || source === 'mouse') {
+  if (!deferred && ((settings.liveSound && !calibration) || source === 'mouse' || (rhythmCapture?.state === 'recording' && source === 'keyboard'))) {
     if (audio.ready) audio.playNow(instId, vel / 127);
     else audio.ensure().then(() => audio.playNow(instId, vel / 127)).catch(() => toast('Zvuk nije dostupan.'));
   }
@@ -277,6 +307,11 @@ function onHit(instId, vel, perf, source = 'keyboard', midiNote) {
     return;
   }
   let res = null;
+  if (rhythmCapture?.busy) {
+    rhythmCapture.hit(instId, vel, perf, source, midiNote, metadata);
+    kit.hit(instId, 'free'); showLastHit(instId, vel, null); return;
+  }
+  if (!deferred && play.nextSection && bufferSectionHit(instId,rawVelocity,perf,source,midiNote,metadata)) { kit.hit(instId,'free');return; }
   if (play.on && perf - settings.calib >= play.firstPerf - LEVELS[settings.level][1] && (!play.exerciseEndPerf || perf - settings.calib <= play.exerciseEndPerf + LEVELS[settings.level][1])) {
     scorer.currentLoop = Math.max(0, play.cur?.loop ?? 0);
     if (acceptsInstrument(play.range, instId)) res = scorer.hit(instId, perf, vel);
@@ -295,7 +330,7 @@ function onHit(instId, vel, perf, source = 'keyboard', midiNote) {
     studio?.hit(instId, rawVelocity, perf, source, midiNote, res, { slot: s, loop, adjustedVelocity: vel });
     if (settings.record) recordHit(instId, vel, perf);
   }
-  kit.hit(instId, res ? res.kind : 'free');
+  if(!deferred)kit.hit(instId, res ? res.kind : 'free');
   showLastHit(instId, vel, res);
 }
 
@@ -363,8 +398,8 @@ function onStatus(st) {
   renderMidiOut();
 }
 
-function onNote(note, vel) {
-  const inst = midi.map[note];
+function onNote(note, vel, metadata) {
+  const inst = midi.resolve(note, metadata);
   $('#lastNote').textContent = `${note} (jačina ${vel})${INST[inst] ? ' → ' + INST[inst].label : ' → nije mapirana'}`;
 }
 
@@ -377,6 +412,7 @@ function renderAll() {
   renderEditorControls();
   if (!$('#view-editor').hidden) renderEditor();
   renderLibrary();
+  editorTools?.refresh();
 }
 
 function renderHeader() {
@@ -407,9 +443,11 @@ function renderTransport() {
   $('#bpm').value = pattern.bpm;
   for (const id of ['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record']) $('#' + id).checked = settings[id];
   renderClickSub();
-  const busy = play.on || play.starting;
+  const busy = play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running;
   for (const el of $$('#view-editor input, #view-editor select, #view-editor button, #calibBtn, #resetStats, #level, #calib')) el.disabled = busy;
-  for (const el of $$('#bpm, .tbtn, #trainerOn')) el.disabled = busy && !!(studio?.backing.enabled || studio?.run);
+  for (const el of $$('#bpm, .tbtn, #trainerOn')) el.disabled = !!rhythmCapture?.busy || (busy && !!(studio?.backing.enabled || studio?.run));
+  b.disabled = !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running;
+  $('#captureRhythm').disabled = busy || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
   studio?.playState();
   profiles?.playState();
   configurator?.playState();
@@ -417,10 +455,12 @@ function renderTransport() {
   workbench?.playState();
   renderSongImport();
   $('#edSwing').disabled = busy || pattern.division === 12;
+  editorTools?.refresh();
+  aiTools?.refresh();
 }
 
 function renderSongImport() {
-  const busy = play.on || play.starting || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
+  const busy = play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
   $('#importSong').disabled = busy;
   $('#scoreFile').disabled = busy;
 }
@@ -436,6 +476,7 @@ function renderClickSub() {
 }
 
 function setBpm(v) {
+  if (rhythmCapture?.busy || aiTools?.busy || studio?.backupRestore?.running) return;
   if (play.on && (studio?.backing.enabled || studio?.run)) return;
   pattern.bpm = Math.min(260, Math.max(30, Math.round(Number(v) || pattern.bpm)));
   settings.current = pattern;
@@ -449,6 +490,7 @@ function markDirty() {
   dirty = settings.currentDirty = true;
   settings.current = pattern;
   saveSettings();
+  editorTools?.capture('edit');
 }
 
 function toast(msg) {
@@ -503,7 +545,7 @@ function renderEditor() {
       b.dataset.inst = inst.id;
       b.dataset.slot = s;
       b.dataset.v = pattern.steps[inst.id][s];
-      b.disabled = play.on || play.starting;
+      b.disabled = kitBusy();
       b.title = `${inst.label} · takt ${Math.floor(s / spBar) + 1}, korak ${(s % spBar) + 1}`;
       grid.append(b);
       edCells[s].push(b);
@@ -518,7 +560,7 @@ function syncGrid() {
 }
 
 function setCell(b, v) {
-  if (play.on || play.starting) return;
+  if (kitBusy()) return;
   pattern.steps[b.dataset.inst][b.dataset.slot] = v;
   b.dataset.v = v;
   if (v && !play.on) audio.ensure().then(() => audio.play(b.dataset.inst, audio.time, DYN_VEL[v] / 127, 'pattern'));
@@ -592,6 +634,7 @@ function libraryItem(p, own) {
     load.append(meta); load.dataset.presetId = p.id;
   }
   load.onclick = () => loadPattern(p);
+  appendLibraryPreview(load, p);
   li.append(load);
   const favorite = document.createElement('button');
   favorite.className = 'favorite'; favorite.dataset.patternId = p.id;
@@ -635,6 +678,7 @@ function libraryItem(p, own) {
 const fileName = name => (String(name).toLowerCase().replace(/[^a-z0-9šđčćž]+/g, '-').replace(/^-|-$/g, '') || 'ritam') + '.json';
 
 function loadPattern(p, { program = false } = {}) {
+  if (rhythmCapture?.busy || aiTools?.busy || studio?.backupRestore?.running) return false;
   if (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?')) return false;
   stop(program ? 'transition' : 'load');
   studio?.replay.stop();
@@ -643,6 +687,7 @@ function loadPattern(p, { program = false } = {}) {
   settings.current = pattern;
   saveSettings();
   studio?.patternChanged();
+  editorTools?.reset({ saved: true });
   renderAll();
   return true;
 }
@@ -665,6 +710,7 @@ function saveCurrent(asNew) {
   dirty = settings.currentDirty = false;
   settings.current = pattern;
   saveSettings();
+  if (asNew || !own) editorTools?.reset({ saved: true }); else editorTools?.markSaved();
   renderAll();
   toast(`Sačuvano: ${pattern.name}`);
 }
@@ -684,7 +730,7 @@ function renderStats() {
     const r = s.per[i.id];
     const mean = r.mean == null ? '–' : fmtErr(r.mean);
     const spread = r.spread == null ? '–' : `±${Math.round(r.spread)} ms`;
-    const dyn = r.errs.length ? Math.round((100 * r.dynOk) / r.errs.length) + '%' : '–';
+    const dyn = r.sampleCount ? Math.round((100 * r.dynOk) / r.sampleCount) + '%' : '–';
     return `<tr><td><i style="background:${i.color}"></i>${esc(i.label)}</td><td>${r.good + r.ok}/${r.expected}${r.extra ? ` <small>+${r.extra}</small>` : ''}</td><td>${mean}</td><td>${spread}</td><td>${dyn}</td></tr>`;
   });
   $('#statTable').innerHTML = rows.length
@@ -694,7 +740,7 @@ function renderStats() {
 }
 
 function advice(s) {
-  const list = INSTRUMENTS.map(i => ({ i, r: s.per[i.id] })).filter(x => x.r && x.r.errs.length >= 6);
+  const list = INSTRUMENTS.map(i => ({ i, r: s.per[i.id] })).filter(x => x.r && x.r.sampleCount >= 6);
   if (!list.length) return 'Pokreni ritam i sviraj, ovdje ćeš vidjeti šta da popraviš.';
   const tips = [];
   const drift = list.filter(x => Math.abs(x.r.mean) >= 8).sort((a, b) => Math.abs(b.r.mean) - Math.abs(a.r.mean))[0];
@@ -703,7 +749,7 @@ function advice(s) {
   if (wobbly) tips.push(`Najneujednačeniji je ${wobbly.i.label.toLowerCase()} (±${Math.round(wobbly.r.spread)} ms), uspori pa ga ustabili.`);
   const missy = list.filter(x => x.r.miss >= 3).sort((a, b) => b.r.miss - a.r.miss)[0];
   if (missy) tips.push(`Najviše promašaja: ${missy.i.label.toLowerCase()}.`);
-  const dyn = list.filter(x => x.r.dynOk / x.r.errs.length < 0.6)[0];
+  const dyn = list.filter(x => x.r.dynOk / x.r.sampleCount < 0.6)[0];
   if (dyn) tips.push(`Pazi na dinamiku na ${dyn.i.label.toLowerCase()} (akcenti jače, ghost note tiše).`);
   if (!tips.length && s.accuracy >= 90) tips.push('Odlično! Probaj tempo +5 ili uključi tihe taktove.');
   return tips.join(' ') || 'Dobro ide, nastavi.';
@@ -805,12 +851,20 @@ function renderKeyHelp() {
 // ---------- Povezivanje kontrola ----------
 
 function bind() {
+  $('#homeLink').onclick = e => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button) return;
+    e.preventDefault(); workspaceView?.toggle(false);
+    $('.viewtabs [data-view=kit]').click(); $('.sidetabs [data-panel=library]').click();
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+  $('#captureRhythm').onclick = () => rhythmCapture.open();
   $('#playBtn').onclick = toggle;
   $('#bpm').onchange = e => setBpm(e.target.value);
   for (const b of $$('.tbtn')) b.onclick = () => setBpm(pattern.bpm + Number(b.dataset.bpm));
   for (const id of ['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record']) {
     $('#' + id).onchange = e => {
       settings[id] = e.target.checked;
+      if (id === 'record' && play.on) settings.record ? editorTools?.begin('record') : editorTools?.end();
       saveSettings();
       e.target.blur();
       if (settings[id]) audio.ensure().catch(() => toast('Zvuk nije dostupan.'));
@@ -953,24 +1007,21 @@ function bind() {
   }).observe($('#notation'));
   setInterval(() => { if (play.on && !$('#panel-stats').hidden) renderStats(); }, 1000);
   $('#backupCurrent').textContent = 'Izvezi sve podatke';
-  $('#backupCurrent').onclick = () => store.download('drummer-backup.json', {
-    version: 1, ritmovi: library, trenutni: pattern, podesavanja: settings,
-    sessions: studio.sessions, programs: studio.programs, programDraft: studio.program,
-    profiles: profiles.items, midiMap: midi.map, language: getLanguage(), favorites: [...favorites],
-  });
-  $('#retryStorage').onclick = () => {
-    const saved = [store.saveLibrary(library), store.saveSettings(settings), store.saveSessions(studio.sessions), store.savePrograms(studio.programs), store.saveProfiles(profiles.items), midi.save()];
+  $('#backupCurrent').onclick = async () => store.download('drummer-backup.json', { ...await getBackupState(), sessions: await studio.exportSessions() });
+  $('#retryStorage').onclick = async () => {
+    const saved = [store.saveLibrary(library), saveSettings.flush(), await studio.flushJournal(), store.savePrograms(studio.programs), store.saveProfiles(profiles.items), midi.save()];
     if (saved.every(Boolean)) { $('#storageWarning').hidden = true; toast(dirty ? 'Čuvanje ponovo radi. Sačuvaj izmene ritma dugmetom Sačuvaj.' : 'Podaci su sačuvani.'); }
   };
-  window.addEventListener('pagehide', () => { stop('unload'); store.saveSettings(settings); });
+  window.addEventListener('pagehide', () => { rhythmCapture?.close(); stop('unload'); saveSettings.flush(); });
 }
 
-const kitBusy = () => play.on || play.starting || !!calibration || !!studio?.run || studio?.replay.playing || studio?.replay.starting;
+const kitBusy = () => play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || studio?.replay.playing || studio?.replay.starting;
 function applyKit(value, persist = true) {
   if (kitBusy()) return false;
   const config = normalizeKit(value);
   if (persist && !store.saveSettings({ ...settings, kitConfig: config })) return false;
   settings.kitConfig = config; midi.cancelLearn();
+  activeInstrumentIds = new Set(kitInstruments(config).map(i => i.id));
   kit.configure(); renderMapTable(); renderKeyHelp(); renderAll(); studio?.renderFocus();
   const missing = missingKitInstruments(pattern, config);
   if (missing.length) toast('Ritam koristi delove koji nisu u tvom setu. Uključi ih u Moj bubanj ili izmeni ritam.');
@@ -992,17 +1043,28 @@ renderAll();
 renderMapTable();
 renderKeyHelp();
 studio = new PracticeStudio({ audio, getPattern: () => pattern, getLevel: () => settings.level,
-  isPlaying: () => play.on || play.starting, start, stop, loadPattern, setBpm,
+  isPlaying: () => play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!calibration, start, stop, loadPattern, setBpm,
+  getBackupState, applyRestoredState: async () => { saveSettings.cancel(); location.reload(); },
   refreshNotation: renderNotationView, toast, getInstruments: () => kitInstruments(settings.kitConfig),
-  onBusyChange: () => { profiles?.playState(); configurator?.playState(); kit?.playState(); renderSongImport(); } });
+  onBusyChange: () => {
+    profiles?.playState(); configurator?.playState(); kit?.playState(); renderSongImport();
+    const locked=!!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running;
+    $('#playBtn').disabled=locked; $('#captureRhythm').disabled=kitBusy();
+    for(const control of $$('#view-editor input,#view-editor select,#view-editor button,#calibBtn,#resetStats,#level,#calib'))control.disabled=kitBusy();
+    for(const control of $$('#bpm,.tbtn,#trainerOn'))control.disabled=locked || ((play.on || play.starting) && !!(studio?.backing.enabled || studio?.run));
+    editorTools?.refresh();
+  } });
+studio.journalReady.then(()=>{ if(studio.journal.recoveredRestore){saveSettings.cancel();location.reload();} });
 profiles = new DeviceProfiles({ midi, settings, saveSettings, stop, toast, renderMap: renderMapTable, applyKit, profileChanged: () => configurator?.render(),
-  isBusy: () => play.on || play.starting || !!calibration || !!studio.run || studio.replay.playing || studio.replay.starting });
+  isBusy: kitBusy });
 configurator = new KitConfigurator({ settings, midi, profiles, apply: applyKit, renderMap: renderMapTable,
-  isBusy: () => play.on || play.starting || !!calibration || !!studio.run || studio.replay.playing || studio.replay.starting });
+  isBusy: kitBusy });
 createScoreImporter({ button: $('#importSong'), input: $('#scoreFile'), toast, isBusy: kitBusy,
   onOpen: () => { stop(); studio.replay.stop(); studio.cancelProgram(); } });
-workbench = new Workbench({ midi, toast, loadPattern, markDirty, render: renderAll, getPattern: () => pattern,
-  isBusy: () => play.on || play.starting || !!studio.run || !!calibration });
+workbench = new Workbench({ midi, toast, loadPattern: p => {
+  if (kitBusy() || (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?'))) return false;
+  editorTools.apply(normalize(p),'midi-import'); return true;
+}, markDirty, render: renderAll, getPattern: () => pattern, isBusy: kitBusy });
 document.addEventListener('drummer:language', () => {
   configurator?.render();
   renderEditorControls(); renderLibrary(); studio.renderBacking(); studio.renderJournal();
@@ -1014,12 +1076,43 @@ document.addEventListener('drummer:language', () => {
 });
 workspaceView = new WorkspaceView(settings, saveSettings, renderNotationView);
 renderNotationView();
+editorTools = createEditorTools({ container:$('#view-editor'), getPattern:()=>pattern, isBusy:kitBusy, setCell,
+  getInstruments:()=>kitInstruments(settings.kitConfig), toast,
+  confirmApply:()=>!dirty || confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?'),
+  replacePattern: (next, options) => {
+    pattern=normalize(next); dirty=settings.currentDirty=options.dirty; settings.current=pattern;
+    saveSettings(); studio.patternChanged(); renderAll();
+  } });
+editorTools.reset({ saved: !dirty });
+rhythmCapture = new RhythmCapture({ audio,getPattern:()=>pattern,calibration:()=>settings.calib,isBusy:kitBusy,
+  onBusyChange:renderTransport,toast,showKit:()=>{ workspaceView.toggle(false); $('.viewtabs [data-view=kit]').click(); },
+  save: next => {
+    if (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?')) return false;
+    const saved=normalize({...next,id:store.newId(),preset:false}), list=[saved,...library];
+    if (!store.saveLibrary(list)) return false;
+    library=list; libraryPages.mine=1; dirty=false; loadPattern(saved); toast(`Sačuvano: ${saved.name}`); return true;
+  } });
+aiTools=createAiTools({container:$('#view-tools'),isBusy:kitBusy,onBusyChange:renderTransport,toast,onCandidate:applyAiCandidate});
+function applyAiCandidate(candidate){
+  if(kitBusy())return false;
+  if(studio.arrangements.dirty&&!confirm(t('Odbaciti nesačuvane izmene aranžmana?')))return false;
+  const arrangement=candidateArrangement(candidate,store.newId());
+  if(!loadPattern(arrangement.sections[0].pattern))return false;
+  studio.arrangements.draft=arrangement;studio.arrangements.dirty=true;studio.arrangements.render();
+  const backing=studio.backing;backing.stop();backing.buffer=candidate.backingBuffer||candidate.audioBuffer;
+  backing.name=candidate.fileName;backing.enabled=!!backing.buffer;backing.bpm=candidate.bpm;
+  backing.offset=candidate.offsetSeconds||0;backing.arrangementId=arrangement.id;studio.renderBacking();
+  $('.viewtabs [data-view=kit]').click();studio.show('arrangement');
+  studio.arrangements.status(t('Proveri note po deonicama, sačuvaj aranžman i pokreni vežbanje uz pesmu.'));
+  return true;
+}
 initI18n();
 const patternMeta = p => ({ id: p.id, name: p.name, nameEn: p.nameEn || t(p.name, 'en'),
   category: p.category || 'basics', preset: !!p.preset, bpm: p.bpm, bars: p.bars, beats: p.beats,
   beatUnit: p.beatUnit, division: p.division, swing: p.swing, difficulty: p.difficulty || '', favorite: favorites.has(p.id) });
 agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENTS.map(i => i.id),
   getState: () => ({ pattern: patternMeta(pattern), playing: play.on, starting: play.starting,
+    capturing:!!rhythmCapture?.busy,restoring:!!studio.backupRestore?.running,aiBusy:!!aiTools?.busy,
     programRunning: !!studio.run, calibrating: !!calibration, replaying: studio.replay.playing || studio.replay.starting,
     unsavedPattern: dirty, unsavedProgram: studio.programDirty, backingEnabled: studio.backing.enabled,
     kitConfig: settings.kitConfig, audioReady: audio.ready, language: getLanguage(), focus: studio.focus, favoriteCount: favoriteCount(),
@@ -1060,8 +1153,62 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
     })) }),
   setLanguage: language => { $('#languageSelect').value = language; $('#languageSelect').dispatchEvent(new Event('change')); },
 });
-setupPwa({ canReload: () => !play.on && !play.starting && !studio.run && !dirty && !studio.programDirty && !calibration,
-  flush: () => [store.saveSettings(settings), store.saveLibrary(library), store.saveSessions(studio.sessions), store.savePrograms(studio.programs), store.saveProfiles(profiles.items), midi.save()].every(Boolean) });
+setupPwa({ canReload: () => !kitBusy() && !dirty && !studio.programDirty,
+  flush: async () => [saveSettings.flush(),store.saveLibrary(library),await studio.flushJournal(),store.savePrograms(studio.programs),store.saveProfiles(profiles.items),midi.save()].every(Boolean) });
 loadKitList().then(() => settings.kit && chooseKit(settings.kit));
 midi.init();
 requestAnimationFrame(frame);
+
+async function getBackupState() {
+  saveSettings.flush();
+  return {version:2,ritmovi:library,trenutni:pattern,podesavanja:settings,programs:studio.programs,
+    programDraft:studio.program,profiles:profiles.items,midiMap:midi.map,midiRouting:midi.routing,
+    language:getLanguage(),favorites:[...favorites],arrangements:studio.arrangements.items,arrangementDraft:studio.arrangements.draft};
+}
+
+// Queue the first few audible events of the next section on the current audio
+// clock. The visual/scoring section changes when that exact boundary arrives.
+function prepareArrangementAudio(startAudio, perf) {
+  if (!play.nextSection) {
+    const section=studio.peekNextSection();
+    if (missingKitInstruments(section.pattern,settings.kitConfig).length) { stop('error');toast('Ritam koristi delove koji nisu u tvom setu. Uključi ih u Moj bubanj ili izmeni ritam.');return; }
+    play.nextSection={section,startAudio,perf,scheduled:0,hits:[],reserved:new Set()};
+  }
+  const next=play.nextSection,p=next.section.pattern,spb=slotsPerBeat(p),spBar=slotsPerBar(p);
+  while(next.scheduled<totalSlots(p) && next.startAudio+slotOffsetMs(p,next.scheduled)/1000<audio.time+.12){
+    const n=next.scheduled++,time=next.startAudio+slotOffsetMs(p,n)/1000,hitPerf=next.perf+slotOffsetMs(p,n),inBar=n%spBar;
+    if(settings.metro && !quietBar(Math.floor(n/spBar))){
+      if(inBar%spb===0)audio.click(time,groupStarts(p).includes(inBar/spb));
+      else if(spb%settings.clickSub===0 && inBar%(spb/settings.clickSub)===0)audio.click(time,false,.4);
+    }
+    if(settings.playPattern)for(const inst of INSTRUMENTS){const v=p.steps[inst.id][n];if(v&&!midi.sendInstrument(inst.id,DYN_VEL[v],hitPerf))audio.play(inst.id,time,DYN_VEL[v]/127,'pattern');}
+  }
+}
+
+async function advanceArrangement() {
+  const next=play.nextSection;if(!next || studio?.run?.kind!=='arrangement')return;
+  play.transitioning=true;
+  stop('transition',{preserveScheduled:true,boundaryPerf:next.perf});
+  const section=studio.prepareNextSection();if(!section)return;
+  pattern=normalize(section.pattern);dirty=settings.currentDirty=false;settings.current=pattern;saveSettings();
+  studio.patternChanged();studio.focus.enabled=false;studio.renderFocus();editorTools?.reset({saved:true});renderAll();
+  const started=await start({program:true,arrangement:true,durationBars:section.bars,countIn:false,startAtAudio:next.startAudio,startAtPerf:next.perf,
+    preScheduledSlots:next.scheduled,preserveScheduled:true});
+  if(!started){audio.stopScheduled();midi.stopOutput();studio.backing.stop();studio.cancelProgram();return;}
+  if(play.on)for(const hit of next.hits)onHit(...hit,true);
+}
+
+function bufferSectionHit(inst,vel,perf,source,note,metadata){
+  const next=play.nextSection,pad=id=>id==='hho'?'hh':id,time=perf-settings.calib,windowMs=LEVELS[settings.level][1];
+  let closest=Infinity,key=null;
+  for(const instrument of INSTRUMENTS){if(pad(instrument.id)!==pad(inst))continue;
+    for(let slot=0;slot<next.scheduled;slot++){
+      const candidateKey=`${instrument.id}:${slot}`;
+      if(!next.section.pattern.steps[instrument.id][slot]||next.reserved.has(candidateKey))continue;
+      const distance=Math.abs(time-next.perf-slotOffsetMs(next.section.pattern,slot));
+      if(distance<=windowMs && distance<closest){closest=distance;key=candidateKey;}
+    }
+  }
+  if(!key || scorer.pending.some(n=>!n.done&&pad(n.inst)===pad(inst)&&Math.abs(time-n.perf)<=closest))return false;
+  next.reserved.add(key);next.hits.push([inst,vel,perf,source,note,metadata]);return true;
+}

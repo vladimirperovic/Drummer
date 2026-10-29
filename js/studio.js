@@ -4,6 +4,9 @@ import { normalizeFocus, practiceRange, acceptsInstrument, patternSignature, ses
 import { BackingTrack } from './backing.js';
 import { ReplayPlayer } from './replay.js';
 import { renderPerformanceReport } from './performance-report.js';
+import { JournalStore, sessionSummary } from './journal-store.js';
+import { ArrangementEditor, compileArrangement } from './arrangements.js';
+import { BackupRestore } from './backup-restore.js';
 import * as store from './storage.js';
 import { getLanguage, t } from './i18n.js';
 
@@ -19,22 +22,107 @@ export class PracticeStudio {
     this.host = host;
     this.focus = normalizeFocus(host.getPattern());
     this.sessions = store.loadSessions().map(normalizeSession).filter(Boolean);
+    this.sessionCache = new Map(this.sessions.map(s => [s.id, s]));
+    this.pendingSessions = new Map(); this.sessionLoads = new Map(); this.journalPage = 1; this.journalPageSize = 12; this.loadingSessionId = ''; this.journalError = false;
     this.programs = store.loadPrograms().map(normalizeProgram).filter(p => p.id);
-    this.program = normalizeProgram({ name: t('Moj program') }); this.programDirty = false;
+    const programDraft = store.loadProgramDraft();
+    this.program = normalizeProgram(programDraft || { name: t('Moj program') }); this.programDirty = !!programDraft;
     this.selectedId = this.sessions[0]?.id || '';
     this.backing = new BackingTrack(host.audio);
     this.replay = new ReplayPlayer(host.audio, ms => this.replayPosition(ms), () => { $('replayPlay').textContent = '▶ Slušaj'; this.host.onBusyChange?.(); });
     this.capture = null; this.run = null; this.runToken = 0;
     this.bind(); this.renderFocus(); this.renderJournal(); this.renderPrograms(); this.renderBacking();
+    this.mountJournalControls();
+    this.arrangements = new ArrangementEditor(this);
+    this.backupRestore = new BackupRestore(this);
+    this.initializeJournal();
+    window.addEventListener('beforeunload', event => { if (this.pendingSessions.size) { event.preventDefault(); event.returnValue = ''; } });
+  }
+
+  initializeJournal() {
+    this.journal?.db?.close(); this.journal = new JournalStore();
+    this.journalReady = this.journal.ready.then(async () => {
+      const saved = await this.journal.list(), known = new Map(saved.map(s => [s.id, s]));
+      for (const session of this.sessions) if (!known.has(session.id)) known.set(session.id, session);
+      this.sessions = [...known.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+      this.selectedId ||= this.sessions[0]?.id || '';
+      // A retained legacy copy can be older than an already committed IDB row.
+      // Re-read migrated sessions, while keeping in-flight captures in memory.
+      for (const id of this.sessionCache.keys()) if (!this.pendingSessions.has(id)) this.sessionCache.delete(id);
+      this.journalError = false; this.updateJournalStatus(); this.renderJournal(); return true;
+    }).catch(() => { this.journalError = true; this.updateJournalStatus(); return false; });
   }
 
   get range() { return practiceRange(this.host.getPattern(), this.focus); }
-  get selected() { return this.sessions.find(s => s.id === this.selectedId); }
+  get selected() {
+    const cached = this.sessionCache.get(this.selectedId), entry = this.sessions.find(s => s.id === this.selectedId);
+    return Array.isArray(entry?.hits) ? entry : cached || null;
+  }
+
+  mountJournalControls() {
+    const status = document.createElement('p'); status.id = 'journalStorageStatus'; status.className = 'muted'; status.setAttribute('role', 'status');
+    $('studio-journal').prepend(status);
+    const nav = document.createElement('div'); nav.className = 'row journal-pagination';
+    nav.innerHTML = '<button id="journalPrev">Prethodna strana</button><span id="journalPageInfo" aria-live="polite"></span><button id="journalNext">Sledeća strana</button>';
+    $('sessionList').closest('.table-wrap')?.after(nav);
+    $('journalPrev').onclick = () => { this.journalPage--; this.renderJournal(); };
+    $('journalNext').onclick = () => { this.journalPage++; this.renderJournal(); };
+    this.updateJournalStatus();
+  }
+  updateJournalStatus() {
+    if (!$('journalStorageStatus')) return;
+    $('journalStorageStatus').textContent = this.journalError ? 'Dnevnik nije sačuvan. Izvezi podatke ili pokušaj ponovo.'
+      : this.pendingSessions.size ? 'Čuvam snimak sesije…' : this.journal?.fallback ? 'Dnevnik koristi ograničeno lokalno skladište ovog browsera.' : 'Snimci se čuvaju u IndexedDB; detalji se učitavaju po izboru sesije.';
+  }
+  async loadSession(id = this.selectedId) {
+    if (!id) return null;
+    const existing = this.sessions.find(s => s.id === id);
+    if (Array.isArray(existing?.hits)) return existing;
+    if (this.sessionCache.has(id)) return this.sessionCache.get(id);
+    if (this.sessionLoads.has(id)) return this.sessionLoads.get(id);
+    this.loadingSessionId = id;
+    const loading = (async () => { try {
+      await this.journalReady;
+      const session = normalizeSession(await this.journal.get(id));
+      if (!session) throw new Error('Snimak sesije nije dostupan.');
+      this.sessionCache.set(id, session);
+      for (const key of this.sessionCache.keys()) if (this.sessionCache.size > 3 && key !== this.selectedId && !this.pendingSessions.has(key)) this.sessionCache.delete(key);
+      return session;
+    } catch (error) { this.journalError = true; store.reportError(error); this.updateJournalStatus(); return null; }
+    finally { if (this.loadingSessionId === id) this.loadingSessionId = ''; }
+    })();
+    this.sessionLoads.set(id, loading);
+    try { return await loading; } finally { this.sessionLoads.delete(id); }
+  }
+  persistSession(session) {
+    this.pendingSessions.set(session.id, session); this.updateJournalStatus();
+    const saved = this.journal.put(session).then(() => {
+      this.pendingSessions.delete(session.id); this.journalError = false;
+      this.sessions = this.sessions.map(s => s.id === session.id ? sessionSummary(session) : s);
+      this.updateJournalStatus();
+    }).catch(() => { this.journalError = true; this.updateJournalStatus(); });
+    return saved;
+  }
+  async flushJournal() {
+    if (!await this.journalReady) { this.initializeJournal(); if (!await this.journalReady) return false; }
+    for (const session of [...this.pendingSessions.values()]) await this.persistSession(session);
+    try { await this.journal.flush(); return this.pendingSessions.size === 0; }
+    catch { return false; }
+  }
+  async exportSessions() {
+    let saved = [];
+    try { saved = await this.journal.exportAll(); } catch { if (!this.sessions.every(s => Array.isArray(s.hits) || this.sessionCache.has(s.id))) throw new Error('Sve snimke nije moguće izvesti. Pokušaj ponovo.'); }
+    const all = new Map(saved.map(s => [s.id, s]));
+    for (const s of this.sessionCache.values()) all.set(s.id, s);
+    for (const s of this.sessions) if (Array.isArray(s.hits)) all.set(s.id, s);
+    for (const s of this.pendingSessions.values()) all.set(s.id, s);
+    return [...all.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  }
 
   show(panel) {
     document.querySelector('[data-view=practice]').click();
     for (const button of document.querySelectorAll('[data-studio]')) button.classList.toggle('active', button.dataset.studio === panel);
-    for (const name of ['focus', 'journal', 'backing', 'program', 'replay']) $(`studio-${name}`).hidden = name !== panel;
+    for (const name of ['focus', 'journal', 'backing', 'program', 'replay', 'arrangement']) if ($(`studio-${name}`)) $(`studio-${name}`).hidden = name !== panel;
     if (panel === 'journal') this.renderJournal();
     if (panel === 'replay') this.renderReplay();
   }
@@ -52,29 +140,30 @@ export class PracticeStudio {
     for (const [id, predicate] of [['focusAll', () => true], ['focusHands', i => !['kick', 'kick2', 'hhp'].includes(i.id)], ['focusFeet', i => ['kick', 'kick2', 'hhp'].includes(i.id)]]) {
       $(id).onclick = () => { this.focus.instruments = (this.host.getInstruments?.() || INSTRUMENTS).filter(predicate).map(i => i.id); this.focus.enabled = true; this.renderFocus(); this.host.refreshNotation(); };
     }
-    $('focusSuggest').onclick = () => {
+    $('focusSuggest').onclick = async () => {
       const latest = this.sessions.find(s => patternSignature(s.pattern) === patternSignature(this.host.getPattern()));
-      const suggestion = recommendFocus(latest);
+      const suggestion = recommendFocus(latest ? await this.loadSession(latest.id) : null);
       if (!suggestion) return this.host.toast('Nema dovoljno grešaka iz ovog ritma za predlog.');
       this.focus = normalizeFocus(this.host.getPattern(), { enabled: true, from: suggestion.bar, to: suggestion.bar, instruments: [suggestion.inst] });
       this.host.setBpm(suggestion.bpm); this.renderFocus(); this.host.refreshNotation(); this.renderBacking();
       this.host.toast(`Vežbaj takt ${suggestion.bar}, ${INST[suggestion.inst].label}, na ${suggestion.bpm} BPM.`);
     };
-    $('journalFilter').onchange = () => this.renderJournal();
-    $('sessionList').onclick = e => {
+    $('journalFilter').onchange = () => { this.journalPage = 1; this.renderJournal(); };
+    $('sessionList').onclick = async e => {
       const button = e.target.closest('[data-session]'); if (!button) return;
-      this.replay.stop(); this.selectedId = button.dataset.session; this.renderJournal();
+      this.replay.stop(); this.selectedId = button.dataset.session; await this.loadSession(); this.renderJournal();
     };
-    $('sessionDetail').onclick = e => {
+    $('sessionDetail').onclick = async e => {
       if (e.target.closest('[data-replay-selected]')) { this.show('replay'); return; }
       if (e.target.closest('[data-delete-session]')) {
         if (!confirm('Obrisati ovu sesiju i njeno izvođenje?')) return;
         const list = this.sessions.filter(s => s.id !== this.selectedId);
-        if (!store.saveSessions(list)) return;
+        try { await this.journal.delete(this.selectedId); } catch { return; }
+        this.sessionCache.delete(this.selectedId); this.pendingSessions.delete(this.selectedId);
         this.replay.stop(); this.sessions = list; this.selectedId = list[0]?.id || ''; this.renderJournal();
       }
     };
-    $('exportJournal').onclick = () => store.download('drummer-dnevnik.json', { version: 1, sessions: this.sessions });
+    $('exportJournal').onclick = async () => { try { store.download('drummer-dnevnik.json', { version: 2, sessions: await this.exportSessions() }); } catch (error) { this.host.toast(error.message); } };
     this.bindBacking(); this.bindPrograms(); this.bindReplay();
   }
 
@@ -117,6 +206,8 @@ export class PracticeStudio {
     $('replayPlay').disabled = busy || !this.selected;
     $('replaySession').disabled = busy;
     $('replaySeek').disabled = busy || !this.selected;
+    this.arrangements?.playState();
+    this.backupRestore?.playState();
   }
 
   beginSession(pattern, range, firstPerf, options) {
@@ -155,7 +246,8 @@ export class PracticeStudio {
         slot: r.note?.slot ?? r.slot ?? null, loop: r.note?.loop ?? r.loop ?? 0, expectedId: r.note?.id || null })) };
     delete session.firstPerf;
     this.sessions.unshift(session); this.selectedId = session.id;
-    store.saveSessions(this.sessions); this.renderJournal();
+    this.sessionCache.set(session.id, session); this.journalPage = 1;
+    this.persistSession(session); this.renderJournal();
     if (!this.run && ['manual', 'complete', 'duration'].includes(reason)) this.show('journal');
     return session;
   }
@@ -166,7 +258,11 @@ export class PracticeStudio {
     const best = progressFor(this.sessions, reference).bestBpm;
     $('journalSummary').innerHTML = `<div><strong>${data.matching.length}</strong><span>sesija</span></div><div><strong>${Math.round(data.matching.reduce((sum, s) => sum + s.durationMs, 0) / 60000)}</strong><span>minuta vežbanja</span></div><div><strong>${best ?? '–'}</strong><span>najbolji BPM ≥90%, trenutni ritam i fokus</span></div>`;
     $('journalEmpty').textContent = data.matching.length ? '' : 'Pokreni vežbu. Posle Stop, ovde će se pojaviti sesija i izvođenje.';
-    $('sessionList').innerHTML = [...data.matching].reverse().map(s => `<tr class="${s.id === this.selectedId ? 'selected' : ''}"><td><button data-session="${esc(s.id)}">${patternLabel(s.pattern)}<br><small>${date(s.startedAt)}</small></button></td><td>${s.bpmStart} → ${s.bpmEnd}</td><td>${time(s.durationMs)}</td><td>${percent(s.stats?.accuracy)}</td></tr>`).join('');
+    const pages = Math.max(1, Math.ceil(data.matching.length / this.journalPageSize));
+    this.journalPage = Math.min(pages, Math.max(1, this.journalPage));
+    const pageSessions = [...data.matching].reverse().slice((this.journalPage - 1) * this.journalPageSize, this.journalPage * this.journalPageSize);
+    $('sessionList').innerHTML = pageSessions.map(s => `<tr class="${s.id === this.selectedId ? 'selected' : ''}"><td><button data-session="${esc(s.id)}">${patternLabel(s.pattern)}<br><small>${date(s.startedAt)}</small></button></td><td>${s.bpmStart} → ${s.bpmEnd}</td><td>${time(s.durationMs)}</td><td>${percent(s.stats?.accuracy)}</td></tr>`).join('');
+    if ($('journalPageInfo')) { $('journalPageInfo').textContent = `${this.journalPage} / ${pages}`; $('journalPrev').disabled = this.journalPage <= 1; $('journalNext').disabled = this.journalPage >= pages; }
     this.drawProgress(data.daily);
     const selected = this.selected;
     if (selected) {
@@ -179,8 +275,12 @@ export class PracticeStudio {
       report.id = 'performanceReport';
       $('sessionDetail').prepend(report);
       renderPerformanceReport(report, selected);
-    } else $('sessionDetail').innerHTML = '';
-    $('replaySession').innerHTML = '<option value="">Izaberi snimljenu sesiju…</option>' + this.sessions.map(s => `<option${s.pattern.preset ? '' : ' data-user-text'} value="${esc(s.id)}">${esc(s.pattern.name)} · ${date(s.startedAt)} · ${percent(s.stats?.accuracy)}</option>`).join('');
+    } else {
+      $('sessionDetail').textContent = this.selectedId ? 'Učitavam snimak sesije…' : '';
+      if (this.selectedId && this.journal && !this.loadingSessionId && !this.journalError) this.loadSession().then(session => { if (session) this.renderJournal(); });
+    }
+    const replayPage = [...new Map([...pageSessions, ...(selected ? [selected] : [])].map(s => [s.id, s])).values()];
+    $('replaySession').innerHTML = '<option value="">Izaberi snimljenu sesiju…</option>' + replayPage.map(s => `<option${s.pattern.preset ? '' : ' data-user-text'} value="${esc(s.id)}">${esc(s.pattern.name)} · ${date(s.startedAt)} · ${percent(s.stats?.accuracy)}</option>`).join('');
     $('replaySession').value = this.selectedId;
     if (!$('studio-replay').hidden) this.renderReplay();
     this.playState();
@@ -242,7 +342,7 @@ export class PracticeStudio {
       if (saved) { this.program = structuredClone(saved); this.programDirty = false; }
       this.renderPrograms();
     };
-    $('programName').oninput = e => { this.program.name = e.target.value; this.programDirty = true; };
+    $('programName').oninput = e => { this.program.name = e.target.value; this.programDirty = true; store.saveProgramDraft(this.program); };
     $('programAdd').onclick = () => {
       const pattern = structuredClone(this.host.getPattern());
       this.program.entries.push({ pattern, focus: structuredClone(this.focus), seconds: 60, bpm: pattern.bpm, target: 90, rest: 5 });
@@ -279,6 +379,7 @@ export class PracticeStudio {
   }
 
   renderPrograms() {
+    store.saveProgramDraft(this.programDirty ? this.program : null);
     $('programName').value = this.program.name;
     $('programSelect').innerHTML = '<option value="">Izaberi program…</option>' + this.programs.map(p => `<option data-user-text value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
     $('programSelect').value = this.program.id || '';
@@ -288,12 +389,39 @@ export class PracticeStudio {
   }
 
   async startProgram() {
-    if (this.run || !this.program.entries.length) return;
+    if (this.run || this.backupRestore?.running || !this.program.entries.length) return;
     this.host.stop(); this.replay.stop();
     const program = normalizeProgram(this.program), token = ++this.runToken;
     this.run = { ...structuredClone(program), id: store.newId(), token, index: 0, results: [] };
     $('programResults').innerHTML = '';
     await this.advanceProgram(token);
+  }
+
+  async startArrangement() {
+    if (this.run || this.backupRestore?.running || this.host.isPlaying() || this.replay.playing || this.replay.starting) return false;
+    const entries = compileArrangement(this.arrangements.draft);
+    if (!entries.length) { this.host.toast('Dodaj bar jednu deonicu u aranžman.'); return false; }
+    const token = ++this.runToken;
+    this.run = { kind: 'arrangement', id: this.arrangements.draft.id || store.newId(), name: this.arrangements.draft.name,
+      token, index: 0, entries, results: [] };
+    const first = entries[0];
+    if (!this.host.loadPattern(first.pattern, { program: true })) { this.cancelProgram(); return false; }
+    this.focus = normalizeFocus(first.pattern); this.host.setBpm(first.bpm); this.renderFocus(); this.host.refreshNotation();
+    this.arrangements.status(`${this.run.name} · ${first.name} · ${first.bars} ${t('taktova ukupno')}`);
+    const started = await this.host.start({ program: true, arrangement: true, durationBars: first.bars, durationSeconds: first.durationSeconds });
+    if (!started && this.run?.token === token) this.cancelProgram();
+    this.playState(); return started;
+  }
+  peekNextSection() {
+    if (this.run?.kind !== 'arrangement') return null;
+    const next = this.run.entries[this.run.index + 1];
+    return next ? structuredClone(next) : null;
+  }
+  prepareNextSection() {
+    const next = this.peekNextSection(); if (!next) return null;
+    this.run.index++;
+    this.arrangements.status(`${this.run.name} · ${next.name} · ${next.bars} ${t('taktova ukupno')}`);
+    return next;
   }
 
   async advanceProgram(token) {
@@ -309,6 +437,10 @@ export class PracticeStudio {
   stopped(reason, session) {
     if (!this.run || reason === 'transition') { this.playState(); return; }
     if (reason !== 'duration') { this.cancelProgram(); return; }
+    if (this.run.kind === 'arrangement') {
+      this.run = null; this.arrangements.status('Aranžman je završen. Svaka deonica je sačuvana u dnevniku.');
+      this.playState(); this.renderStatus(); return;
+    }
     const entry = this.run.entries[this.run.index], accuracy = session?.stats?.accuracy;
     this.run.results.push({ name: entry.pattern.name, preset: entry.pattern.preset, accuracy, target: entry.target });
     $('programResults').innerHTML = this.run.results.map((r, i) => `<p class="${r.accuracy != null && r.accuracy >= r.target ? 'pass' : 'fail'}">${i + 1}. ${patternLabel(r)}: ${percent(r.accuracy)} / cilj ${r.target}% · ${r.accuracy != null && r.accuracy >= r.target ? 'cilj ostvaren' : 'ponovi vežbu'}</p>`).join('');
@@ -331,6 +463,9 @@ export class PracticeStudio {
     if (this.run && this.capture) {
       const entry = this.run.entries[this.run.index];
       const left = Math.max(0, Math.ceil(entry.seconds - (now - this.capture.firstPerf) / 1000));
+      if (this.run.kind === 'arrangement') {
+        this.arrangements.status(`${this.run.name} · ${entry.name} · ${left} s`); return;
+      }
       const message = `${this.run.name} · vežba ${this.run.index + 1}/${this.run.entries.length} · ${left} s`;
       if ($('programStatus').textContent !== t(message)) { $('programStatus').textContent = message; this.renderStatus(message); }
     }
@@ -338,13 +473,14 @@ export class PracticeStudio {
 
   cancelProgram() {
     if (!this.run) return;
+    if (this.run.kind === 'arrangement') this.arrangements.status('Aranžman je prekinut. Završene deonice ostaju u dnevniku.');
     this.runToken++; clearInterval(this.breakTimer); this.run = null;
     $('programStatus').textContent = 'Program je prekinut. Završene sesije ostaju u dnevniku.';
     this.playState(); this.renderStatus();
   }
 
   bindReplay() {
-    $('replaySession').onchange = e => { this.replay.stop(); this.selectedId = e.target.value; this.renderReplay(); };
+    $('replaySession').onchange = async e => { this.replay.stop(); this.selectedId = e.target.value; await this.loadSession(); this.renderReplay(); };
     $('replayPlay').onclick = async () => {
       if (!this.selected) return;
       if (this.replay.playing) { this.replay.pause(); $('replayPlay').textContent = '▶ Nastavi'; this.host.onBusyChange?.(); return; }
@@ -374,6 +510,7 @@ export class PracticeStudio {
     $('replaySeek').max = Math.max(1, session?.durationMs || 1); $('replaySeek').value = 0;
     const loops = [...new Set((session?.timeline || []).map(e => e.loop))];
     $('replayPass').innerHTML = '<option value="all">Svi prolazi</option>' + loops.map(loop => `<option value="${loop}">Prolaz ${loop + 1}</option>`).join('');
+    if (session?.hits.length > 2000 && loops.length) $('replayPass').value = String(loops[0]);
     this.drawReplay(); this.replayPosition(0); this.playState();
   }
 
@@ -392,9 +529,10 @@ export class PracticeStudio {
     const within = ms => ms >= start && ms <= end;
     const missed = new Set(session.results.filter(r => r.kind === 'miss').map(r => r.expectedId));
     let html = rows.map(i => `<text x="6" y="${y(i.id) + 4}" font-size="12">${esc(i.label)}</text><line x1="140" x2="980" y1="${y(i.id)}" y2="${y(i.id)}" stroke="#ddd"/>`).join('');
-    html += session.expected.filter(e => within(e.timeMs)).map(e => `<line x1="${x(e.timeMs)}" x2="${x(e.timeMs)}" y1="${y(e.inst) - 9}" y2="${y(e.inst) + 9}" stroke="#aaa" stroke-width="3"/>${missed.has(e.id) ? `<circle cx="${x(e.timeMs)}" cy="${y(e.inst)}" r="7" fill="none" stroke="#d93025"/>` : ''}`).join('');
+    html += session.expected.filter(e => within(e.timeMs)).slice(0, 2000).map(e => `<line x1="${x(e.timeMs)}" x2="${x(e.timeMs)}" y1="${y(e.inst) - 9}" y2="${y(e.inst) + 9}" stroke="#aaa" stroke-width="3"/>${missed.has(e.id) ? `<circle cx="${x(e.timeMs)}" cy="${y(e.inst)}" r="7" fill="none" stroke="#d93025"/>` : ''}`).join('');
     const hits = session.hits.filter(h => within(h.timeMs));
-    html += hits.map(h => `<circle cx="${x(h.timeMs)}" cy="${y(h.inst)}" r="${3 + h.vel / 50}" fill="${({ good: '#1e8e3e', ok: '#888', extra: '#d93025', free: '#111' })[h.kind] || '#111'}"><title>${esc(INST[h.inst].label)} · ${h.timeMs.toFixed(1)} ms · ${h.vel} · ${h.err == null ? 'bez ocene' : `${h.err.toFixed(1)} ms`}</title></circle>`).join('');
+    html += hits.slice(0, 2000).map(h => `<circle cx="${x(h.timeMs)}" cy="${y(h.inst)}" r="${3 + h.vel / 50}" fill="${({ good: '#1e8e3e', ok: '#888', extra: '#d93025', free: '#111' })[h.kind] || '#111'}"><title>${esc(INST[h.inst].label)} · ${h.timeMs.toFixed(1)} ms · ${h.vel} · ${h.err == null ? 'bez ocene' : `${h.err.toFixed(1)} ms`}</title></circle>`).join('');
+    if (hits.length > 2000) html += `<text x="140" y="14" font-size="12">${t('Graf prikazuje prvih 2000 udaraca. Izaberi pojedinačni prolaz za detalje.')}</text>`;
     html += `<text x="140" y="${chartBottom}" font-size="12">${time(start)}</text><text x="940" y="${chartBottom}" font-size="12">${time(end)}</text><line id="replayCursor" x1="140" x2="140" y1="12" y2="${chartBottom - 20}" stroke="#d93025"/>`;
     $('replayChart').innerHTML = html;
     $('replayHits').innerHTML = hits.slice(0, 200).map(h => `<tr><td>${(h.timeMs / 1000).toFixed(3)} s</td><td>${esc(INST[h.inst].label)}</td><td>${h.note}</td><td>${h.vel}</td><td>${h.err == null ? '–' : `${h.err > 0 ? '+' : ''}${h.err.toFixed(1)} ms`}</td></tr>`).join('') + (hits.length > 200 ? '<tr><td colspan="5">Tabela prikazuje prvih 200 udaraca ovog prikaza. Izvoz sadrži sve.</td></tr>' : '');

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { blankPattern, slotOffsetMs } from '../js/patterns.js';
-import { performanceBar, performancePasses } from '../js/performance-report.js';
+import { performanceBar, performancePasses, performanceTimeline } from '../js/performance-report.js';
 import { normalizeSession, performanceMidi } from '../js/practice.js';
 import { ReplayPlayer } from '../js/replay.js';
 import { AudioEngine } from '../js/audio.js';
@@ -48,6 +48,46 @@ test('a partial final bar hides notes that were never scheduled and pass selecti
   const s = session(); s.timeline = s.timeline.slice(0, 3); s.expected = s.expected.slice(0, 1);
   assert.equal(performanceBar(s, 0, 1).pattern.steps.snare[4], 0);
   assert.deepEqual(performancePasses(s), [0]);
+});
+
+test('chronological report assigns early and late hits to their actual bar and pass', () => {
+  const s = session({ durationMs: 8000 });
+  s.timeline.push(...s.timeline.map(e => ({ ...e, loop: 1, timeMs: e.timeMs + 4000 })));
+  s.expected.push({ ...s.expected[0], id: '1:0:snare', loop: 1, timeMs: 4000 });
+  s.hits = [
+    { inst: 'snare', loop: 0, timeMs: 1990, expectedId: '0:16:snare', err: -10 },
+    { inst: 'snare', loop: 1, timeMs: 3990, expectedId: '1:0:snare', err: -10 },
+    { inst: 'kick', loop: 0, timeMs: 4010, kind: 'extra' },
+  ];
+  const models = performanceTimeline(s);
+  assert.deepEqual(models.map(m => [m.loop, m.bar, m.startMs]), [[0, 1, 0], [0, 2, 2000], [1, 1, 4000], [1, 2, 6000]]);
+  assert.equal(models[0].hits[0].timeMs, 1990); assert.equal(models[1].hits[0].timeMs, 3990);
+  assert.equal(models[2].hits[0].timeMs, 4010); assert.ok(Math.abs(models[2].hits[0].localSlot - .08) < 1e-8);
+  assert.equal(models[1].missed.length, 0); // A hit can be drawn in the preceding bar without becoming a miss.
+});
+
+test('legacy recordings without a slot clock retain absolute loop timing and silent bars', () => {
+  const s = session({ timeline: [], durationMs: 8000, hits: [
+    { inst: 'snare', loop: 1, slot: 0, timeMs: 4020, kind: 'extra' },
+  ] });
+  s.expected.push({ id: '1:16:snare', inst: 'snare', slot: 16, loop: 1, dyn: 2, timeMs: 6000 });
+  const models = performanceTimeline(s);
+  assert.deepEqual(models.map(m => m.startMs), [0, 2000, 4000, 6000]);
+  assert.ok(Math.abs(models[2].hits[0].localSlot - .16) < 1e-8);
+  assert.equal(models[3].endMs, 8000);
+  s.expected = []; s.range = { from: 2, to: 2 }; s.durationMs = 4000;
+  assert.equal(performanceBar(s, 1, 2).startMs, 2000);
+});
+
+test('long reports preserve chronological bar order without duplicating raw events', () => {
+  const s = session({ durationMs: 100000, timeline: [], expected: [], hits: [] });
+  for (let loop = 0; loop < 25; loop++) {
+    s.timeline.push(...Array.from({ length: 32 }, (_, slot) => ({ loop, slot, timeMs: loop * 4000 + slot * 125, bpm: 120 })));
+    s.hits.push({ inst: 'snare', loop, slot: 0, timeMs: loop * 4000 + 20, kind: 'extra' });
+  }
+  const models = performanceTimeline(s);
+  assert.equal(models.length, 50); assert.equal(models.reduce((n, m) => n + m.hits.length, 0), 25);
+  assert.deepEqual(models.map(m => m.startMs), Array.from({ length: 50 }, (_, i) => i * 2000));
 });
 
 test('session loading, replay and MIDI retain the early first hit instead of dropping it', async () => {

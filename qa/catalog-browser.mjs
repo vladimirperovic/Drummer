@@ -39,14 +39,41 @@ const loadEight = async p => p.evaluate(async () => {
 });
 
 await scenario('Catalog: category counts, bilingual search and typing without drum shortcuts', async p => {
-  assert.equal(await p.locator('#presets .load').count(), 12);
+  assert.equal(await p.locator('#presets .load').count(), 20);
   assert.match(await p.locator('#presetCount').innerText(), /\/ 94/);
-  for (const category of ['latin', 'rock', 'jazz', 'three-eight']) { await p.locator('#presetCategory').selectOption(category); assert.equal(await p.locator('#presets .load').count(), 12); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/); }
+  for (const category of ['latin', 'rock', 'jazz', 'three-eight']) { await p.locator('#presetCategory').selectOption(category); assert.equal(await p.locator('#presets .load').count(), 20); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/); }
   await p.locator('#presetCategory').selectOption('latin'); await p.locator('#presetSearch').pressSequentially('bossa');
   assert.equal(await p.locator('#presetSearch').inputValue(), 'bossa'); assert.equal(await p.locator('#presets .load').count(), 2);
   assert.equal(await p.evaluate(() => __qa.play.on), false);
   await p.locator('#presetSearch').fill('anticipated kick'); assert.equal(await p.locator('#presets .load').count(), 1);
   await p.locator('#presetSearch').fill('no-such-pattern'); assert.ok(await p.locator('#presetEmpty').isVisible());
+});
+await scenario('Catalog: twenty real notation previews match notes, retain names and show first-two-bar captions', async p => {
+  for (const category of ['all', 'latin', 'rock', 'jazz', 'three-eight']) {
+    await p.locator('#presetCategory').selectOption(category);
+    assert.equal(await p.locator('#presets .library-preview svg').count(), 20);
+    const failures = await p.evaluate(async () => {
+      const { PRESETS, INSTRUMENTS, slotsPerBar } = await import('/js/patterns.js'), failures = [];
+      for (const button of document.querySelectorAll('#presets .load')) {
+        const source = PRESETS.find(preset => preset.id === button.dataset.presetId), svg = button.querySelector('.library-preview svg');
+        const limit = Math.min(2, source.bars) * slotsPerBar(source);
+        if (button.firstElementChild.textContent !== source.name) failures.push(source.id + ': name');
+        for (const inst of INSTRUMENTS) {
+          const expected = source.steps[inst.id].slice(0, limit).filter(Boolean).length;
+          if (svg.querySelectorAll(`.head[data-inst="${inst.id}"]`).length !== expected) failures.push(source.id + ': notes ' + inst.id);
+        }
+        if (svg.querySelector('.playhead') || /NaN|Infinity/.test(svg.outerHTML)) failures.push(source.id + ': invalid geometry');
+        if (source.bars > 2 && !button.querySelector('.preview-caption')?.textContent.includes(`1–2 / ${source.bars}`)) failures.push(source.id + ': truncated without caption');
+        const box = svg.getBBox(), frame = svg.viewBox.baseVal;
+        if (box.y < frame.y - 1 || box.y + box.height > frame.y + frame.height + 1) failures.push(source.id + ': clipped preview');
+      }
+      return failures;
+    });
+    assert.deepEqual(failures, [], category);
+  }
+  await p.locator('#languageSelect').selectOption('en');
+  assert.ok((await p.locator('#presets .load > span:first-child').allTextContents()).every(Boolean));
+  for (const width of [1440, 390, 360]) { await p.setViewportSize({ width, height: 1000 }); assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); }
 });
 await scenario('Catalog: all eighty new presets load their correct meter, notes and English lesson', async p => {
   await p.locator('#languageSelect').selectOption('en');
@@ -211,10 +238,10 @@ await scenario('Kit: 3D and new presets load offline even when 3D was never open
   await p.evaluate(async () => { await navigator.serviceWorker.ready; });
   await p.waitForFunction(() => !!navigator.serviceWorker.controller);
   await context.setOffline(true); await p.reload(); await p.locator('#presets .load').first().waitFor();
-  assert.equal(await p.locator('#presets .load').count(), 12);
+  assert.equal(await p.locator('#presets .load').count(), 20);
   assert.match(await p.locator('#presetCount').innerText(), /\/ 94/);
   await p.locator('#kit3d').click(); await p.locator('#kit3dHost canvas').waitFor(); assert.equal(await p.locator('#kit3d').getAttribute('aria-pressed'), 'true');
-  await p.locator('#presetCategory').selectOption('three-eight'); assert.equal(await p.locator('#presets .load').count(), 12); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/);
+  await p.locator('#presetCategory').selectOption('three-eight'); assert.equal(await p.locator('#presets .load').count(), 20); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/);
 }, { offline: true });
 
 const report = { browser: channel || 'Chromium', browserVersion: browser.version(), generatedAt: new Date().toISOString(), passed: results.filter(r => r.status === 'PASS').length, failed: results.filter(r => r.status === 'FAIL').length, results };

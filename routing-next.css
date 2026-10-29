@@ -1,0 +1,13 @@
+#midiRouting { margin: 1rem 0; padding: .8rem; border: 1px solid var(--line, #ddd); border-radius: 10px; }
+#midiRouting summary { cursor: pointer; font-weight: 700; }
+.routing-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-bottom: .8rem; }
+.routing-form label { display: grid; gap: .3rem; min-width: 0; }
+.routing-form select, .routing-form input { min-width: 0; width: 100%; }
+.routing-scroll { max-width: 100%; overflow-x: auto; margin: .8rem 0; }
+.routing-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.routing-table th, .routing-table td { padding: .4rem; border-bottom: 1px solid var(--line, #ddd); text-align: left; }
+.routing-table td:first-child { max-width: 10rem; overflow-wrap: anywhere; }
+.routing-table select { width: 100%; min-width: 7rem; max-width: 14rem; }
+.routing-table input { width: 4.6rem; }
+.routing-table button { min-height: 36px; }
+@media (max-width: 480px) { #midiRouting { padding: .6rem; } .routing-form { grid-template-columns: minmax(0, 1fr); } }

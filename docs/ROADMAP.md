@@ -1,17 +1,15 @@
-# Five next features
+# Completed roadmap — 2026-10-29
 
-These are proposals, not features already implemented in this release.
+The five previously proposed features are implemented:
 
-1. **Full backup restore.** Restore sessions, programs, profiles, favorites and patterns from one export, with a preview and conflict handling. This completes the existing export workflow. Medium scope.
-2. **Undo/redo and selected-bar editing.** Recover accidental edits and copy/paste arbitrary bar selections. The current editor already supports copying bar 1 to the remaining bars. Small to medium scope.
-3. **Rudiment and fill generator.** Generate practice variations from sticking, accents, instruments and difficulty instead of relying only on presets. Medium scope.
-4. **Whole-song practice arrangements.** Sequence intro, verse, chorus and fill sections by musical bars, including tempo/meter changes. Current programs sequence timed exercises and rests. Larger scope.
-5. **MIDI routing by device, channel and note.** Distinguish pads from multiple devices even when they send the same note, and configure output mappings independently. Medium scope.
+1. **Full backup restore:** preview merge/replace changes and duplicate-ID choices for patterns, sessions, programs, profiles, favorites and arrangements; optionally restore settings, drafts and MIDI routing.
+2. **Undo/redo and selected-bar editing:** recover editor changes and copy/paste compatible bar ranges.
+3. **Rudiment and fill generator:** preview variations from sticking, accents, orchestration and difficulty before applying.
+4. **Whole-song arrangements:** sequence named sections with their own tempo, meter and bar repeat count.
+5. **MIDI routing:** distinguish device/channel/note inputs, learn actual source ports, and configure independent outputs. Existing shared maps and profile imports remain supported.
 
-## Optimization priorities
+The storage/performance priorities are also implemented: raw sessions use IndexedDB with paginated summaries and lazy event loading; settled 3D views request no frames; scoring maintains counts, mean and variance incrementally, and the active instrument set is cached. Storage errors retain explicit recovery/export paths.
 
-- **Journal storage:** move raw performance events to IndexedDB and paginate the journal/replay. In a fresh Chromium profile, one simulated 30-minute Basic rock session at 120 BPM serialized to about 4.13 MB; two produced about 8.25 MB and exceeded the localStorage quota. The existing warning and preservation of the prior saved session worked. This is a capacity limit, not a silent successful save.
-- **Idle 3D rendering:** render when the camera, layout, pedal or flash changes. An idle visible kit generated 96 renders in two seconds, with 564 draw calls per frame in a software-rendered test. This measurement is specific to the test environment. Shared geometry/instancing may further reduce draw calls.
-- **Long-session statistics:** maintain incremental counts/mean/variance rather than rebuilding them from the full result history on each statistics update. Cache the active instrument ID set when the kit configuration changes.
+Additional work includes played-rhythm capture, 20-pattern library pages with real notation previews, and optional local AI audio tools. Demucs extracts a drum stem; ADTOF proposes five-group drum notes for review, MIDI export and whole-song practice. Models download only after an explicit action and are not bundled. CPU/WASM separation can be slow or exceed browser memory; transcription is approximate. ADTOF is non-commercial CC BY-NC-SA 4.0, separate from the MIT app. See the [guide](../README.en.md) and [model notices](../THIRD_PARTY_NOTICES.md).
 
-Prioritize full restore and storage capacity before adding more long-session data.
+Further quality work can broaden physical MIDI hardware/browser coverage, evaluate GPU acceleration, and improve transcription detail. These are future possibilities, not current guarantees.

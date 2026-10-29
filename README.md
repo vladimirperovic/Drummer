@@ -1,6 +1,6 @@
 # Drummer
 
-[**Try the live demo**](https://vladimirperovic.github.io/Drummer/) · [English guide](README.en.md) · [Srpsko uputstvo](README.sr.md) · [Report an issue](https://github.com/vladimirperovic/Drummer/issues)
+[**Try the live demo**](https://vladimirperovic.github.io/Drummer/) · [Guide](README.en.md) · [Report an issue](https://github.com/vladimirperovic/Drummer/issues)
 
 Practice drums in your browser with readable notation, MIDI input and honest timing feedback. Drummer works with electronic drum kits such as the Roland TD-17, or with your keyboard and mouse. No account or application server is required.
 
@@ -8,13 +8,17 @@ Practice drums in your browser with readable notation, MIDI input and honest tim
 
 ## What you can do
 
-- Play 94 built-in practice patterns or create your own in the grid editor.
-- Connect a MIDI kit, learn pad mappings and save device profiles.
+- Browse 94 practice patterns, 20 per page, with previews of their actual notes.
+- Edit with undo/redo, copy selected bars, and generate rudiments or fills.
+- Connect multiple MIDI kits with device/channel/note rules and independent output maps, saved in profiles.
 - Adjust tempo with large ±1/±5 controls and read hit feedback beside the tempo.
 - Resize the notes, choose up to eight rows, or hide the drum kit for a dedicated reading view.
 - Import original MusicXML scores with **Import score**. Pitched scores keep their original notation.
 - Review each practice session with expected black notes and your actual red hits, including exact early/late offsets.
 - Use A–B focus, a tempo trainer, backing audio, practice programs and performance replay.
+- Sequence whole-song arrangements with section lengths, tempo and meter changes.
+- Capture a played rhythm with count-in, quantize it, listen and save it.
+- Export and restore a full backup with a change preview and conflict choices.
 - Customize a 2D/3D kit, play its pads with the mouse and arrange its parts.
 - Install the offline app, print practice sheets, and export patterns or performances.
 
@@ -53,6 +57,14 @@ MusicXML viewing does not turn piano music into a drum exercise or assess pitche
 
 ![Original pitched MusicXML score in the reading view](assets/screenshots/musicxml-score.png)
 
+## AI audio: drums and drum notes
+
+Open **Tools → AI audio** and choose an MP3 or another browser-decodable audio file, up to 100 MB / 10 minutes. **Isolate drums** runs Demucs locally, with drums-only listening, a mix without drums, and WAV export. **Transcribe notes** runs ADTOF on the original mix or extracted drums. Review the estimated tempo, five instrument groups and note suggestions, then export MIDI or apply a whole-song practice reference.
+
+The first action explicitly downloads the selected model and a shared runtime: approximately **180.5 MB for Demucs** or **17.0 MB for ADTOF**; the 14.85 MB runtime is shared. Verified files are cached for reuse and can be deleted in the AI panel. Audio is never uploaded. Processing uses CPU/WASM workers, can take several minutes and substantial memory, and can be cancelled. Transcription is approximate: toms, hi-hat articulations and cymbal types are grouped, and MIDI velocity is a default rather than detected dynamics.
+
+ADTOF's model is **CC BY-NC-SA 4.0, non-commercial use only**. This is separate from Drummer's MIT code license; see [model notices](THIRD_PARTY_NOTICES.md).
+
 ## Read your timing
 
 After Stop, the journal opens your notation report. Black notes show the task; red notes below show when you actually played. A red note to the left is early, to the right is late. The report includes ±milliseconds, extra hits and missed notes, plus a pass/bar selector and exact original timestamps.
@@ -73,9 +85,9 @@ For Web MIDI, use a supported Chromium browser over HTTPS or localhost. Keyboard
 
 ## Local data and offline use
 
-Patterns, sessions and settings belong to the browser and origin. The public demo and localhost have separate data. Audio/score files are read locally, with no upload or analytics. Export important patterns and sessions before clearing browser data. A full journal/program restore workflow is not yet available. Long recordings may exhaust local storage; the app shows a warning and offers export/retry.
+Patterns, sessions and settings belong to the browser and origin. The public demo and localhost have separate data. **Tools → Backup and restore** exports patterns, full sessions, programs, profiles, favorites, arrangements and settings. Review merge/replace choices and conflicts before applying a restore. Audio files and downloaded AI models are not included. The journal stores recordings in IndexedDB and loads details on demand; storage failures still show export/retry actions.
 
-Open Tools → Offline app and wait until it is ready before going offline. See [privacy](PRIVACY.md) and the [detailed guide](README.en.md).
+Open Tools → Offline app and wait until it is ready before going offline. AI needs its optional downloads before offline use. See [privacy](PRIVACY.md).
 
 ## Development and deployment
 
@@ -89,10 +101,10 @@ Browser tests, implementation notes and contribution steps are in [CONTRIBUTING.
 
 Automated tests use simulated MIDI and isolated browsers. Physical drum hardware, audio-interface latency and all GPU/browser combinations have not been exhaustively tested. See [release notes](CHANGELOG.md).
 
-See the [verification report](qa/RELEASE-2026-10-29.md) and [five proposed next features](docs/ROADMAP.md).
+See the [verification report](qa/RELEASE-2026-10-29.md) and [completed roadmap](docs/ROADMAP.md).
 
 ## License and credits
 
-Drummer's original code and generated kit artwork are available under the [MIT license](LICENSE), copyright 2026 Vladimir Perovic. Third-party components retain their own licenses: Three.js/OrbitControls and OpenSheetMusicDisplay with its bundled dependencies. See [third-party notices](THIRD_PARTY_NOTICES.md).
+Drummer's original code and generated kit artwork are available under the [MIT license](LICENSE), copyright 2026 Vladimir Perovic. Third-party components and optional AI models retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
 No commercial sample pack or copyrighted song recording is included. Roland and EZdrummer are product references; this project is not affiliated with their manufacturers.

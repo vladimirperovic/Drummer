@@ -9,3 +9,11 @@ dist/
 qa/artifacts/score-view/
 qa/artifacts/performance-report/
 qa/artifacts/score-import/
+qa/artifacts/editor-next/
+qa/artifacts/studio-next/
+qa/artifacts/rhythm-capture/
+qa/artifacts/routing-performance/
+qa/artifacts/drum-separator/
+qa/artifacts/ai-transcription/
+qa/artifacts/ai-tools/
+qa/artifacts/pagination-final/

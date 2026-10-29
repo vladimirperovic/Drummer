@@ -21,6 +21,8 @@ export class Scorer {
     this.pending = [];
     this.results = [];
     this.loops = new Map();
+    this.totals = { good: 0, ok: 0, miss: 0, extra: 0 };
+    this.instrumentStats = new Map();
   }
 
   expect(note) { this.pending.push({ ...note, done: false }); }
@@ -57,6 +59,15 @@ export class Scorer {
 
   record(r, loop) {
     this.results.push(r);
+    const s = this.instrumentStats.get(r.inst) || { good: 0, ok: 0, miss: 0, extra: 0, errs: [], vels: [], dynOk: 0, mean: 0, m2: 0 };
+    s[r.kind]++; this.totals[r.kind]++;
+    if (r.err != null) {
+      s.errs.push(r.err); s.vels.push(r.vel); if (r.dynOk) s.dynOk++;
+      const delta = r.err - s.mean;
+      s.mean += delta / s.errs.length;
+      s.m2 += delta * (r.err - s.mean);
+    }
+    this.instrumentStats.set(r.inst, s);
     const L = this.loops.get(loop) || { good: 0, ok: 0, miss: 0, extra: 0 };
     L[r.kind]++;
     this.loops.set(loop, L);
@@ -73,21 +84,20 @@ export class Scorer {
 
   stats() {
     const per = {};
-    const all = { good: 0, ok: 0, miss: 0, extra: 0 };
-    for (const r of this.results) {
-      const s = (per[r.inst] ||= { good: 0, ok: 0, miss: 0, extra: 0, errs: [], vels: [], dynOk: 0 });
-      s[r.kind]++;
-      all[r.kind]++;
-      if (r.err != null) {
-        s.errs.push(r.err);
-        s.vels.push(r.vel);
-        if (r.dynOk) s.dynOk++;
-      }
-    }
-    for (const s of Object.values(per)) {
-      s.expected = s.good + s.ok + s.miss;
-      s.mean = s.errs.length ? s.errs.reduce((a, b) => a + b, 0) / s.errs.length : null;
-      s.spread = s.errs.length > 1 ? Math.sqrt(s.errs.reduce((a, e) => a + (e - s.mean) ** 2, 0) / s.errs.length) : null;
+    const all = { ...this.totals };
+    for (const [inst, state] of this.instrumentStats) {
+      const count = state.errs.length;
+      // The hot UI uses sampleCount. Existing report consumers still receive
+      // ordinary independent arrays, copied only if they request the samples.
+      let errs, vels;
+      const s = { good: state.good, ok: state.ok, miss: state.miss, extra: state.extra,
+        get errs() { return errs ||= state.errs.slice(0, count); },
+        get vels() { return vels ||= state.vels.slice(0, count); }, dynOk: state.dynOk,
+        expected: state.good + state.ok + state.miss,
+        mean: count ? state.mean : null,
+        spread: count > 1 ? Math.sqrt(Math.max(0, state.m2 / count)) : null };
+      Object.defineProperty(s, 'sampleCount', { value: count });
+      per[inst] = s;
     }
     const expected = all.good + all.ok + all.miss;
     const accuracy = expected ? Math.round((100 * (all.good + 0.5 * all.ok)) / (expected + 0.5 * all.extra)) : null;

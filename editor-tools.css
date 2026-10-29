@@ -1,0 +1,21 @@
+.editor-next-tools { margin: 12px 0; padding: 12px; border: 1px solid var(--line, #ddd); border-radius: 8px; }
+.editor-history-row, .editor-selection-row, .generator-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+.editor-history-row { align-items: center; margin-bottom: 12px; }
+.editor-selection-row label, .generator-controls label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.editor-selection-row input, #generatorBars { width: 76px; }
+.editor-selection-row .muted, .editor-history-row .muted, .editor-selection-hint { font-size: 12px; }
+.editor-selection-hint { margin: 10px 0 16px; }
+#exerciseGenerator { padding-top: 12px; border-top: 1px solid var(--line, #ddd); }
+#exerciseGenerator summary { cursor: pointer; font-weight: 650; }
+.generator-controls { margin-top: 14px; }
+.generator-controls input[type=text] { width: 180px; }
+.generator-preview { background: #fff; overflow: auto; max-height: 360px; min-height: 90px; }
+#generatorStatus { font-size: 12px; }
+#grid { touch-action: pan-y; }
+#grid .cell { touch-action: none; }
+@media (max-width: 600px) {
+  .editor-next-tools { padding: 10px; }
+  .editor-selection-row, .generator-controls { gap: 8px; }
+  .generator-controls label { max-width: 100%; }
+  .generator-controls input, .generator-controls select { max-width: 100%; }
+}

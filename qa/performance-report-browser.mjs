@@ -21,7 +21,7 @@ async function scenario(name, fn) {
     await route.fulfill({ response, body: await response.text() + '\nglobalThis.__qa={studio,settings,play,scorer,start,stop,onHit,loadPattern};' });
   });
   try {
-    await page.goto(base); await page.waitForFunction(() => !!globalThis.__qa);
+    await page.goto(base); await page.waitForFunction(() => !!globalThis.__qa); await page.evaluate(() => __qa.studio.journalReady);
     await fn(page); assert.deepEqual(errors, []);
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
   } catch (error) {
@@ -48,28 +48,34 @@ async function fixture(page) {
   });
 }
 
-await scenario('Report: red heads retain early/late time, reference guides, extra and missed notes', async page => {
+await scenario('Report: black and red heads share the staff, with exact early/late displacement, extra and missed notes', async page => {
   await fixture(page);
   const geometry = await page.evaluate(() => {
     const root = document.querySelector('#performanceReport');
     const hits = [...root.querySelectorAll('.performance-hit')].map(g => ({ slot: +g.dataset.slot, time: +g.dataset.timeMs, red: getComputedStyle(g.querySelector('.performance-actual')).fill }));
-    return { hits, guides: root.querySelectorAll('.performance-guide').length, text: root.textContent };
+    const firstBar = root.querySelector('.performance-bar'), black = [...firstBar.querySelectorAll('.head[data-inst="snare"]')].map(g => ({ x: +g.dataset.x, y: +g.dataset.y }));
+    const red = [...firstBar.querySelectorAll('.performance-hit[data-inst="snare"] .performance-actual ellipse')].map(e => ({ x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }));
+    return { hits, offsets: root.querySelectorAll('.performance-offset').length, staffs: root.querySelectorAll('.staff').length, black, red, text: root.textContent };
   });
   assert.deepEqual(geometry.hits.map(h => Number(h.slot.toFixed(6))), [-.08, 4.4, 6.4]);
   assert.equal(geometry.hits[0].time, -10); assert.equal(geometry.hits[0].red, 'rgb(198, 40, 40)');
-  assert.equal(geometry.guides, 2); assert.match(geometry.text, /\+50 ms/); assert.match(geometry.text, /višak/);
-  await page.locator('[data-report-next]').click(); assert.equal(await page.locator('.performance-missed').count(), 1);
-  await page.locator('[data-report-prev]').click();
+  assert.equal(geometry.offsets, 2); assert.equal(geometry.staffs, 10); assert.match(geometry.text, /\+50 ms/); assert.match(geometry.text, /višak/);
+  assert.equal(geometry.red[0].y, geometry.black[0].y); assert.equal(geometry.red[1].y, geometry.black[1].y);
+  assert.ok(geometry.red[0].x < geometry.black[0].x); assert.ok(geometry.red[1].x > geometry.black[1].x);
+  assert.equal(await page.locator('.performance-missed').count(), 1); assert.equal(await page.locator('.performance-bar').count(), 2);
+  const staffY = await page.locator('.performance-bar').evaluateAll(cards => cards.map(card => card.querySelector('.staff').getBoundingClientRect().y));
+  assert.ok(Math.abs(staffY[0] - staffY[1]) < 1, 'consecutive bars share the same row baseline');
   await page.locator('#performanceReport').screenshot({ path: `${artifacts}/desktop.png` });
 });
 
-await scenario('Report: instrument filter, English and narrow screens retain readable scrolling notation', async page => {
+await scenario('Report: instrument filter, English and narrow screens preserve a chronological score without page overflow', async page => {
   await fixture(page);
   await page.locator('[data-report-instrument]').selectOption('kick'); assert.equal(await page.locator('.performance-hit').count(), 1);
   await page.locator('#languageSelect').selectOption('en');
-  assert.match(await page.locator('#performanceReport h3').textContent(), /Your performance/);
+  assert.match(await page.locator('#performanceReport h3').textContent(), /Your complete performance/);
   await page.setViewportSize({ width: 390, height: 844 });
-  assert.ok(await page.locator('.performance-scroll').evaluate(e => e.scrollWidth > e.clientWidth));
+  const cards = await page.locator('.performance-bar').evaluateAll(elements => elements.map(e => ({ x: e.getBoundingClientRect().x, y: e.getBoundingClientRect().y })));
+  assert.equal(cards[0].x, cards[1].x); assert.ok(cards[1].y > cards[0].y);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
   await page.locator('#performanceReport').screenshot({ path: `${artifacts}/phone.png` });
 });
@@ -88,8 +94,38 @@ await scenario('Report: Stop opens the completed report and preserves a first hi
   assert.equal(await page.locator('body').evaluate(e => e.classList.contains('notes-only')), false);
   assert.equal(await page.locator('#studio-journal').isVisible(), true);
   assert.equal(await page.locator('#performanceReport .performance-hit').count(), 1);
-  const hit = await page.evaluate(() => __qa.studio.sessions[0].hits[0]);
+  const hit = await page.evaluate(async () => (await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits[0]);
   assert.equal(hit.kind, 'good'); assert.ok(Math.abs(hit.timeMs + 10) < .001);
+});
+
+await scenario('Report: long performances load twenty chronological bars per batch and exact times one hundred per page', async page => {
+  await page.evaluate(async () => {
+    window.IntersectionObserver = class { observe() {} disconnect() {} };
+    const { blankPattern } = await import('/js/patterns.js');
+    const { renderPerformanceReport } = await import('/js/performance-report.js');
+    const pattern = blankPattern({ bars: 2, bpm: 120 }); pattern.steps.snare[0] = 2;
+    const session = { pattern, durationMs: 100000, range: { from: 1, to: 2 }, hits: [], expected: [], timeline: [] };
+    for (let loop = 0; loop < 25; loop++) {
+      session.timeline.push(...Array.from({ length: 32 }, (_, slot) => ({ loop, slot, timeMs: loop * 4000 + slot * 125, bpm: 120 })));
+      session.hits.push(...Array.from({ length: 12 }, (_, slot) => ({ inst: 'snare', loop, slot, timeMs: loop * 4000 + slot * 125 + 20, kind: 'extra' })));
+    }
+    const container = document.createElement('div'); container.id = 'longPerformanceReport'; document.querySelector('#view-tools').append(container);
+    document.querySelector('[data-view=tools]').click(); renderPerformanceReport(container, session);
+  });
+  const report = page.locator('#longPerformanceReport');
+  assert.equal(await report.locator('.performance-bar').count(), 20);
+  await report.locator('[data-report-more]').click(); assert.equal(await report.locator('.performance-bar').count(), 40);
+  await report.locator('[data-report-more]').click(); assert.equal(await report.locator('.performance-bar').count(), 50);
+  assert.equal(await report.locator('[data-report-more]').isVisible(), false);
+  assert.deepEqual(await report.locator('.performance-bar').evaluateAll(elements => elements.map(e => +e.dataset.reportBar)), Array.from({ length: 50 }, (_, i) => i + 1));
+  const times = await report.locator('.performance-hit').evaluateAll(elements => elements.map(e => +e.dataset.timeMs));
+  assert.equal(times.length, 300); assert.ok(times.every((time, i) => !i || time >= times[i - 1]));
+  await report.locator('summary').click(); await page.waitForFunction(() => document.querySelectorAll('#longPerformanceReport tbody tr').length === 100);
+  await report.locator('[data-report-more-times]').click(); assert.equal(await report.locator('tbody tr').count(), 200);
+  await report.locator('[data-report-more-times]').click(); assert.equal(await report.locator('tbody tr').count(), 300);
+  await report.locator('[data-report-columns]').selectOption('1');
+  assert.equal(await report.locator('.performance-full-score').evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 1);
+  await report.locator('[data-report-labels]').uncheck(); assert.equal(await report.locator('.performance-delta').first().isVisible(), false);
 });
 
 await browser.close();

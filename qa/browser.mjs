@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER;
-const artifacts = fileURLToPath(new URL(`./artifacts${channel ? `/${channel}` : ''}/`, import.meta.url));
+const artifacts = process.env.DRUMMER_ARTIFACTS || fileURLToPath(new URL(`./artifacts${channel ? `/${channel}` : ''}/`, import.meta.url));
 await mkdir(artifacts, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}), args: ['--autoplay-policy=no-user-gesture-required'] });
 const filter = process.env.DRUMMER_CASE ? new RegExp(process.env.DRUMMER_CASE) : null;
@@ -38,7 +38,7 @@ async function scenario(name, fn, options = {}) {
   });
   try {
     await page.goto(base);
-    if (!options.startupFailure) await page.waitForFunction(() => !!globalThis.__qa, null, { timeout: 15000 });
+    if (!options.startupFailure) { await page.waitForFunction(() => !!globalThis.__qa, null, { timeout: 15000 }); await page.evaluate(() => __qa.studio.journalReady); }
     const detail = await fn(page, errors);
     if (!options.allowErrors) assert.deepEqual(errors, [], 'Uncaught page errors');
     results.push({ name, status: 'PASS', detail });
@@ -53,8 +53,8 @@ async function scenario(name, fn, options = {}) {
 
 await scenario('Startup: notation, 94 presets, simulated MIDI, assets', async p => {
   assert.equal(await p.title(), 'Drummer');
-  assert.equal(await p.locator('#presets .load').count(), 12);
-  assert.match(await p.locator('#presetCount').innerText(), /1–12 \/ 94/);
+  assert.equal(await p.locator('#presets .load').count(), 20);
+  assert.match(await p.locator('#presetCount').innerText(), /1–20 \/ 94/);
   assert.equal(await p.locator('#notation .head').count(), 12);
   assert.match(await p.locator('#midiStatus').innerText(), /Simulated TD-17/);
   const response = await p.request.get(`${base}/kits/index.json`); assert.equal(response.status(), 200); assert.deepEqual(await response.json(), []);
@@ -62,14 +62,17 @@ await scenario('Startup: notation, 94 presets, simulated MIDI, assets', async p 
 });
 
 await scenario('All presets render valid note coordinates', async p => {
+  const loaded = new Set();
   for (let i = 0; i < 94; i++) {
-    if (i && i % 12 === 0) await p.locator('#presetsNext').click();
-    await p.locator('#presets .load').nth(i % 12).click();
-    assert.equal(await p.locator('.notation-svg').count(), 1);
+    if (i && i % 20 === 0) await p.locator('#presetsNext').click();
+    await p.locator('#presets .load').nth(i % 20).click();
+    loaded.add(await p.evaluate(() => __qa.pattern.id));
+    assert.equal(await p.locator('#notation .notation-svg').count(), 1);
     assert.ok(await p.locator('#notation .head').count() > 0);
     assert.doesNotMatch(await p.locator('#notation').innerHTML(), /NaN|Infinity|undefined/);
     if ([3, 6, 12, 13].includes(i)) await p.screenshot({ path: `${artifacts}/preset-${i}.png`, fullPage: true });
   }
+  assert.equal(loaded.size, 94, 'Every preset was loaded exactly once across all five pages');
 });
 
 await scenario('All 96 supported meter/bar/subdivision combinations render', async p => {
@@ -136,7 +139,7 @@ await scenario('Save, duplicate, export and reload preserve an edited rhythm', a
   const path = `${artifacts}/export.json`; await download.saveAs(path);
   const { readFile } = await import('node:fs/promises'); const data = JSON.parse(await readFile(path, 'utf8'));
   assert.equal(data.ritmovi.length, 2); assert.equal(data.ritmovi[0].steps.crash2[0], 3);
-  await p.waitForTimeout(300); await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
+  await p.waitForTimeout(300); await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   assert.equal(await p.locator('#mine .item').count(), 2); assert.equal(await p.evaluate(() => __qa.pattern.steps.crash2[0]), 3);
 });
 
@@ -165,7 +168,7 @@ await scenario('BUG: imported non-string name must not break export', async (p, 
 });
 
 await scenario('BUG: corrupted library shape must recover on startup', async (p, errors) => {
-  assert.deepEqual(errors, []); assert.equal(await p.locator('#presets .load').count(), 12);
+  assert.deepEqual(errors, []); assert.equal(await p.locator('#presets .load').count(), 20);
   assert.match(await p.locator('#presetCount').innerText(), /\/ 94/);
 }, { startupFailure: true, initial: { 'trener.ritmovi.v1': '{}' } });
 
@@ -379,7 +382,7 @@ const seedReplay = async p => {
       stats: { accuracy: 50, all: { good: 1, ok: 1, miss: 1, extra: 0 }, expected: 3, per: {} } };
     localStorage.setItem('drummer.sessions.v1', JSON.stringify([session]));
   });
-  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
 };
 
 await scenario('Feature: A-B scores only chosen bars and instruments while retaining other raw hits', async p => {
@@ -391,7 +394,7 @@ await scenario('Feature: A-B scores only chosen bars and instruments while retai
   await p.waitForFunction(() => __qa.play.cur?.n >= 0);
   await p.keyboard.press('f');
   await p.waitForFunction(() => !__qa.play.on);
-  const result = await p.evaluate(() => __qa.studio.sessions[0]);
+  const result = await p.evaluate(async () => { await __qa.studio.journalReady; return await __qa.studio.loadSession(__qa.studio.sessions[0].id); });
   assert.equal(result.expected.length, 10); assert.ok(result.expected.every(e => e.slot >= 16 && e.slot < 32 && ['kick', 'hhp'].includes(e.inst)));
   assert.equal(result.stats.all.extra, 0); assert.equal(result.stats.all.miss, 10);
   assert.ok(result.hits.some(h => h.inst === 'snare' && h.kind === 'free'));
@@ -412,9 +415,9 @@ await scenario('Feature: weak segment suggestion uses the last session and lower
 });
 
 await scenario('Feature: journal stores session, statistics and completed passes across reload', async p => {
-  await onePass(p); const original = await p.evaluate(() => __qa.studio.sessions[0]);
+  await onePass(p); const original = await p.evaluate(async () => { await __qa.studio.journalReady; return await __qa.studio.loadSession(__qa.studio.sessions[0].id); });
   assert.equal(original.stats.expected, 12); assert.equal(original.passes.length, 1); assert.equal(original.passes[0].score, 0);
-  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   assert.equal(await p.evaluate(() => __qa.studio.sessions[0].id), original.id);
   await showStudio(p, 'journal'); assert.equal(await p.locator('#sessionList tr').count(), 1);
   assert.match(await p.locator('#sessionDetail').innerText(), /Hi-hat zatvoren/);
@@ -431,8 +434,8 @@ await scenario('Feature: original MIDI zone, velocity and fractional timing surv
     return { relative: timestamp - __qa.studio.capture.firstPerf };
   });
   await p.waitForFunction(() => !__qa.play.on);
-  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
-  const hit = await p.evaluate(() => __qa.studio.sessions[0].hits[0]);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
+  const hit = await p.evaluate(async () => { await __qa.studio.journalReady; return (await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits[0]; });
   assert.equal(hit.note, 40); assert.equal(hit.vel, 73); assert.equal(hit.kind, 'good');
   assert.ok(Math.abs(hit.err - 17.25) < .00001, 'Fractional timing must survive floating-point clock subtraction');
   assert.ok(Math.abs(hit.timeMs - sent.relative) < .00001);
@@ -440,8 +443,8 @@ await scenario('Feature: original MIDI zone, velocity and fractional timing surv
 
 await scenario('Feature: journal compares matching sessions and reports the best 90-percent BPM', async p => {
   await onePass(p, { perfect: true });
-  const first = await p.evaluate(() => __qa.studio.sessions[0]); assert.equal(first.stats.accuracy, 100);
-  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
+  const first = await p.evaluate(async () => { await __qa.studio.journalReady; return await __qa.studio.loadSession(__qa.studio.sessions[0].id); }); assert.equal(first.stats.accuracy, 100);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   await onePass(p); await showStudio(p, 'journal'); await p.locator('#journalFilter').selectOption('current');
   assert.match(await p.locator('#sessionDetail').innerText(), /Promena: -100/);
   assert.match(await p.locator('#journalSummary').innerText(), /260/);
@@ -450,13 +453,14 @@ await scenario('Feature: journal compares matching sessions and reports the best
 
 await scenario('Feature: failed journal save retains the performance and retry persists it', async p => {
   await p.evaluate(() => {
-    window.__originalSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function(k, v) { if (k === 'drummer.sessions.v1') throw new DOMException('quota', 'QuotaExceededError'); return __originalSetItem.call(this, k, v); };
+    window.__originalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function(...args) { const request = __originalPut.apply(this, args); if (this.name === 'events') this.transaction.abort(); return request; };
   });
   await onePass(p); assert.equal(await p.locator('#storageWarning').isVisible(), true);
   assert.equal(await p.evaluate(() => __qa.studio.sessions.length), 1);
-  await p.evaluate(() => { Storage.prototype.setItem = __originalSetItem; });
-  await p.locator('#retryStorage').click(); await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
+  await p.evaluate(() => { IDBObjectStore.prototype.put = __originalPut; });
+  await p.locator('#retryStorage').click(); await p.waitForFunction(() => __qa.studio.pendingSessions.size === 0);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   assert.equal(await p.evaluate(() => __qa.studio.sessions.length), 1);
 });
 
@@ -557,7 +561,7 @@ const setupProgram = async (p, rest = 0) => {
 
 await scenario('Feature: program persists snapshots, runs sequentially and stores both outcomes', async p => {
   await setupProgram(p); await p.locator('#programSave').click(); const id = await p.locator('#programSelect').inputValue();
-  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await showStudio(p, 'program'); await p.locator('#programSelect').selectOption(id);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady); await showStudio(p, 'program'); await p.locator('#programSelect').selectOption(id);
   assert.equal(await p.locator('.program-entry').count(), 2); assert.equal(await p.locator('#programName').inputValue(), 'QA routine');
   await p.locator('#programStart').click(); await p.waitForFunction(() => !__qa.studio.run && __qa.studio.sessions.length === 2, null, { timeout: 10000 });
   const sessions = await p.evaluate(() => __qa.studio.sessions);
@@ -608,17 +612,16 @@ await scenario('Feature: Space operates focused controls without unexpectedly st
 
 await scenario('Feature: corrupt journal fields remain readable and safe after reload', async p => {
   await seedReplay(p);
-  await p.evaluate(() => {
-    const sessions = JSON.parse(localStorage.getItem('drummer.sessions.v1'));
-    const s = sessions[0]; s.bpmStart = '<img src=x onerror=alert(1)>'; s.hits[0].err = 'bad';
+  await p.evaluate(async () => {
+    const s = await __qa.studio.journal.get(__qa.studio.sessions[0].id); s.bpmStart = '<img src=x onerror=alert(1)>'; s.hits[0].err = 'bad';
     s.timeline[0].loop = '<img>'; s.stats.per = { snare: null }; s.stats.accuracy = '<img>';
-    localStorage.setItem('drummer.sessions.v1', JSON.stringify(sessions));
+    await __qa.studio.journal.put(s);
   });
-  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa);
+  await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   await showStudio(p, 'journal'); await showStudio(p, 'replay');
   assert.equal(await p.locator('#replayHits tr').count(), 2);
   assert.equal(await p.locator('#view-practice img').count(), 0);
-  assert.equal(await p.evaluate(() => __qa.studio.sessions[0].hits[0].err), null);
+  assert.equal(await p.evaluate(async () => (await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits[0].err), null);
 });
 
 await scenario('Feature: backing volume changes live and speed choices respect tempo limits', async p => {

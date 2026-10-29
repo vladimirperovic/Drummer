@@ -47,18 +47,18 @@ const firstId = PRESETS[0].id;
 
 await scenario('Library: pagination reaches all 94 unique presets; category and search reset pages', async p => {
   const ids = [];
-  for (let page = 1; page <= 8; page++) {
-    assert.match(await p.locator('#presetsPageInfo').innerText(), new RegExp(`${page} / 8`));
+  for (let page = 1; page <= 5; page++) {
+    assert.match(await p.locator('#presetsPageInfo').innerText(), new RegExp(`${page} / 5`));
     ids.push(...await p.locator('#presets .load').evaluateAll(nodes => nodes.map(n => n.dataset.presetId)));
-    if (page < 8) await p.locator('#presetsNext').click();
+    if (page < 5) await p.locator('#presetsNext').click();
   }
   assert.deepEqual(ids, PRESETS.map(p => p.id)); assert.ok(await p.locator('#presetsNext').isDisabled());
-  assert.equal(await p.locator('#presets .load').count(), 10);
-  await p.locator('#presetCategory').selectOption('jazz'); assert.match(await p.locator('#presetsPageInfo').innerText(), /1 \/ 2/);
-  await p.locator('#presetsNext').click(); assert.equal(await p.locator('#presets .load').count(), 8);
+  assert.equal(await p.locator('#presets .load').count(), 14);
+  await p.locator('#presetCategory').selectOption('jazz'); assert.match(await p.locator('#presetsPageInfo').innerText(), /1 \/ 1/);
+  assert.equal(await p.locator('#presets .load').count(), 20); assert.ok(await p.locator('#presetsPager').isHidden());
   await p.locator('#presetSearch').fill('offbeat'); assert.equal(await p.locator('#presets .load').count(), 1); assert.ok(await p.locator('#presetsPager').isHidden());
   await p.locator('#presetSearch').fill('no match'); assert.match(await p.locator('#presetCount').innerText(), /0–0 \/ 0/);
-  await p.locator('#presetSearch').fill(''); assert.match(await p.locator('#presetsPageInfo').innerText(), /1 \/ 2/);
+  await p.locator('#presetSearch').fill(''); assert.match(await p.locator('#presetsPageInfo').innerText(), /1 \/ 1/);
 });
 await scenario('Library: starring does not load or edit a rhythm; favorites and filter survive reload', async p => {
   const before = await call(p, 'get_pattern'), id = PRESETS[2].id;
@@ -69,7 +69,7 @@ await scenario('Library: starring does not load or edit a rhythm; favorites and 
   assert.equal(await p.locator('#favoritesOnly').getAttribute('aria-pressed'), 'true'); assert.equal(await p.locator('#favoriteCount').innerText(), '1');
   await star(p, id).click(); assert.equal(await p.locator('#presets .load').count(), 0); assert.ok(await p.locator('#favoritesEmpty').isVisible());
   assert.equal(await p.evaluate(() => document.activeElement.id), 'favoritesOnly');
-  await p.locator('#favoritesOnly').click(); assert.equal(await p.locator('#presets .load').count(), 12);
+  await p.locator('#favoritesOnly').click(); assert.equal(await p.locator('#presets .load').count(), 20);
 });
 await scenario('Library: saved favorites retain IDs through renaming; copies are separate and deletion clears favorite', async p => {
   await star(p, 'saved-0').click();
@@ -87,16 +87,16 @@ await scenario('Library: favorites pagination clamps after removal and saved pat
   await p.locator('#favoritesOnly').click(); assert.match(await p.locator('#minePageInfo').innerText(), /1 \/ 2/);
   await p.locator('#presetsNext').click(); await p.locator('#presetsNext').click();
   assert.equal(await p.locator('#presets .favorite').count(), 1); await p.locator('#presets .favorite').click();
-  assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 2/); assert.equal(await p.locator('#presets .load').count(), 12);
+  assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 2/); assert.equal(await p.locator('#presets .load').count(), 20);
   assert.ok(await p.locator('#presetsNext').isDisabled()); assert.match(await p.locator('#minePageInfo').innerText(), /1 \/ 2/);
-}, { initial: { 'trener.ritmovi.v1': Array.from({ length: 13 }, (_, i) => ({ ...PRESETS[0], id: `saved-${i}`, name: `Saved ${i}`, preset: false })),
-  'drummer.favorites.v1': [...PRESETS.slice(0, 25).map(p => p.id), ...Array.from({ length: 13 }, (_, i) => `saved-${i}`)] } });
+}, { initial: { 'trener.ritmovi.v1': Array.from({ length: 21 }, (_, i) => ({ ...PRESETS[0], id: `saved-${i}`, name: `Saved ${i}`, preset: false })),
+  'drummer.favorites.v1': [...PRESETS.slice(0, 41).map(p => p.id), ...Array.from({ length: 21 }, (_, i) => `saved-${i}`)] } });
 await scenario('Library: keyboard stars do not start playback; SR/EN labels and mobile layout fit', async p => {
   await star(p, firstId).focus(); await star(p, firstId).press('Space');
   assert.equal(await star(p, firstId).getAttribute('aria-pressed'), 'true'); assert.equal((await call(p, 'get_state')).playing, false);
   await p.locator('#languageSelect').selectOption('en');
   assert.match(await star(p, firstId).getAttribute('aria-label'), /Remove from favorites/);
-  assert.match(await p.locator('#presetsPageInfo').innerText(), /Page 1 \/ 8/);
+  assert.match(await p.locator('#presetsPageInfo').innerText(), /Page 1 \/ 5/);
   await p.locator('#panel-library').screenshot({ path: artifacts + 'library-en.png' });
   for (const width of [768, 390, 360]) { await p.setViewportSize({ width, height: 844 }); assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); }
   await p.locator('#panel-library').screenshot({ path: artifacts + 'library-phone.png' });
@@ -159,12 +159,12 @@ await scenario('MCP: unsupported browser keeps ordinary controls usable and disp
 await scenario('MCP: registration failure is shown without breaking the rhythm library', async p => {
   await p.locator('[data-view=tools]').click(); await p.locator('[data-tool=mcp]').click();
   assert.match(await p.locator('#mcpStatus').innerText(), /nije mogao/); await p.locator('#presetsNext').click();
-  assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 8/);
+  assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 5/);
 }, { rejectRegistration: true });
 await scenario('Library: favorites and pagination work offline and survive offline reload', async (p, context) => {
   await p.evaluate(async () => navigator.serviceWorker.ready); await p.waitForFunction(() => !!navigator.serviceWorker.controller);
   await context.setOffline(true); await p.reload(); await star(p, firstId).click();
-  await p.locator('#presetsNext').click(); assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 8/);
+  await p.locator('#presetsNext').click(); assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 5/);
   await p.reload(); await star(p, firstId).waitFor(); assert.equal(await star(p, firstId).getAttribute('aria-pressed'), 'true');
   await p.locator('#favoritesOnly').click(); assert.equal(await p.locator('#presets .load').count(), 1);
   assert.equal((await call(p, 'list_patterns', { favoritesOnly: true })).total, 1);

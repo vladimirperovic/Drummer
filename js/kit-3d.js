@@ -35,7 +35,7 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
     if (!group) { group = new THREE.Group(); group.userData.part = part.id; group.position.set(part.x, 0, part.z); partGroups.set(part.id, group); scene.add(group); }
     for (const child of children) { child.position.x -= part.x; child.position.z -= part.z; group.add(child); }
   }
-  let disposed = false, visible = false, intersecting = false, framed = false;
+  let disposed = false, visible = false, intersecting = false, framed = false, frameId = 0;
   function material(color = 0xffffff) { return new THREE.MeshBasicMaterial({ color, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }); }
   function shape(geometry, parent, color = 0xffffff, outline = true) {
     const mesh = new THREE.Mesh(geometry, material(color)); parent.add(mesh);
@@ -209,11 +209,13 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
       })));
       if (outside) frameKit(camera.position.clone().sub(controls.target).normalize());
     }
+    invalidate();
   }
   function setEditing(value) {
     drag.setEditing(value); controls.enabled = !value;
     if (value) { controls.enableDamping = false; controls.update(); controls.enableDamping = true; }
     canvas.setAttribute('aria-label', value ? '3D bubanj; prevuci deo za pomeranje' : '3D bubanj; klikni deo za zvuk, prevuci pozadinu za rotaciju, točkić za zum');
+    invalidate();
   }
 
   function reset() {
@@ -260,8 +262,13 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
     camera.aspect = width / height;
     camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(39) / 2) * Math.max(1, 1.25 / camera.aspect)));
     camera.updateProjectionMatrix(); renderer.setSize(width, height, false);
+    invalidate();
   }
+  function active() { return !disposed && visible && intersecting && !document.hidden; }
+  function invalidate() { if (active() && !frameId) frameId = requestAnimationFrame(render); }
   function render() {
+    frameId = 0;
+    if (!active()) return;
     const now = performance.now();
     for (const [id, flash] of flashes) {
       const strength = Math.max(0, 1 - (now - flash.time) / 380);
@@ -269,8 +276,15 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
       if (!strength) flashes.delete(id);
     }
     controls.update(); renderer.render(scene, camera);
+    if (flashes.size) invalidate();
   }
-  function syncLoop() { renderer.setAnimationLoop(!disposed && visible && intersecting && !document.hidden ? render : null); }
+  // OrbitControls emits changes throughout damping; flashes request frames
+  // until their last color is restored. A settled kit consumes no frames.
+  controls.addEventListener('change', invalidate);
+  function syncLoop() {
+    if (active()) invalidate();
+    else if (frameId) { cancelAnimationFrame(frameId); frameId = 0; }
+  }
   const observer = new ResizeObserver(resize); observer.observe(container);
   const intersection = new IntersectionObserver(entries => { intersecting = entries[0].isIntersecting; syncLoop(); }); intersection.observe(container);
   document.addEventListener('visibilitychange', syncLoop);
@@ -279,16 +293,19 @@ export function createKit3D(container, onFailure = () => {}, configuration, drag
   function pulse(id) {
     const instrument = INST[id]; if (!instrument || !visible) return;
     flashes.set(instrument.target, { time: performance.now(), color: new THREE.Color(instrument.color) });
+    invalidate();
   }
   function dispose() {
-    if (disposed) return; playing.dispose(); drag.dispose(); disposed = true; renderer.setAnimationLoop(null); controls.dispose(); observer.disconnect(); intersection.disconnect();
+    if (disposed) return; playing.dispose(); drag.dispose(); disposed = true;
+    if (frameId) cancelAnimationFrame(frameId); frameId = 0;
+    controls.removeEventListener('change', invalidate); controls.dispose(); observer.disconnect(); intersection.disconnect();
     document.removeEventListener('visibilitychange', syncLoop); canvas.removeEventListener('webglcontextlost', lost); canvas.removeEventListener('keydown', onKey);
     const geometries = new Set(), materials = new Set();
     scene.traverse(node => { if (node.geometry) geometries.add(node.geometry); if (node.material) materials.add(node.material); });
     geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); renderer.dispose(); canvas.remove();
   }
   reset(); resize();
-  return { pulse, hit(id, kind) { if (kind !== 'miss') pulse(id); }, pedal(v) { hiTop.position.y = 1.4 + .065 * (1 - THREE.MathUtils.clamp(v, 0, 127) / 127); },
+  return { pulse, hit(id, kind) { if (kind !== 'miss') pulse(id); }, pedal(v) { hiTop.position.y = 1.4 + .065 * (1 - THREE.MathUtils.clamp(v, 0, 127) / 127); invalidate(); },
     setVisible(value) { if (!value) drag.cancel(); visible = value; resize(); if (visible && !framed) { reset(); framed = true; } syncLoop(); }, reset, rotate, zoom, dispose, updateLayout, setEditing, cancelDrag: drag.cancel,
     // Kept on the instance for integration checks; nothing is exposed globally.
     camera, targets, renderer, scene, partGroups,

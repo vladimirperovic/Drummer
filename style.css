@@ -403,3 +403,11 @@ body.notes-only .sheet { flex: 1; height: auto; min-height: 0; padding-bottom: 1
   #presetCount { margin-left: 0; }
 }
 @media print { body.notes-only { height: auto; overflow: visible; } }
+.brand { color:inherit; text-decoration:none; }
+.brand:focus-visible { outline:2px solid #555; outline-offset:4px; }
+.library-preview { display:block; width:100%; margin-top:8px; overflow:hidden; pointer-events:none; }
+.library-preview svg { display:block; width:100%; height:auto; max-height:145px; }
+.library-preview .playhead { display:none; }
+.list .item.active .load .library-preview::before { content:none; }
+.preview-caption { text-align:right; }
+#presets .load,#mine .load { min-width:0; }

@@ -1,5 +1,6 @@
 import { bounded } from './practice.js';
-import { normalizeMidiMap } from './midi.js';
+import { normalizeMidiMap, normalizeRouting } from './midi.js';
+import { MidiRoutingUI } from './midi-routing-ui.js';
 import * as store from './storage.js';
 import { t } from './i18n.js';
 import { normalizeKit } from './kit-config.js';
@@ -11,7 +12,7 @@ export function normalizeProfile(value) {
     device: typeof value?.device === 'string' ? value.device.slice(0, 200) : '',
     calib: Math.round(bounded(value?.calib, -1000, 1000, 0)),
     curve: ['linear', 'soft', 'hard'].includes(value?.curve) ? value.curve : 'linear',
-    gain: bounded(value?.gain, .5, 2, 1), kitConfig: normalizeKit(value?.kitConfig), map: normalizeMidiMap(value?.map) };
+    gain: bounded(value?.gain, .5, 2, 1), kitConfig: normalizeKit(value?.kitConfig), map: normalizeMidiMap(value?.map), routing: normalizeRouting(value?.routing) };
 }
 export function velocityFor(velocity, curve = 'linear', gain = 1) {
   const normalized = bounded(velocity, 1, 127, 92) / 127;
@@ -23,13 +24,15 @@ export class DeviceProfiles {
   constructor(host) {
     this.host = host; this.items = store.loadProfiles().filter(v => v.id).map(normalizeProfile);
     this.id = host.settings.profileId || ''; this.inputs = [];
+    this.routingUI = new MidiRoutingUI(host, $('deviceProfiles'));
     this.bind(); this.render();
   }
   get current() { return normalizeProfile({ id: this.id, name: $('profileName').value, device: $('profileDevice').value,
-    calib: this.host.settings.calib, curve: this.host.settings.velocityCurve, gain: this.host.settings.velocityGain, kitConfig: this.host.settings.kitConfig, map: this.host.midi.map }); }
+    calib: this.host.settings.calib, curve: this.host.settings.velocityCurve, gain: this.host.settings.velocityGain, kitConfig: this.host.settings.kitConfig, map: this.host.midi.map, routing: this.host.midi.routing }); }
   apply(profile, persist = true) {
     if (this.host.isBusy()) return false;
     profile = normalizeProfile(profile);
+    if (!this.host.midi.setRouting(profile.routing, persist)) { this.routingUI.failed(); return false; }
     this.host.stop(); this.host.midi.cancelLearn();
     this.host.applyKit?.(profile.kitConfig, false);
     this.id = profile.id;
@@ -38,6 +41,7 @@ export class DeviceProfiles {
     $('calib').value = profile.calib;
     if (persist) { this.host.midi.save(); this.host.saveSettings(); }
     this.host.renderMap();
+    this.routingUI.render(); return true;
   }
   save(name = $('profileName').value) {
     if (this.host.isBusy()) return false;
@@ -53,7 +57,7 @@ export class DeviceProfiles {
     $('profileName').value = t('Moj uređaj'); this.host.toast('Novi profil koristi trenutnu mapu i kalibraciju.');
   }
   exportProfile(name = $('profileName').value) {
-    store.download('drummer-kit-profile.json', { type: 'drummer-kit-profile', version: 1, profile: { ...this.current, name } });
+    store.download('drummer-kit-profile.json', { type: 'drummer-kit-profile', version: 2, profile: { ...this.current, name } });
   }
   async importProfile(file) {
     if (this.host.isBusy()) return false;
@@ -61,7 +65,7 @@ export class DeviceProfiles {
       if (file.size > 200000) throw new Error();
       const data = JSON.parse(await file.text());
       if (this.host.isBusy()) return false;
-      if (data.type !== 'drummer-kit-profile' || data.version !== 1 || !data.profile || typeof data.profile.name !== 'string' || !data.profile.map || typeof data.profile.map !== 'object' || Array.isArray(data.profile.map) || !data.profile.kitConfig) throw new Error();
+      if (data.type !== 'drummer-kit-profile' || ![1, 2].includes(data.version) || !data.profile || typeof data.profile.name !== 'string' || !data.profile.map || typeof data.profile.map !== 'object' || Array.isArray(data.profile.map) || !data.profile.kitConfig) throw new Error();
       const profile = normalizeProfile({ ...data.profile, id: store.newId() });
       const items = [...this.items, profile]; if (!store.saveProfiles(items)) return false;
       this.items = items; this.apply(profile); this.render(); this.host.toast('Profil je uvezen.'); return true;
@@ -85,7 +89,7 @@ export class DeviceProfiles {
       this.apply(p); this.render(); this.host.toast(`Učitan profil: ${p.name}`);
     };
   }
-  devices(inputs) { this.inputs = inputs || []; this.renderDevices(); }
+  devices(inputs, outputs) { this.inputs = inputs || []; this.renderDevices(); this.routingUI.devices(inputs, outputs); }
   renderDevices() {
     const chosen = $('profileDevice').value || this.items.find(p => p.id === this.id)?.device || '';
     const names = [...new Set([chosen, ...this.inputs.map(i => i.name)].filter(Boolean))];
@@ -103,9 +107,11 @@ export class DeviceProfiles {
     $('profileCurve').value = this.host.settings.velocityCurve || 'linear';
     $('profileGain').value = this.host.settings.velocityGain || 1;
     this.playState(); this.host.profileChanged?.();
+    this.routingUI.render();
   }
   playState() {
     for (const el of $('deviceProfiles').querySelectorAll('button,input,select')) el.disabled = this.host.isBusy();
     $('profileDelete').disabled ||= !this.id;
+    this.routingUI.playState();
   }
 }

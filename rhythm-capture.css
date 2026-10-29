@@ -1,0 +1,13 @@
+.rhythm-capture { width:min(900px,calc(100vw - 32px)); max-height:90dvh; overflow:auto; padding:24px; border:1px solid #bbb; border-radius:12px; background:#fff; color:#171717; }
+.rhythm-capture::backdrop { background:#0008; }
+.rhythm-capture h2 { margin-top:0; }
+.capture-fields,.capture-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
+.capture-fields label { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.capture-fields input[type=number] { width:70px; }
+.capture-fields input:not([type]) { max-width:220px; }
+.capture-actions button { min-height:44px; }
+[data-capture-preview] { max-height:48dvh; overflow:auto; margin:16px 0; }
+.capture-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 20px; background:#fff1f1; border-bottom:2px solid #bd2525; }
+.capture-banner[hidden] { display:none; }
+.capture-banner strong { font-size:18px; color:#9c2020; }
+.capture-banner button { min-height:44px; }

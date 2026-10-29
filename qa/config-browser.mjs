@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER || '';
-const dir = fileURLToPath(new URL(`./artifacts/config/${channel || 'chromium'}/`, import.meta.url));
+const dir = process.env.DRUMMER_ARTIFACTS ? process.env.DRUMMER_ARTIFACTS.replace(/[\\/]?$/, '/') : fileURLToPath(new URL(`./artifacts/config/${channel || 'chromium'}/`, import.meta.url));
 await mkdir(dir, { recursive:true });
 const browser = await chromium.launch({headless:true,...(channel?{channel}:{}),args:['--autoplay-policy=no-user-gesture-required','--enable-unsafe-swiftshader']});
 const results=[], filter=process.env.DRUMMER_CASE ? new RegExp(process.env.DRUMMER_CASE) : null;
@@ -70,7 +70,7 @@ await scenario('Configurator: both bass drums score and record separately, with 
     await new Promise(resolve=>{const tick=()=>performance.now()>__qa.play.firstPerf&&__qa.play.cur?resolve():requestAnimationFrame(tick);tick();});
     __qa.onHit('kick',92,__qa.play.firstPerf,'midi',36);__qa.onHit('kick2',92,__qa.play.firstPerf,'midi',35);
     const stats=__qa.scorer.stats();const p=__qa.pattern;__qa.stop();
-    return {good:stats.all.good,one:p.steps.kick[0],two:p.steps.kick2[0],session:__qa.studio.sessions[0].hits.map(h=>h.inst)};
+    return {good:stats.all.good,one:p.steps.kick[0],two:p.steps.kick2[0],session:(await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits.map(h=>h.inst)};
   });assert.equal(r.good,2);assert.equal(r.one,2);assert.equal(r.two,2);assert.deepEqual(r.session,['kick','kick2']);
   // Stop opens the saved performance report; inspect the recorded editor next.
   await p.locator('[data-view=editor]').click();
@@ -158,9 +158,9 @@ await scenario('Configurator: minimum kit, canceled learning and rapid 3D rebuil
 });
 await scenario('Configurator: two snares have distinct notation heads and both kicks belong to foot focus',async p=>{
   await expanded(p);await p.evaluate(async()=>{const {blankPattern}=await import('/js/patterns.js');const pat=blankPattern();for(const id of ['snare','snare2','kick','kick2'])pat.steps[id][0]=2;__qa.loadPattern(pat);});
-  const heads=await p.locator('.notation-svg .head').evaluateAll(es=>es.map(e=>({id:e.dataset.inst,x:e.dataset.x,y:e.dataset.y})));
+  const heads=await p.locator('#notation .notation-svg .head').evaluateAll(es=>es.map(e=>({id:e.dataset.inst,x:e.dataset.x,y:e.dataset.y})));
   assert.equal(heads.length,4);assert.notEqual(heads.find(h=>h.id==='snare').x,heads.find(h=>h.id==='snare2').x);
-  assert.equal(await p.locator('.kit-note-badge').count(),2);
+  assert.equal(await p.locator('#notation .kit-note-badge').count(),2);
   await p.locator('[data-view=practice]').click();await p.locator('#focusFeet').click();
   assert.deepEqual(await p.locator('#focusInstruments input:checked').evaluateAll(es=>es.map(e=>e.value).sort()),['hhp','kick','kick2']);
 });

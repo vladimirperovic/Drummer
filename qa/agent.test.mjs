@@ -67,6 +67,14 @@ test('tempo is adjustable during normal playback but locked for backing, replay 
   }
   assert.equal(s.pattern.bpm, 120);
 });
+
+test('capture and restore lock all mutations while state reads and emergency stop remain available', async () => {
+  for (const flag of ['capturing', 'restoring', 'aiBusy']) {
+    const { call, s } = fixture(); s[flag] = true;
+    for (const [name, args] of [['set_tempo', { bpm: 130 }], ['set_language', { language: 'en' }], ['set_favorite', { id: 'basic', favorite: true }], ['set_view', { view: 'editor' }], ['start', {}]]) assert.equal((await call(name, args)).error.code, 'BUSY', flag);
+    assert.equal((await call('get_state')).ok, true); assert.equal((await call('stop')).ok, true); assert.equal(s.pattern.bpm, 90);
+  }
+});
 test('start requires audio activation, reports failures and avoids restarting playback', async () => {
   const { call, host, s } = fixture(); host.audioReady = () => false;
   assert.equal((await call('start')).error.code, 'AUDIO_LOCKED'); host.audioReady = () => true;

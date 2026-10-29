@@ -1,7 +1,16 @@
 // Serbian source strings stay in the data model. The view layer translates text
 // and accessible labels, retaining originals so SR/EN can switch without reload.
 import { CATALOG_DEFINITIONS, PRESET_CATEGORIES } from './preset-catalog.js';
+import editorNext from './editor-next-i18n.js';
+import studioNext from './studio-next-i18n.js';
+import routingNext from './routing-next-i18n.js';
+import captureNext from './capture-next-i18n.js';
+import aiNext from './ai-tools-i18n.js';
 export const EN = {
+  ...editorNext, ...studioNext, ...routingNext, ...captureNext, ...aiNext,
+  'Otkaži':'Cancel',
+  'Proveri note po deonicama, sačuvaj aranžman i pokreni vežbanje uz pesmu.':'Review each section, save the arrangement, then start practicing along with the song.',
+  'Uredi note':'Edit notes', 'Preuzmi trenutni ritam':'Use current rhythm',
   'Druga partitura': 'Choose another score', 'Vrati na bubanj': 'Back to drums', 'Deonice': 'Parts',
   'Originalna partitura za čitanje. Bubnjarsko bodovanje i snimanje ostaju vezani za izabrani ritam.': 'Original score reading view. Drum scoring and recording use the selected practice pattern.',
   'Učitavam originalnu partituru…': 'Loading the original score…',

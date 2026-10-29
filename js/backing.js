@@ -47,6 +47,15 @@ export class BackingTrack {
     this.sources.add(source); source.start(t, offset, duration);
   }
 
+  scheduleSong(t, rate = 1) {
+    if (!this.enabled || !this.buffer) return;
+    const ctx=this.audio.ctx,source=ctx.createBufferSource(),gain=ctx.createGain();
+    source.buffer=this.buffer;source.playbackRate.value=rate;gain.gain.value=this.volume;source.mixGain=gain;
+    source.connect(gain).connect(ctx.destination);
+    source.onended=()=>{this.sources.delete(source);source.disconnect();gain.disconnect();};
+    this.sources.add(source);source.start(t,this.offset);
+  }
+
   stop() { for (const source of this.sources) { try { source.stop(); } catch {} } this.sources.clear(); }
   setVolume(value) {
     this.volume = bounded(value, 0, 1, .6);

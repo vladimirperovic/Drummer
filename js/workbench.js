@@ -7,7 +7,7 @@ export class Workbench {
   constructor(host) { this.host = host; this.file = null; this.loadToken = 0; this.bind(); this.playState(); }
   show(name) {
     for (const b of document.querySelectorAll('[data-tool]')) b.classList.toggle('active', b.dataset.tool === name);
-    for (const panel of ['import', 'print', 'offline', 'mcp']) $(`tool-${panel}`).hidden = panel !== name;
+    for (const panel of document.querySelectorAll('#view-tools [id^="tool-"]')) panel.hidden = panel.id !== `tool-${name}`;
     if (name === 'print') this.printPreview();
   }
   bind() {

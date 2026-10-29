@@ -22,7 +22,7 @@ try {
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: output + 'drummer-desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: output + 'drummer-phone.png', fullPage: true });
+  await page.screenshot({ path: output + 'drummer-phone.png' });
   await page.setViewportSize({ width: 1440, height: 1050 });
   await page.evaluate(async () => {
     const { resize, PRESETS } = await import('../js/patterns.js');
@@ -48,7 +48,12 @@ try {
       durationMs: 2000, calib: 0, range: { from: 1, to: 1, instruments: ['snare', 'kick'] }, level: 'normalno', expected, hits,
       timeline: Array.from({ length: 16 }, (_, slot) => ({ slot, loop: 0, timeMs: slotOffsetMs(pattern, slot), bpm: 120 })),
       results: [{kind:'miss',inst:'snare',expectedId:expected[2].id,loop:0,slot:8}], passes: [], stats: { accuracy: 44, per: {} } };
-    __capture.studio.sessions = [session]; __capture.studio.selectedId = session.id; __capture.studio.show('journal');
+    session.durationMs=12000;
+    for(const field of ['expected','hits','timeline','results'])session[field]=Array.from({length:6},(_,loop)=>session[field].map(value=>({
+      ...value,loop,...(value.timeMs!=null?{timeMs:value.timeMs+loop*2000}:{}),
+      ...(value.id?{id:value.id.replace(/^0:/,`${loop}:`)}:{}),...(value.expectedId?{expectedId:value.expectedId.replace(/^0:/,`${loop}:`)}:{})
+    }))).flat();
+    await __capture.studio.journalReady; __capture.studio.sessionCache.set(session.id,session); __capture.studio.sessions = [session]; __capture.studio.selectedId = session.id; __capture.studio.show('journal');
   });
   // The sticky transport is outside this cropped artifact; hide it briefly so
   // it cannot cover the report's title when Playwright scrolls the crop into view.

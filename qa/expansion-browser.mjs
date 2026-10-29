@@ -8,7 +8,7 @@ import { fixture, smf, track, end } from './midi-fixtures.mjs';
 
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER || '';
-const artifacts = fileURLToPath(new URL(`./artifacts/expansion/${channel || 'chromium'}/`, import.meta.url));
+const artifacts = process.env.DRUMMER_ARTIFACTS ? process.env.DRUMMER_ARTIFACTS.replace(/[\\/]?$/, '/') : fileURLToPath(new URL(`./artifacts/expansion/${channel || 'chromium'}/`, import.meta.url));
 await mkdir(artifacts, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}), args: ['--autoplay-policy=no-user-gesture-required'] });
 const results = [], filter = process.env.DRUMMER_CASE ? new RegExp(process.env.DRUMMER_CASE) : null;
@@ -28,7 +28,7 @@ async function scenario(name, fn, { offline = false } = {}) {
   if (!offline) await p.route('**/js/main.js', async route => { const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge }); });
   try {
     await p.goto(base);
-    if (!offline) await p.waitForFunction(() => !!window.__qa, null, { timeout: 15000 });
+    if (!offline) { await p.waitForFunction(() => !!window.__qa, null, { timeout: 15000 }); await p.evaluate(() => __qa.studio.journalReady); }
     else await p.locator('#presets .load').first().waitFor();
     await fn(p, context); assert.deepEqual(errors, [], 'uncaught page errors');
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
@@ -67,7 +67,7 @@ await scenario('Expansion: 7/8 scheduler accents 2+2+3, ends after seven eighths
     await __qa.start();
   });
   await p.waitForFunction(() => !__qa.play.on && __qa.studio.sessions.length);
-  const r = await p.evaluate(() => ({ clicks: __clicks, session: __qa.studio.sessions[0] }));
+  const r = await p.evaluate(async () => ({ clicks: __clicks, session: await __qa.studio.loadSession(__qa.studio.sessions[0].id) }));
   assert.equal(r.clicks.length, 7); assert.deepEqual(r.clicks.map(a => a[1]), [true, false, true, false, true, false, false]);
   assert.ok(Math.abs(r.clicks[6][0] - r.clicks[0][0] - 1.5) < .00001);
   assert.equal(r.session.expected.length, 14); assert.equal(r.session.passes.length, 1);
@@ -82,7 +82,7 @@ await scenario('Expansion: swung scheduler records unequal subdivisions and coun
     await __qa.start();
   });
   await p.waitForFunction(() => !__qa.play.on && __qa.studio.sessions.length, null, { timeout: 10000 });
-  const s = await p.evaluate(() => __qa.studio.sessions[0]);
+  const s = await p.evaluate(async () => { await __qa.studio.journalReady; return await __qa.studio.loadSession(__qa.studio.sessions[0].id); });
   assert.equal(s.pattern.swing, 67); assert.ok(Math.abs(s.timeline[2].timeMs - 335) < 20);
   assert.ok(Math.abs(s.timeline[4].timeMs - 500) < 20); assert.ok(Math.abs(s.durationMs - 2000) < 30);
 });
@@ -152,7 +152,7 @@ await scenario('Expansion: velocity curve affects live sound/scoring but recordi
   await p.waitForFunction(() => __qa.play.cur?.n >= 0);
   await p.evaluate(() => __port.onmidimessage({ data: [153, 40, 40], timeStamp: performance.now() }));
   await p.waitForFunction(() => !__qa.play.on);
-  const hit = await p.evaluate(() => __qa.studio.sessions[0].hits[0]);
+  const hit = await p.evaluate(async () => { await __qa.studio.journalReady; return (await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits[0]; });
   assert.equal(hit.vel, 40); assert.equal(hit.note, 40); assert.ok(hit.adjustedVelocity > 40);
 });
 await scenario('Expansion: profile controls are locked during exercise and program', async p => {

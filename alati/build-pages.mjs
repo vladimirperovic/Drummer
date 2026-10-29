@@ -12,6 +12,7 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 const files = ['index.html', 'style.css', 'performance-report.css', 'score-import.css',
+  'editor-tools.css', 'rhythm-capture.css', 'routing-next.css', 'studio-next.css', 'ai-tools.css',
   'manifest.webmanifest', 'sw.js', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md',
   'js', 'icons', 'assets/kit', 'assets/screenshots', 'kits'];
 for (const path of files) await cp(resolve(root, path), resolve(output, path), { recursive: true });

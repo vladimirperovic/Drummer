@@ -7,6 +7,10 @@ const SET_KEY = 'trener.podesavanja.v1';
 const FAV_KEY = 'drummer.favorites.v1';
 let onError = () => {};
 export function setErrorHandler(fn) { onError = fn; }
+export function reportError(error, key = 'drummer.journal') { onError(error, key); }
+export const STORAGE_KEYS = Object.freeze({ library: LIB_KEY, settings: SET_KEY, favorites: FAV_KEY,
+  sessions: 'drummer.sessions.v1', programs: 'drummer.programs.v1', profiles: 'drummer.profiles.v1',
+  midiMap: 'trener.midiMapa.v1', midiRouting: 'drummer.midiRouting.v1', language: 'drummer.language.v1', arrangements: 'drummer.arrangements.v1', arrangementDraft: 'drummer.arrangementDraft.v1', programDraft: 'drummer.programDraft.v1' });
 
 function read(key, fallback) {
   try {
@@ -42,6 +46,12 @@ export const loadPrograms = () => readList('drummer.programs.v1');
 export const saveProfiles = list => write('drummer.profiles.v1', list);
 export const loadProfiles = () => readList('drummer.profiles.v1');
 export const saveMidiMap = map => write('trener.midiMapa.v1', map);
+export const saveArrangements = list => write(STORAGE_KEYS.arrangements, list);
+export const loadArrangements = () => readList(STORAGE_KEYS.arrangements);
+export const loadArrangementDraft = () => read(STORAGE_KEYS.arrangementDraft, null);
+export const loadProgramDraft = () => read(STORAGE_KEYS.programDraft, null);
+export const saveArrangementDraft = value => write(STORAGE_KEYS.arrangementDraft, value);
+export const saveProgramDraft = value => write(STORAGE_KEYS.programDraft, value);
 
 export const newId = () => 'u-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 

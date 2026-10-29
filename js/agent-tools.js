@@ -47,6 +47,8 @@ export function createDrummerTools(host) {
         validateArguments(inputSchema, args);
         if (!host.isEnabled()) fail('DISABLED', 'Drummer site tools are disabled in Tools → MCP connector.');
         if (!readOnly && name !== 'stop') {
+          const current = state();
+          if (current.capturing || current.restoring || current.aiBusy) fail('BUSY', 'Finish rhythm capture or backup restore before changing Drummer.');
           if (writing) fail('BUSY', 'Another Drummer command is still running.');
           writing = acquired = true;
         }

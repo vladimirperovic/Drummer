@@ -1,9 +1,21 @@
 // Bump VERSION whenever a cached application file changes.
-const VERSION = '2026-10-29-public-1';
+const VERSION = '2026-10-29-roadmap-ai-1';
 const ROOT = new URL('./', self.location.href);
 const PREFIX = `drummer:${ROOT.pathname}:`;
 const CACHE = PREFIX + VERSION;
 const ASSETS = ['./', 'index.html', 'style.css', 'manifest.webmanifest',
+  'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md',
+  'editor-tools.css', 'rhythm-capture.css', 'routing-next.css', 'studio-next.css', 'ai-tools.css',
+  'js/editor-model.js', 'js/editor-tools.js', 'js/editor-next-i18n.js',
+  'js/rhythm-capture.js', 'js/rhythm-capture-model.js', 'js/capture-next-i18n.js',
+  'js/arrangements.js', 'js/backup-restore.js', 'js/journal-store.js', 'js/studio-next-i18n.js',
+  'js/midi-routing.js', 'js/midi-routing-ui.js', 'js/routing-next-i18n.js', 'js/library-preview.js',
+  'js/ai-tools.js', 'js/ai-tools-i18n.js', 'js/ai-model-cache.js', 'js/ai-audio.js', 'js/ai-reference.js',
+  'js/ai-transcriber.js', 'js/ai-transcription-model.js', 'js/ai-transcription-worker.js',
+  'js/drum-separator.js', 'js/drum-separator-core.js', 'js/drum-separator-worker.js',
+  'js/vendor/ort-wasm-1.31.1.min.mjs', 'js/vendor/ORT-LICENSE.txt',
+  'js/vendor/DEMUCS-LICENSE.txt', 'js/vendor/DEMUCS-ONNX-LICENSE.txt',
+  'js/vendor/ADTOF-LICENSE.txt', 'js/vendor/ADTOF-NOTICE.txt', 'js/vendor/OSMD-PROVENANCE.txt',
   'performance-report.css', 'score-import.css', 'js/performance-report.js', 'js/score-import.js',
   'js/vendor/opensheetmusicdisplay.min.js', 'js/vendor/OSMD-LICENSE.txt', 'js/vendor/opensheetmusicdisplay.min.js.LICENSE.txt',
   'js/kit-drag.js', 'js/kit-play.js', 'assets/kit/pick-map.png',
