@@ -51,7 +51,10 @@ export function createKit(container, callbacks) {
     // leak through a drum, stand or cymbal in front of the struck surface.
     const mask = el('mask', { id: `${prefix}-${id}`, maskUnits: 'userSpaceOnUse', x: 0, y: 0, width, height, 'mask-type': 'luminance' }, defs);
     el('image', { href: `assets/kit/mask-${id}.png`, width, height }, mask);
-    const overlay = el('rect', { x: 0, y: 0, width, height, mask: `url(#${prefix}-${id})`, class: 'overlay', opacity: 0, 'data-pad': id }, fx);
+    // Keep the animated paint inside the struck surface even if a browser
+    // briefly loses an SVG image mask while compositing a rapid hit sequence.
+    // A full-canvas rectangle can otherwise flash across the entire kit.
+    const overlay = el('polygon', { points: pad.outline.map(p => p.join(',')).join(' '), mask: `url(#${prefix}-${id})`, class: 'overlay', opacity: 0, 'data-pad': id }, fx);
     const hit = el('polygon', { points: pad.outline.map(p => p.join(',')).join(' '), class: 'hitring', opacity: 0, 'data-pad': id }, fx);
     targets[id] = { overlay, hit };
   }

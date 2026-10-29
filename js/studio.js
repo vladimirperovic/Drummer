@@ -3,6 +3,7 @@ import { normalizeFocus, practiceRange, acceptsInstrument, patternSignature, ses
   normalizeSession, progressFor, recommendFocus, normalizeProgram, performanceMidi, bounded } from './practice.js';
 import { BackingTrack } from './backing.js';
 import { ReplayPlayer } from './replay.js';
+import { renderPerformanceReport } from './performance-report.js';
 import * as store from './storage.js';
 import { getLanguage, t } from './i18n.js';
 
@@ -136,7 +137,7 @@ export class PracticeStudio {
   }
   hit(inst, vel, perf, source, midiNote, result, position) {
     if (!this.capture) return;
-    this.capture.hits.push({ timeMs: Math.max(0, perf - this.capture.firstPerf), inst, vel,
+    this.capture.hits.push({ timeMs: perf - this.capture.firstPerf, inst, vel,
       source, note: midiNote ?? INST[inst].midiOut, kind: result?.kind || 'free', err: result?.err ?? null,
       expectedId: result?.note?.id || null, slot: position.slot, loop: position.loop,
       adjustedVelocity: position.adjustedVelocity ?? vel });
@@ -155,6 +156,7 @@ export class PracticeStudio {
     delete session.firstPerf;
     this.sessions.unshift(session); this.selectedId = session.id;
     store.saveSessions(this.sessions); this.renderJournal();
+    if (!this.run && ['manual', 'complete', 'duration'].includes(reason)) this.show('journal');
     return session;
   }
 
@@ -173,6 +175,10 @@ export class PracticeStudio {
       const compare = delta == null ? 'Nema ranije uporedive sesije.' : `Prethodna uporediva sesija: ${percent(previous.stats.accuracy)}. Promena: ${delta >= 0 ? '+' : ''}${delta} procentnih poena.`;
       const rows = Object.entries(selected.stats?.per || {}).filter(([id]) => INST[id]).map(([id, s]) => `<tr><td>${esc(INST[id].label)}</td><td>${s.good + s.ok}/${s.expected}</td><td>${s.mean == null ? '–' : `${s.mean > 0 ? '+' : ''}${Math.round(s.mean)} ms`}</td><td>${s.spread == null ? '–' : `±${Math.round(s.spread)} ms`}</td><td>${percent(s.dynamics)}</td></tr>`).join('');
       $('sessionDetail').innerHTML = `<h3>${patternLabel(selected.pattern)} · ${date(selected.startedAt)}</h3><p>${esc(compare)}</p><p class="muted">Taktovi ${selected.range.from}–${selected.range.to} · ${selected.range.instruments.length} instrumenata · ${esc(selected.level)} · ${selected.hits.length} stvarnih udaraca</p><div class="table-wrap"><table class="data-table"><thead><tr><th>Instrument</th><th>Pogođeno</th><th>Rano/kasno</th><th>Rasipanje</th><th>Dinamika</th></tr></thead><tbody>${rows}</tbody></table></div><div class="row"><button data-replay-selected>Otvori replay</button><button data-delete-session>Obriši ovu sesiju</button></div>`;
+      const report = document.createElement('section');
+      report.id = 'performanceReport';
+      $('sessionDetail').prepend(report);
+      renderPerformanceReport(report, selected);
     } else $('sessionDetail').innerHTML = '';
     $('replaySession').innerHTML = '<option value="">Izaberi snimljenu sesiju…</option>' + this.sessions.map(s => `<option${s.pattern.preset ? '' : ' data-user-text'} value="${esc(s.id)}">${esc(s.pattern.name)} · ${date(s.startedAt)} · ${percent(s.stats?.accuracy)}</option>`).join('');
     $('replaySession').value = this.selectedId;

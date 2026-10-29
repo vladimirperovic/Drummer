@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test core.test.mjs practice.test.mjs expansion.test.mjs catalog.test.mjs agent.test.mjs kit-config.test.mjs",
-    "test:browser": "node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs && node layout-browser.mjs && node pointer-browser.mjs",
+    "test": "node --test core.test.mjs practice.test.mjs expansion.test.mjs catalog.test.mjs agent.test.mjs kit-config.test.mjs score-view.test.mjs performance-report.test.mjs",
+    "test:browser": "node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs && node layout-browser.mjs && node pointer-browser.mjs && node score-view-browser.mjs && node performance-report-browser.mjs && node ui-feedback-browser.mjs && node score-import-browser.mjs && node release-browser.mjs",
     "test:python": "python -m unittest discover -s . -p test_analysis.py -v"
   },
   "devDependencies": {

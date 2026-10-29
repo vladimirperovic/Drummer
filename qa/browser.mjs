@@ -20,6 +20,7 @@ async function scenario(name, fn, options = {}) {
   page.on('pageerror', e => errors.push(e.message));
   page.setDefaultTimeout(6000);
   await page.addInitScript(({ initial, midiMode }) => {
+    if (localStorage.getItem('drummer.language.v1') == null) localStorage.setItem('drummer.language.v1', 'sr');
     for (const [k, v] of Object.entries(initial || {})) localStorage.setItem(k, v);
     const port = { id: 'qa-input', name: 'Simulated TD-17', onmidimessage: null };
     const sent = [];
@@ -97,7 +98,7 @@ await scenario('Keyboard: all 13 instruments, normal/accent/ghost', async p => {
 
 await scenario('Keyboard shortcuts do not trigger when editing text', async p => {
   await p.locator('[data-view=editor]').click(); await p.locator('#edName').fill('ff jj vv');
-  await p.locator('#edName').press('Space'); assert.equal(await p.locator('#lastHit').innerText(), '');
+  await p.locator('#edName').press('Space'); assert.equal(await p.locator('#lastHit').innerText(), 'Spremno za sviranje');
   assert.equal(await p.evaluate(() => __qa.play.on), false);
 });
 

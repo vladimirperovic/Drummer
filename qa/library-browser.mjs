@@ -19,8 +19,9 @@ async function scenario(name, fn, options = {}) {
   p.on('requestfailed', r => networkErrors.push({ url: r.url(), error: r.failure()?.errorText }));
   p.on('console', message => { if (message.type() === 'error') networkErrors.push({ console: message.text() }); });
   await p.addInitScript(({ initial, unsupported, rejectRegistration }) => {
+    if (localStorage.getItem('drummer.language.v1') == null) localStorage.setItem('drummer.language.v1', 'sr');
     if (!sessionStorage.getItem('qa-seeded')) {
-      for (const [key, value] of Object.entries(initial || {})) localStorage.setItem(key, JSON.stringify(value));
+      for (const [key, value] of Object.entries(initial || {})) localStorage.setItem(key, key === 'drummer.language.v1' ? value : JSON.stringify(value));
       sessionStorage.setItem('qa-seeded', 'yes');
     }
     Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) });

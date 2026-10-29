@@ -5,3 +5,7 @@ alati/midirec
 node_modules/
 __pycache__/
 *.py[cod]
+dist/
+qa/artifacts/score-view/
+qa/artifacts/performance-report/
+qa/artifacts/score-import/

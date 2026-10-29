@@ -97,7 +97,7 @@ export function createDrummerTools(host) {
     tool('stop', 'Stop playback, a pending start, replay and the practice program. A running exercise is finalized in the journal, as with the app Stop button.', object(), false, () => { host.stop(); return state(); }),
     tool('set_view', 'Change visible panels, 2D/3D drum view, notes-only mode or notation rows. Does not alter notes or stop playback.', { ...object({
       view: choice(['kit', 'editor', 'practice', 'tools']), panel: choice(['library', 'stats', 'settings']),
-      kitView: choice(['2d', '3d']), notesOnly: bool, rows: { type: 'integer', enum: [0, 1, 2, 4] },
+      kitView: choice(['2d', '3d']), notesOnly: bool, rows: { type: 'integer', enum: [0, 1, 2, 4, 8] },
     }), minProperties: 1 }, false, async args => { await host.setView(args); return state(); }),
     tool('set_focus', 'Set an A–B bar range and scored instruments for the current pattern. Requires stopped playback. Other instruments remain audible. Bar numbering starts at 1.', object({
       enabled: bool, from: integer(1, 8), to: integer(1, 8), instruments: { type: 'array', minItems: 1, maxItems: host.instrumentIds.length, uniqueItems: true, items: choice(host.instrumentIds) },

@@ -14,6 +14,7 @@ export class AudioEngine {
     this.voices = [];
     this.offset = null;
     this.sources = new Set();
+    this.kitLoadId = 0;
   }
 
   async ensure() {
@@ -90,8 +91,12 @@ export class AudioEngine {
     out.connect(this.buses[bus]);
     const sample = this.kit && this.pickSample(instId, v);
     const end = sample ? this.playSample(sample, t, v, out) : SYNTH[SOUND_FAMILY[instId] || instId]?.(this, t, v, out) ?? t;
-    this.voices.push({ instId, out, end });
-    this.voices = this.voices.filter(x => x.end > this.ctx.currentTime);
+    this.voices.push({ instId, out, start: t, end });
+    this.voices = this.voices.filter(x => {
+      if (x.end > this.ctx.currentTime) return true;
+      x.out.disconnect();
+      return false;
+    });
   }
 
   playNow(instId, v) { if (this.ready) this.play(instId, this.ctx.currentTime, v, 'live'); }
@@ -101,13 +106,14 @@ export class AudioEngine {
     if (!this.ctx) return;
     const group = CHOKE[instId] || instId;
     for (const v of this.voices) {
-      if ((CHOKE[v.instId] || v.instId) !== group || v.end <= t) continue;
+      if ((CHOKE[v.instId] || v.instId) !== group || v.start > t || v.end <= t) continue;
       v.out.gain.setTargetAtTime(0, t, 0.015);
       v.end = t + 0.1;
     }
   }
 
   async loadKit(url) {
+    const loadId = ++this.kitLoadId;
     await this.ensure();
     const def = await (await fetch(`${url}/kit.json`)).json();
     const layers = {};
@@ -115,11 +121,12 @@ export class AudioEngine {
       const buf = await this.ctx.decodeAudioData(await (await fetch(`${url}/${s.file}`)).arrayBuffer());
       (layers[inst] ||= []).push({ buf, lo: s.lo ?? 1, hi: s.hi ?? 127, gain: s.gain ?? 1 });
     })));
+    if (loadId !== this.kitLoadId) return null;
     this.kit = { def, layers, rr: {} };
     return def;
   }
 
-  useSynth() { this.kit = null; }
+  useSynth() { this.kitLoadId++; this.kit = null; }
 
   pickSample(instId, v) {
     const list = this.kit.layers[instId] || this.kit.layers[SOUND_FAMILY[instId]];

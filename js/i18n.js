@@ -2,6 +2,32 @@
 // and accessible labels, retaining originals so SR/EN can switch without reload.
 import { CATALOG_DEFINITIONS, PRESET_CATEGORIES } from './preset-catalog.js';
 export const EN = {
+  'Druga partitura': 'Choose another score', 'Vrati na bubanj': 'Back to drums', 'Deonice': 'Parts',
+  'Originalna partitura za čitanje. Bubnjarsko bodovanje i snimanje ostaju vezani za izabrani ritam.': 'Original score reading view. Drum scoring and recording use the selected practice pattern.',
+  'Učitavam originalnu partituru…': 'Loading the original score…',
+  'Zaustavi vežbu pre uvoza partiture.': 'Stop practicing before importing a score.',
+  'MusicXML arhiva je oštećena ili nepotpuna.': 'The MusicXML archive is damaged or incomplete.',
+  'MusicXML arhiva ima previše ili nepodržane stavke.': 'The MusicXML archive has too many or unsupported entries.',
+  'Raspakovana partitura je prevelika (najviše 16 MB).': 'The uncompressed score is too large (maximum 16 MB).',
+  'MusicXML arhiva nema traženu partituru.': 'The MusicXML archive does not contain the requested score.',
+  'Ovaj browser ne može da otvori MXL. Raspakuj fajl i izaberi MusicXML.': 'This browser cannot open MXL. Extract the file and choose the MusicXML document.',
+  'MusicXML mora biti ispravan UTF-8 ili UTF-16 XML fajl.': 'MusicXML must be a valid UTF-8 or UTF-16 XML file.',
+  'Partitura sadrži DTD, entitete ili spoljne resurse koji nisu podržani.': 'The score contains unsupported DTDs, entities or external resources.',
+  'MusicXML fajl nije ispravan XML.': 'The MusicXML file is not valid XML.',
+  'Partitura je prevelika za prikaz u browseru.': 'The score is too large to display in the browser.',
+  'Izaberi MusicXML partituru tipa score-partwise (.musicxml, .xml ili .mxl).': 'Choose a score-partwise MusicXML score (.musicxml, .xml or .mxl).',
+  'MusicXML partitura nema note za prikaz.': 'The MusicXML score has no notes to display.',
+  'Izaberi MusicXML fajl (.musicxml, .xml ili .mxl). PDF i audio nisu MusicXML.': 'Choose a MusicXML file (.musicxml, .xml or .mxl). PDF and audio files are not MusicXML.',
+  'Partitura mora biti manja od 10 MB.': 'Choose a nonempty score of up to 10 MB.',
+  'MusicXML arhiva nema ispravnu putanju partiture.': 'The MusicXML archive has an invalid score path.',
+  'Prikaz partiture nije dostupan. Pokreni server ili pripremi offline aplikaciju.': 'The score viewer is unavailable. Start the server or prepare the offline app.',
+  'MusicXML partitura nije mogla da se prikaže.': 'The MusicXML score could not be displayed.',
+  'Uvezi partituru': 'Import score', 'Otvori MusicXML notni zapis': 'Open a MusicXML score',
+  'Poslednji udarac': 'Last hit', 'Spremno za sviranje': 'Ready to play',
+  'Uvezi pesmu': 'Import song', 'Uvezi lokalni audio fajl kao podlogu za vežbanje': 'Import a local audio file as a practice backing track',
+  'Smanji tempo za 5 BPM': 'Decrease tempo by 5 BPM', 'Smanji tempo za 1 BPM': 'Decrease tempo by 1 BPM',
+  'Povećaj tempo za 1 BPM': 'Increase tempo by 1 BPM', 'Povećaj tempo za 5 BPM': 'Increase tempo by 5 BPM',
+  'Veličina nota': 'Note size', 'Sakrij bubanj · samo note': 'Hide drums · notes only',
   'Klikni deo za zvuk · Shift: akcenat · Alt: tiše. Snimaj upisuje udarce dok ritam ide.': 'Click a part to play · Shift: accent · Alt: softer. Record to grid adds hits during playback.',
   'Prevuci praznu pozadinu za rotaciju · točkić ili dva prsta za zum': 'Drag the empty background to rotate · wheel or pinch to zoom',
   '3D bubanj; klikni deo za zvuk, prevuci pozadinu za rotaciju, točkić za zum': '3D drum kit; click a part to play, drag the background to rotate, wheel to zoom',
@@ -213,8 +239,8 @@ const TOKENS = {
 const DICT = { ...TOKENS, ...EN };
 const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const matcher = new RegExp(`(?<![\\p{L}\\p{N}])(?:${Object.keys(DICT).sort((a, b) => b.length - a.length).map(escape).join('|')})(?![\\p{L}\\p{N}])`, 'gu');
-let language = 'sr';
-try { if (typeof window !== 'undefined' && localStorage.getItem('drummer.language.v1') === 'en') language = 'en'; } catch {}
+let language = 'en';
+try { if (typeof window !== 'undefined' && localStorage.getItem('drummer.language.v1') === 'sr') language = 'sr'; } catch {}
 export const getLanguage = () => language;
 export function t(value, lang = language) {
   const source = String(value ?? ''); if (lang !== 'en') return source;

@@ -15,7 +15,10 @@ async function scenario(name, fn, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: options.offline ? 'allow' : 'block' });
   const p = await context.newPage(), errors = []; p.setDefaultTimeout(10000);
   p.on('pageerror', e => errors.push(e.message));
-  await p.addInitScript(() => Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) }));
+  await p.addInitScript(() => {
+    if (localStorage.getItem('drummer.language.v1') == null) localStorage.setItem('drummer.language.v1', 'sr');
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) });
+  });
   if (!options.offline) await p.route('**/js/main.js', async route => { const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge }); });
   if (options.noWebGL) await p.addInitScript(() => {
     const getContext = HTMLCanvasElement.prototype.getContext;
@@ -82,8 +85,10 @@ await scenario('Workspace: two/four notation rows, focus mode, auto-scroll and E
   await loadEight(p); await p.locator('#scoreRows').selectOption('2'); assert.equal(await p.locator('#notation .staff').count(), 10);
   await p.locator('#scoreRows').selectOption('4'); assert.equal(await p.locator('#notation .staff').count(), 20);
   await p.locator('#scoreView').click(); assert.ok(!(await p.locator('.lower').isVisible())); assert.ok(await p.locator('.bar').isVisible());
-  await p.evaluate(async () => { __qa.settings.countIn = false; await __qa.start(); __qa.notation.setPlayhead(112); });
-  assert.ok(await p.locator('#notation').evaluate(e => e.scrollTop > 0));
+  // Read the manual follow position in the same task: the running transport
+  // moves the playhead back to its actual first beat on the next frame.
+  const followed = await p.evaluate(async () => { __qa.settings.countIn = false; await __qa.start(); __qa.notation.setPlayhead(112); return document.querySelector('#notation').scrollTop; });
+  assert.ok(followed > 0);
   await p.keyboard.press('Escape'); assert.ok(await p.locator('.lower').isVisible()); assert.ok(await p.evaluate(() => __qa.play.on));
   await p.evaluate(() => __qa.stop());
   await p.locator('#scoreView').click(); await p.waitForTimeout(250); await p.reload(); assert.ok(await p.locator('body').evaluate(e => e.classList.contains('notes-only')));
@@ -168,6 +173,9 @@ await scenario('Kit: all thirteen live instruments and reference playback color 
   await p.waitForFunction(() => document.querySelector('#notation .playhead').getAttribute('x') !== '-20');
   await p.waitForFunction(() => { const t = __qa.kit.three.targets.get('kick')[0]; return !t.mesh.material.color.equals(t.base); });
   await p.evaluate(() => __qa.stop());
+  // Finishing now opens the notation report; resume the visible 3D view before
+  // asserting a fade that intentionally pauses while the canvas is hidden.
+  await p.locator('[data-view=kit]').click();
   await p.waitForTimeout(500); assert.ok(await p.evaluate(() => [...__qa.kit.three.targets.values()].flat().every(t => t.mesh.material.color.equals(t.base))));
 });
 await scenario('Kit: mouse rotation, zoom, reset and keyboard controls work without tempo conflicts', async p => {

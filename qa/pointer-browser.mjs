@@ -31,7 +31,10 @@ async function scenario(name, fn, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, serviceWorkers: options.offline ? 'allow' : 'block' });
   const p = await context.newPage(), errors = [];
   p.setDefaultTimeout(10000); p.on('pageerror', error => errors.push(error.message));
-  await p.addInitScript(() => Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) }));
+  await p.addInitScript(() => {
+    if (localStorage.getItem('drummer.language.v1') == null) localStorage.setItem('drummer.language.v1', 'sr');
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) });
+  });
   if (!options.offline) await p.route('**/js/main.js', async route => {
     const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge });
   });

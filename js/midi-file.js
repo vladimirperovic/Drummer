@@ -83,7 +83,8 @@ export function midiToPattern(file, options = {}) {
   const p = blankPattern({ name: options.name || 'Uvezeni MIDI', bars: options.bars || 1, beats, beatUnit,
     bpm: meta.bpm, division: options.quantize === 'triplet' ? 12 : 16 });
   const end = start + p.bars * p.beats * 4 / p.beatUnit;
-  if (file.meters.some(m => m.tick > start * file.ppq && m.tick < end * file.ppq))
+  if (file.meters.some(m => m.tick > start * file.ppq && m.tick < end * file.ppq
+    && (m.beats !== meta.beats || m.beatUnit !== meta.beatUnit)))
     throw new Error('Izabrani deo menja meru. Skrati deo ili pomeri početak posle promene.');
   const map = options.map || fileDrumMap(), spq = slotsPerBeat(p) * p.beatUnit / 4;
   const step = options.quantize === 'eighth' ? spq / 2 : 1;

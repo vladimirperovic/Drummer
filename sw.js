@@ -1,9 +1,11 @@
 // Bump VERSION whenever a cached application file changes.
-const VERSION = '2026-10-19-v7-1';
+const VERSION = '2026-10-29-public-1';
 const ROOT = new URL('./', self.location.href);
 const PREFIX = `drummer:${ROOT.pathname}:`;
 const CACHE = PREFIX + VERSION;
 const ASSETS = ['./', 'index.html', 'style.css', 'manifest.webmanifest',
+  'performance-report.css', 'score-import.css', 'js/performance-report.js', 'js/score-import.js',
+  'js/vendor/opensheetmusicdisplay.min.js', 'js/vendor/OSMD-LICENSE.txt', 'js/vendor/opensheetmusicdisplay.min.js.LICENSE.txt',
   'js/kit-drag.js', 'js/kit-play.js', 'assets/kit/pick-map.png',
   'icons/drummer-192.png', 'icons/drummer-512.png', 'kits/index.json',
   'js/main.js', 'js/patterns.js', 'js/notation.js', 'js/kit.js', 'js/audio.js', 'js/midi.js',

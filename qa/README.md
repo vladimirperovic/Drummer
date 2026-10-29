@@ -1,5 +1,7 @@
 # Drummer QA
 
+Aktuelna javna priprema od **29. oktobra 2026**: [izveštaj](RELEASE-2026-10-29.md), **229 JS + 7 Python + 156 Chromium browser scenarija = 392 različita testa**. Novi skupovi su `score-view`, `performance-report`, `ui-feedback`, `score-import` i `release-browser`. Opisi i brojke ispod beleže prethodne nadogradnje. Testovi koji proveravaju SR eksplicitno biraju taj jezik; posebna release provera potvrđuje novi EN default i pamćenje izabranog SR.
+
 Regresione i funkcionalne provere za popravke devet problema, dve nadogradnje sa po pet funkcija, SR/EN interfejs, 80 novih ritmova, promenljivi raspored nota, 2D/3D bubanj, WebMCP, favorite, paginaciju i konfigurator seta sa jednim/dva bas bubnja i ručnim rasporedom, nad osnovom `b9199e027af2c76b99e67a5dc48835f87daac57f`.
 
 Iz korena repozitorijuma:

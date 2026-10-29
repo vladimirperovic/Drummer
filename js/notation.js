@@ -36,7 +36,7 @@ function beatEvents(p, voice, start, spb) {
   return events;
 }
 
-export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine: requestedBars, barOffset = 0, finalBar = true, pageWidth } = {}) {
+export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine: requestedBars, barOffset = 0, finalBar = true, pageWidth, zoom = 100 } = {}) {
   container.innerHTML = '';
   const pixelW = pageWidth || Math.max(340, container.clientWidth || 900);
   const spb = slotsPerBeat(p), spBar = slotsPerBar(p), total = totalSlots(p);
@@ -48,7 +48,7 @@ export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine
   const LINE_H = TOP + 4 * SP + (downUsed ? 64 : 28) + (p.sticking?.trim() ? 24 : 0);
 
   // Note što veće (bubnjar gleda sa metar udaljenosti), a da stanu u zadatu visinu
-  let scale = 1.5, width, linesCount;
+  let scale = 1.5 * Math.max(40, Math.min(140, Number(zoom) || 100)) / 100, width, linesCount;
   for (;; scale -= 0.05) {
     width = pixelW / scale;
     const fit = Math.max(1, Math.floor((width - HEADER - 8) / minBar));
@@ -256,7 +256,14 @@ export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine
   let marks = [], lastFollowedLine = null;
   return {
     total,
+    svg,
+    geometry: { staffStep: SP, halfStep: HALF, lineHeight: LINE_H, scale, barsPerLine, lineCount: linesCount },
     slotPos,
+    instrumentPos(instId, slot) {
+      const position = slotPos(slot), head = noteEls[slot]?.find(g => g.dataset.inst === instId);
+      return { ...position, x: head ? Number(head.dataset.x) : position.x,
+        y: head ? Number(head.dataset.y) : position.line.y0 + (INST[instId]?.pos || 0) * HALF };
+    },
     setPlayhead(s) {
       if (s == null) return playhead.setAttribute('x', -20);
       const { x, line } = slotPos(s);

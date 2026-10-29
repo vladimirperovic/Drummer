@@ -72,7 +72,9 @@ export function normalizeSession(value) {
     if (!Object.hasOwn(INST, id) || !s || typeof s !== 'object') continue;
     stats.per[id] = { ...counts(s), mean: nullableNumber(s.mean), spread: nullableNumber(s.spread), dynamics: accuracy(s.dynamics) };
   }
-  const hits = value.hits.filter(validEvent).map(e => ({ ...e,
+  // Preserve the first early hit (and negative device calibration) instead of
+  // moving it onto the first beat. Other session events still start at zero.
+  const hits = value.hits.filter(e => e && Object.hasOwn(INST, e.inst) && Number.isFinite(e.timeMs) && e.timeMs >= -2000).map(e => ({ ...e,
     ...position(e), kind: kind(e.kind), err: nullableNumber(e.err),
     vel: Math.round(bounded(e.vel, 1, 127, 92)), note: Math.round(bounded(e.note, 0, 127, INST[e.inst].midiOut)) }));
   return { ...value, pattern, hits, stats,
@@ -136,10 +138,11 @@ export function normalizeProgram(value) {
 // Izvoz koristi originalne note i jačinu, bez kvantizacije ili promene tempa.
 export function performanceMidi(session) {
   const events = [];
+  const preRoll = -session.hits.reduce((min, h) => Number.isFinite(h.timeMs) && h.timeMs >= -2000 ? Math.min(min, h.timeMs) : min, 0);
   for (const hit of session.hits) {
-    if (!INST[hit.inst] || !Number.isFinite(hit.timeMs) || hit.timeMs < 0) continue;
+    if (!INST[hit.inst] || !Number.isFinite(hit.timeMs) || hit.timeMs < -2000) continue;
     const note = Math.round(bounded(hit.note, 0, 127, INST[hit.inst].midiOut));
-    const vel = Math.round(bounded(hit.vel, 1, 127, 92)), tick = Math.round(hit.timeMs);
+    const vel = Math.round(bounded(hit.vel, 1, 127, 92)), tick = Math.round(hit.timeMs + preRoll);
     events.push({ tick, bytes: [0x99, note, vel], off: false }, { tick: tick + 80, bytes: [0x89, note, 0], off: true });
   }
   events.sort((a, b) => a.tick - b.tick || Number(b.off) - Number(a.off));
@@ -147,7 +150,7 @@ export function performanceMidi(session) {
   const track = [0, 0xff, 0x51, 3, 0x0f, 0x42, 0x40];
   let previous = 0;
   for (const event of events) { track.push(...vlq(event.tick - previous), ...event.bytes); previous = event.tick; }
-  track.push(...vlq(Math.max(0, Math.round(session.durationMs || 0) - previous)), 0xff, 0x2f, 0);
+  track.push(...vlq(Math.max(0, Math.round((session.durationMs || 0) + preRoll) - previous)), 0xff, 0x2f, 0);
   const size = track.length;
   return new Uint8Array([77, 84, 104, 100, 0, 0, 0, 6, 0, 0, 0, 1, 3, 232,
     77, 84, 114, 107, (size >>> 24) & 255, (size >>> 16) & 255, (size >>> 8) & 255, size & 255, ...track]);

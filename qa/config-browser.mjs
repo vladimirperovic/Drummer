@@ -13,8 +13,11 @@ async function scenario(name,fn,options={}) {
   if(filter&&!filter.test(name))return;
   const context=await browser.newContext({viewport:{width:1440,height:1100},serviceWorkers:options.offline?'allow':'block'});
   const p=await context.newPage(),errors=[]; p.setDefaultTimeout(10000); p.on('pageerror',e=>errors.push(e.message));
-  await p.addInitScript(()=>Object.defineProperty(navigator,'requestMIDIAccess',{configurable:true,value:async()=>({inputs:new Map(),outputs:new Map()})}));
-  if(options.seed) await p.addInitScript(seed=>{for(const [key,value] of Object.entries(seed))localStorage.setItem(key,JSON.stringify(value));},options.seed);
+  await p.addInitScript(seed=>{
+    if(localStorage.getItem('drummer.language.v1')==null)localStorage.setItem('drummer.language.v1','sr');
+    for(const [key,value] of Object.entries(seed||{}))localStorage.setItem(key,key==='drummer.language.v1'?value:JSON.stringify(value));
+    Object.defineProperty(navigator,'requestMIDIAccess',{configurable:true,value:async()=>({inputs:new Map(),outputs:new Map()})});
+  },options.seed);
   if(options.noWebGL) await p.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:get.call(this,type,...args);};});
   if(!options.offline)await p.route('**/js/main.js',async route=>{const r=await route.fetch();await route.fulfill({response:r,body:await r.text()+bridge});});
   try {await p.goto(base);await p.locator('#kitConfigurator').waitFor();await fn(p,context);assert.deepEqual(errors,[]);results.push({name,status:'PASS'});console.log('PASS '+name);}
@@ -69,6 +72,8 @@ await scenario('Configurator: both bass drums score and record separately, with 
     const stats=__qa.scorer.stats();const p=__qa.pattern;__qa.stop();
     return {good:stats.all.good,one:p.steps.kick[0],two:p.steps.kick2[0],session:__qa.studio.sessions[0].hits.map(h=>h.inst)};
   });assert.equal(r.good,2);assert.equal(r.one,2);assert.equal(r.two,2);assert.deepEqual(r.session,['kick','kick2']);
+  // Stop opens the saved performance report; inspect the recorded editor next.
+  await p.locator('[data-view=editor]').click();
   await p.locator('#grid .cell[data-inst="kick"][data-slot="0"][data-v="2"]').waitFor();
   await p.locator('#grid .cell[data-inst="kick2"][data-slot="0"][data-v="2"]').waitFor();
   const colors=await p.locator('#grid .cell[data-slot="0"][data-v="2"]').evaluateAll(es=>es.map(e=>getComputedStyle(e).backgroundColor));assert.equal(new Set(colors).size,2);

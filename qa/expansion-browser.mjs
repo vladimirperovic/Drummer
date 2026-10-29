@@ -19,6 +19,7 @@ async function scenario(name, fn, { offline = false } = {}) {
   const p = await context.newPage(), errors = [];
   p.setDefaultTimeout(10000); p.on('pageerror', e => errors.push(e.message));
   await p.addInitScript(() => {
+    if (localStorage.getItem('drummer.language.v1') == null) localStorage.setItem('drummer.language.v1', 'sr');
     const port = { id: 'td-17', name: 'Test TD-17', onmidimessage: null };
     const access = { inputs: new Map([['td-17', port]]), outputs: new Map() };
     window.__port = port;

@@ -11,7 +11,10 @@ async function scenario(name,fn,options={}) {
   if(filter&&!filter.test(name))return;
   const context=await browser.newContext({viewport:{width:1440,height:1100},serviceWorkers:options.offline?'allow':'block'}),p=await context.newPage(),errors=[];
   p.setDefaultTimeout(10000);p.on('pageerror',e=>errors.push(e.message));
-  await p.addInitScript(()=>Object.defineProperty(navigator,'requestMIDIAccess',{configurable:true,value:async()=>({inputs:new Map(),outputs:new Map()})}));
+  await p.addInitScript(()=>{
+    if(localStorage.getItem('drummer.language.v1')==null)localStorage.setItem('drummer.language.v1','sr');
+    Object.defineProperty(navigator,'requestMIDIAccess',{configurable:true,value:async()=>({inputs:new Map(),outputs:new Map()})});
+  });
   if(options.noWebGL)await p.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(t,...a){return t.startsWith('webgl')?null:get.call(this,t,...a);};});
   if(!options.offline)await p.route('**/js/main.js',async route=>{const r=await route.fetch();await route.fulfill({response:r,body:await r.text()+bridge});});
   try {await p.goto(base);await p.locator('#kitMove').waitFor();await fn(p,context);assert.deepEqual(errors,[]);results.push({name,status:'PASS'});console.log('PASS '+name);}

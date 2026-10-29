@@ -13,11 +13,12 @@ export class ReplayPlayer {
     finally { if (token === this.token) this.starting = false; }
     if (token !== this.token) return;
     this.session = session; this.speed = speed; this.position = position;
-    this.startTime = this.audio.time + .08; this.startPosition = position;
+    this.startTime = this.audio.time + .08;
+    this.startPosition = position === 0 ? session.hits.reduce((min, h) => Math.min(min, h.timeMs), 0) : position;
     this.events = [
       ...session.hits.map(h => ({ ...h, bus: 'live' })),
       ...(reference ? session.expected.map(n => ({ ...n, vel: DYN_VEL[n.dyn] || 92, bus: 'pattern' })) : []),
-    ].filter(e => e.timeMs >= position).sort((a, b) => a.timeMs - b.timeMs);
+    ].filter(e => e.timeMs >= this.startPosition).sort((a, b) => a.timeMs - b.timeMs);
     this.index = 0; this.playing = true;
     this.timer = setInterval(() => this.tick(), 20); this.tick();
   }

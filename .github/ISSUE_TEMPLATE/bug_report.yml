@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible problem in Drummer.
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the pattern, mode and controls you used.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: Edge on Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: MIDI device, screenshots or console errors
+      description: Include only material you are comfortable making public. Remove personal data from exported sessions.

@@ -1,8 +1,8 @@
 # Drummer
 
-[Srpsko uputstvo](README.md)
+[Project and live demo](README.md) · [Srpsko uputstvo](README.sr.md)
 
-A browser drum practice app designed for the Roland TD-17KVX, with Web MIDI input, notation, a visual drum kit, timing/dynamics scoring, an editor and practice tools. Choose **EN** at the top right to switch all app screens and messages to English. The language is remembered; custom pattern names and note data are preserved.
+A browser drum practice app designed for the Roland TD-17KVX, with Web MIDI input, notation, a visual drum kit, timing/dynamics scoring, an editor and practice tools. New browser profiles open in English. Choose **SR** at the top right for Serbian; use **EN** to switch back. The language is remembered; custom pattern names and note data are preserved.
 
 ## Run
 
@@ -99,3 +99,15 @@ Patterns, settings, profiles, journals and programs are local to the browser. Ex
 `alati/midirec.swift` is a macOS CoreMIDI recorder; `alati/analiza.py` analyzes velocity, double triggers, crosstalk, pedal activity and timing. Compile the recorder with `swiftc -O alati/midirec.swift -o alati/midirec` on macOS.
 
 Test commands and evidence are in [qa/README.md](qa/README.md) and [qa/IZVESTAJ.txt](qa/IZVESTAJ.txt). Automated browser tests simulate MIDI; physical TD-17 hardware, real acoustic latency and EZdrummer integration have not been tested here.
+
+## Reading scores and reviewing your performance
+
+The top **Import score** button reads MusicXML (`.musicxml`, `.xml`, `.mxl`) as an original score, with pitches and multiple parts preserved. Use the reading view zoom slider to fit more measures on screen. This is separate from the percussion MIDI import and does not convert a piano score into a drum exercise. See [supported score formats](docs/score-formats.md).
+
+**Note size** scales the drum notation from 40% to 140%. **Hide drums · notes only** keeps the transport and score visible; automatic layout places each bar on its own row, with up to eight rows. Escape returns to the main workspace. The choice and scale are remembered.
+
+After a normal Stop or completed exercise, the journal shows **Your performance in notation**. Pick a pass, bar and instrument. Expected notes are black; actual hits are red at their measured, calibration-adjusted time. Gray guides make early/late offsets visible, with ±ms labels and missed-note circles. The exact-times table retains original timestamps. A first early hit can have a negative JSON timestamp; replay preserves its lead-in, and MIDI export adds the same nonnegative lead-in offset to all hits.
+
+## License and support
+
+[MIT license](LICENSE), [third-party notices](THIRD_PARTY_NOTICES.md), [privacy](PRIVACY.md), [contributing](CONTRIBUTING.md) and [security reports](SECURITY.md).

@@ -15,7 +15,7 @@ Open Drummer in the Codex browser and check **Tools / Alati → MCP connector / 
 | `drummer_set_options` | At least one boolean: `metro`, `countIn`, `loop`, `playPattern`, `liveSound`. Requires idle playback. |
 | `drummer_start` | Optional `durationSeconds`, integer 1–3600. Uses the app Start operation and journal. Audio must first be activated by interacting with the page. Repeated calls while playing do not restart. |
 | `drummer_stop` | Stops playback/pending start, replay and practice program; finalizes an active exercise in the journal. |
-| `drummer_set_view` | At least one: `view` (kit/editor/practice/tools), `panel` (library/stats/settings), `kitView` (2d/3d), `notesOnly` boolean, `rows` (0/1/2/4). |
+| `drummer_set_view` | At least one: `view` (kit/editor/practice/tools), `panel` (library/stats/settings), `kitView` (2d/3d), `notesOnly` boolean, `rows` (0/1/2/4/8). |
 | `drummer_set_focus` | Required `enabled`, 1-based `from`/`to` bars, distinct `instruments` from state/pattern data. Range must fit current pattern. Requires idle playback. |
 | `drummer_get_results` | Optional `limit`, 1–20, default 5. Current compact scoring, total session count and recent summaries; no raw hits/timeline/audio/profile data. |
 | `drummer_set_language` | Required `language`: sr/en. Preserves note data and custom names. |

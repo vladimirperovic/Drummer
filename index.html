@@ -6,6 +6,14 @@
 <title>Drummer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='white' stroke='black' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='black'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="performance-report.css">
+<link rel="stylesheet" href="score-import.css">
+<meta name="description" content="Practice drums with MIDI, readable sheet music, timing feedback and a customizable 2D/3D kit. Free, open source and offline-ready.">
+<meta property="og:title" content="Drummer — Drum practice in your browser">
+<meta property="og:description" content="MIDI drum practice, MusicXML scores, timing reports and an interactive drum kit. No account required.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://vladimirperovic.github.io/Drummer/">
+<meta property="og:image" content="https://vladimirperovic.github.io/Drummer/assets/screenshots/drummer-desktop.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/drummer-192.png">
 <meta name="theme-color" content="#111111">
@@ -17,15 +25,18 @@
   <div class="transport-group">
   <button id="playBtn" class="play" title="Start / stop (razmak)">▶ Start</button>
   <div class="tempo" title="Tempo (strelice gore/dolje, Shift ±5)">
-    <button class="tbtn" data-bpm="-5">−5</button>
-    <button class="tbtn" data-bpm="-1">−</button>
+    <button class="tbtn" data-bpm="-5" aria-label="Smanji tempo za 5 BPM">−5</button>
+    <button class="tbtn tbtn-step" data-bpm="-1" aria-label="Smanji tempo za 1 BPM">−</button>
     <input id="bpm" type="number" min="30" max="260" aria-label="Tempo">
     <span class="unit">BPM</span>
-    <button class="tbtn" data-bpm="1">+</button>
-    <button class="tbtn" data-bpm="5">+5</button>
+    <button class="tbtn tbtn-step" data-bpm="1" aria-label="Povećaj tempo za 1 BPM">+</button>
+    <button class="tbtn" data-bpm="5" aria-label="Povećaj tempo za 5 BPM">+5</button>
   </div>
+  <div class="hit-feedback"><span class="hit-caption">Poslednji udarac</span><output id="lastHit" class="lasthit free" aria-live="off">Spremno za sviranje</output></div>
   </div>
   <div class="bar-tools">
+    <button id="importSong" title="Otvori MusicXML notni zapis">Uvezi partituru</button>
+    <input id="scoreFile" type="file" accept=".musicxml,.xml,.mxl" hidden>
     <button id="scoreView" aria-pressed="false" title="Prikaži samo komande i note; Esc vraća editor">⤢ Samo note</button>
     <div id="midiStatus" class="status"><span class="dot"></span><span class="txt">MIDI…</span></div>
     <label class="language-picker" translate="no"><span class="sr-only">Language / Jezik</span><select id="languageSelect" aria-label="Language / Jezik"><option value="sr">SR</option><option value="en">EN</option></select></label>
@@ -55,12 +66,13 @@
   <div class="sheet-head">
     <h1 id="patternName"></h1>
     <span id="patternInfo" class="muted"></span>
-    <span id="lastHit" class="lasthit"></span>
   </div>
   <div id="practiceStatus" class="practice-status" aria-live="polite" hidden></div>
   <div class="score-options">
     <span id="patternLesson" class="muted"></span>
-    <label>Redovi nota <select id="scoreRows"><option value="0">Automatski</option><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
+    <label>Redovi nota <select id="scoreRows"><option value="0">Automatski</option><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></label>
+    <label class="score-scale">Veličina nota <input id="scoreScale" type="range" min="40" max="140" step="5" value="100" aria-label="Veličina nota"><output id="scoreScaleValue" for="scoreScale" data-user-text>100%</output></label>
+    <label class="tog score-hide-kit"><input id="scoreOnly" type="checkbox"> Sakrij bubanj · samo note</label>
     <button id="resetSheet" title="Vrati podrazumevanu visinu nota">Vrati visinu</button>
   </div>
   <div id="notation"></div>

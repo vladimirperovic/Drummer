@@ -1,0 +1,7 @@
+OpenSheetMusicDisplay 2.2.1
+Source: https://registry.npmjs.org/opensheetmusicdisplay/-/opensheetmusicdisplay-2.2.1.tgz
+Upstream: https://github.com/opensheetmusicdisplay/opensheetmusicdisplay
+File: package/build/opensheetmusicdisplay.min.js (unchanged)
+License: BSD-3-Clause; see OSMD-LICENSE.txt and notices in the bundled runtime.
+Downloaded from the official npm package on 2026-10-29.
+Loaded only when opening a local MusicXML score. No CDN or remote font is used.

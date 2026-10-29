@@ -5,10 +5,23 @@ export class WorkspaceView {
     this.settings = settings; this.save = save; this.render = render;
     this.sheet = document.querySelector('.sheet'); this.handle = document.getElementById('sheetResize');
     this.focus = !!settings.scoreOnly;
-    settings.scoreRows = [0, 1, 2, 4].includes(Number(settings.scoreRows)) ? Number(settings.scoreRows) : 0;
+    settings.scoreRows = [0, 1, 2, 4, 8].includes(Number(settings.scoreRows)) ? Number(settings.scoreRows) : 0;
+    settings.scoreScale = Math.max(40, Math.min(140, Number(settings.scoreScale) || 100));
     document.getElementById('scoreRows').value = settings.scoreRows;
     document.getElementById('scoreRows').onchange = e => { settings.scoreRows = +e.target.value; save(); render(); };
     document.getElementById('scoreView').onclick = () => this.toggle(!this.focus);
+    const only = document.getElementById('scoreOnly'), scale = document.getElementById('scoreScale');
+    if (only) only.onchange = e => this.toggle(e.target.checked);
+    if (scale) {
+      scale.oninput = e => {
+        settings.scoreScale = Math.max(40, Math.min(140, Number(e.target.value) || 100));
+        this.applyScale();
+        // A slider can emit several events in a frame. Paint at most once per
+        // frame and persist after the gesture instead of writing on each tick.
+        if (!this.scaleFrame) this.scaleFrame = requestAnimationFrame(() => { this.scaleFrame = 0; render(); });
+      };
+      scale.onchange = () => save();
+    }
     document.getElementById('resetSheet').onclick = () => { settings.sheetHeight = 0; this.apply(); save(); render(); };
     this.handle.onpointerdown = e => {
       if (e.button !== 0 || this.focus) return;
@@ -41,7 +54,14 @@ export class WorkspaceView {
     this.handle.setAttribute('aria-valuemax', this.maximum); this.handle.setAttribute('aria-valuenow', height);
     const button = document.getElementById('scoreView');
     button.textContent = this.focus ? '↩ Vrati editor' : '⤢ Samo note'; button.setAttribute('aria-pressed', this.focus);
+    const only = document.getElementById('scoreOnly'); if (only) only.checked = this.focus;
+    this.applyScale();
     document.getElementById('resetSheet').hidden = this.focus;
+  }
+  applyScale() {
+    const scale = document.getElementById('scoreScale'), value = document.getElementById('scoreScaleValue');
+    if (scale) { scale.value = this.settings.scoreScale; scale.setAttribute('aria-valuetext', `${this.settings.scoreScale}%`); }
+    if (value) value.textContent = `${this.settings.scoreScale}%`;
   }
   toggle(focus) {
     this.focus = focus; this.settings.scoreOnly = focus;
@@ -50,7 +70,8 @@ export class WorkspaceView {
     else document.getElementById('scoreView').focus();
   }
   notationOptions(pattern) {
-    const rows = this.settings.scoreRows || (this.focus ? Math.min(4, pattern.bars) : 0);
-    return { maxHeight: Infinity, ...(rows ? { barsPerLine: Math.ceil(pattern.bars / rows) } : {}) };
+    const rows = this.settings.scoreRows || (this.focus ? pattern.bars : 0);
+    return { maxHeight: Infinity, zoom: this.settings.scoreScale,
+      ...(rows ? { barsPerLine: Math.ceil(pattern.bars / rows) } : {}) };
   }
 }

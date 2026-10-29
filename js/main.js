@@ -19,6 +19,7 @@ import { PRESET_CATEGORIES, filterPresets } from './preset-catalog.js';
 import { setupAgentTools, ToolError } from './agent-tools.js';
 import { normalizeKit, kitInstruments, missingKitInstruments } from './kit-config.js';
 import { KitConfigurator } from './kit-config-ui.js';
+import { createScoreImporter } from './score-import.js';
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
@@ -58,7 +59,12 @@ let favorites = new Set(store.loadFavorites());
 const libraryPages = { mine: 1, presets: 1 }, PAGE_SIZE = 12;
 settings.favoritesOnly = settings.favoritesOnly === true;
 let pattern = normalize(settings.current || structuredClone(PRESETS[0]));
-let dirty = false;
+// Recover the draft status too: otherwise reloading makes an unsaved rhythm
+// look saved and the next library selection silently discards its changes.
+const savedPattern = [...library, ...PRESETS].find(p => p.id && p.id === pattern.id);
+const draftContent = p => JSON.stringify(['name', 'bars', 'beats', 'beatUnit', 'division', 'swing', 'groups', 'sticking', 'steps'].map(key => p[key]));
+let dirty = settings.currentDirty === true || (settings.currentDirty == null && !!settings.current && (!savedPattern || draftContent(pattern) !== draftContent(normalize(savedPattern))));
+settings.currentDirty = dirty;
 let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator;
 let edCells = [];
 let calibration = null;
@@ -119,7 +125,7 @@ function stop(reason = 'manual') {
   clearInterval(play.timer);
   // Ne ocenjuj note zakazane unapred koje se nisu ni čule pre Stop.
   scorer.pending = scorer.pending.filter(n => n.perf <= endPerf);
-  for (const r of scorer.sweep(Infinity)) notation.mark(r.note.slot, r.inst, 'miss', r.note.loop);
+  for (const r of scorer.sweep(Infinity)) { notation.mark(r.note.slot, r.inst, 'miss', r.note.loop); showLastHit(r.inst, null, r); }
   for (const boundary of play.boundaries) if (boundary.perf <= endPerf) finishLoop(boundary.loop, false);
   audio.stopScheduled(); midi.stopOutput(); studio?.backing.stop();
   play.queue = []; play.boundaries = [];
@@ -128,6 +134,7 @@ function stop(reason = 'manual') {
   setNowColumn(-1);
   renderTransport(); renderStats();
   const session = studio?.finishSession(scorer.stats(), scorer.results, endPerf, reason);
+  if (session && !studio.run && ['manual', 'complete', 'duration'].includes(reason) && workspaceView?.focus) workspaceView.toggle(false);
   studio?.stopped(reason, session);
 }
 
@@ -231,6 +238,7 @@ function frame() {
   for (const r of scorer.sweep(now)) {
     notation.mark(r.note.slot, r.inst, 'miss', r.note.loop);
     kit.hit(r.inst, 'miss');
+    showLastHit(r.inst, null, r);
   }
   while (play.boundaries.length && play.boundaries[0].perf + lateGrace() <= now) finishLoop(play.boundaries.shift().loop);
   studio?.tick(now);
@@ -269,7 +277,7 @@ function onHit(instId, vel, perf, source = 'keyboard', midiNote) {
     return;
   }
   let res = null;
-  if (play.on && perf - settings.calib >= play.firstPerf && (!play.exerciseEndPerf || perf - settings.calib <= play.exerciseEndPerf + LEVELS[settings.level][1])) {
+  if (play.on && perf - settings.calib >= play.firstPerf - LEVELS[settings.level][1] && (!play.exerciseEndPerf || perf - settings.calib <= play.exerciseEndPerf + LEVELS[settings.level][1])) {
     scorer.currentLoop = Math.max(0, play.cur?.loop ?? 0);
     if (acceptsInstrument(play.range, instId)) res = scorer.hit(instId, perf, vel);
     const total = play.range.length;
@@ -306,8 +314,9 @@ const fmtErr = err => (Math.abs(err) < 3 ? 'tačno' : err < 0 ? `${Math.round(-e
 
 function showLastHit(instId, vel, res) {
   const el = $('#lastHit');
-  let txt = `${INST[instId].label} · jačina ${vel}`;
-  if (res) txt += res.kind === 'extra' ? ' · višak' : ` · ${fmtErr(res.err)}`;
+  let txt = INST[instId].label;
+  if (vel != null) txt += ` · jačina ${vel}`;
+  if (res) txt += res.kind === 'miss' ? ' · promašeno' : res.kind === 'extra' ? ' · višak' : ` · ${fmtErr(res.err)}`;
   el.textContent = txt;
   el.className = 'lasthit ' + (res ? res.kind : 'free');
 }
@@ -406,7 +415,14 @@ function renderTransport() {
   configurator?.playState();
   kit?.playState();
   workbench?.playState();
+  renderSongImport();
   $('#edSwing').disabled = busy || pattern.division === 12;
+}
+
+function renderSongImport() {
+  const busy = play.on || play.starting || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
+  $('#importSong').disabled = busy;
+  $('#scoreFile').disabled = busy;
 }
 
 function renderClickSub() {
@@ -430,7 +446,7 @@ function setBpm(v) {
 }
 
 function markDirty() {
-  dirty = true;
+  dirty = settings.currentDirty = true;
   settings.current = pattern;
   saveSettings();
 }
@@ -487,6 +503,7 @@ function renderEditor() {
       b.dataset.inst = inst.id;
       b.dataset.slot = s;
       b.dataset.v = pattern.steps[inst.id][s];
+      b.disabled = play.on || play.starting;
       b.title = `${inst.label} · takt ${Math.floor(s / spBar) + 1}, korak ${(s % spBar) + 1}`;
       grid.append(b);
       edCells[s].push(b);
@@ -501,6 +518,7 @@ function syncGrid() {
 }
 
 function setCell(b, v) {
+  if (play.on || play.starting) return;
   pattern.steps[b.dataset.inst][b.dataset.slot] = v;
   b.dataset.v = v;
   if (v && !play.on) audio.ensure().then(() => audio.play(b.dataset.inst, audio.time, DYN_VEL[v] / 127, 'pattern'));
@@ -621,7 +639,7 @@ function loadPattern(p, { program = false } = {}) {
   stop(program ? 'transition' : 'load');
   studio?.replay.stop();
   pattern = normalize(structuredClone(p));
-  dirty = false;
+  dirty = settings.currentDirty = false;
   settings.current = pattern;
   saveSettings();
   studio?.patternChanged();
@@ -644,7 +662,7 @@ function saveCurrent(asNew) {
   if (!store.saveLibrary(list)) { markDirty(); renderHeader(); return; }
   library = list; pattern = structuredClone(candidate);
   if (asNew || !own) libraryPages.mine = 1;
-  dirty = false;
+  dirty = settings.currentDirty = false;
   settings.current = pattern;
   saveSettings();
   renderAll();
@@ -720,15 +738,19 @@ async function loadKitList() {
   } catch {}
 }
 
+let kitChoiceToken = 0;
 async function chooseKit(id) {
+  const token = ++kitChoiceToken;
   settings.kit = id;
   saveSettings();
   if (!id) return audio.useSynth();
   toast('Učitavam zvukove…');
   try {
     const def = await audio.loadKit(`kits/${id}`);
+    if (token !== kitChoiceToken || !def) return;
     toast(`Zvuk: ${def.name}`);
   } catch {
+    if (token !== kitChoiceToken) return;
     audio.useSynth();
     toast('Kit nije mogao da se učita, koristim ugrađeni zvuk.');
   }
@@ -745,6 +767,7 @@ async function runCalibration() {
     if (i >= 4) clicks.push(audio.ctxToPerf(t));
   }
   calibration = { hits: [] };
+  renderSongImport();
   $('#calibInfo').textContent = 'Slušaj 4 klika, pa udaraj dobos (ili taster F) tačno uz klik…';
   $('#calibBtn').disabled = true;
   profiles?.playState();
@@ -757,6 +780,7 @@ async function runCalibration() {
       if (Math.abs(h - c) < (beat * 1000) / 3) diffs.push(h - c);
     }
     calibration = null;
+    renderSongImport();
     profiles?.playState();
     configurator?.playState();
     kit?.playState();
@@ -970,11 +994,13 @@ renderKeyHelp();
 studio = new PracticeStudio({ audio, getPattern: () => pattern, getLevel: () => settings.level,
   isPlaying: () => play.on || play.starting, start, stop, loadPattern, setBpm,
   refreshNotation: renderNotationView, toast, getInstruments: () => kitInstruments(settings.kitConfig),
-  onBusyChange: () => { profiles?.playState(); configurator?.playState(); kit?.playState(); } });
+  onBusyChange: () => { profiles?.playState(); configurator?.playState(); kit?.playState(); renderSongImport(); } });
 profiles = new DeviceProfiles({ midi, settings, saveSettings, stop, toast, renderMap: renderMapTable, applyKit, profileChanged: () => configurator?.render(),
   isBusy: () => play.on || play.starting || !!calibration || !!studio.run || studio.replay.playing || studio.replay.starting });
 configurator = new KitConfigurator({ settings, midi, profiles, apply: applyKit, renderMap: renderMapTable,
   isBusy: () => play.on || play.starting || !!calibration || !!studio.run || studio.replay.playing || studio.replay.starting });
+createScoreImporter({ button: $('#importSong'), input: $('#scoreFile'), toast, isBusy: kitBusy,
+  onOpen: () => { stop(); studio.replay.stop(); studio.cancelProgram(); } });
 workbench = new Workbench({ midi, toast, loadPattern, markDirty, render: renderAll, getPattern: () => pattern,
   isBusy: () => play.on || play.starting || !!studio.run || !!calibration });
 document.addEventListener('drummer:language', () => {
