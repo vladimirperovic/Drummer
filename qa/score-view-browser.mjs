@@ -37,16 +37,35 @@ const zoom = async (page, value) => {
   await page.waitForFunction(value => document.querySelector('#scoreScaleValue').textContent === `${value}%`
     && Math.abs(__scoreQA.notation.geometry.scale - value * .015) < 1e-6, value);
 };
+const notationSnapshot = async (page, zoom) => {
+  // Resolve the current head and measure it in one browser task. A locator's
+  // boundingBox can retain a head that a queued resize/RAF render has detached.
+  const handle = await page.waitForFunction(zoom => {
+    const head = document.querySelector('#notation .fillhead');
+    if (!head || Math.abs(__scoreQA.notation.geometry.scale - zoom * .015) >= 1e-6) return null;
+    const width = head.getBoundingClientRect().width;
+    if (!(width > 0)) return null;
+    return { width, staffCount: document.querySelectorAll('#notation .staff').length, pattern: JSON.stringify(__scoreQA.pattern) };
+  }, zoom);
+  try { return await handle.jsonValue(); } finally { await handle.dispose(); }
+};
 
 await scenario('Score view: size slider changes actual note size and eight rows without changing the rhythm', async page => {
   await page.locator('#scoreRows').selectOption('8');
   const pattern = await page.evaluate(() => JSON.stringify(__scoreQA.pattern));
-  const before = await page.locator('#notation .fillhead').first().boundingBox();
+  await page.evaluate(() => {
+    // Exercise the DOM replacement that can also be scheduled by resize events.
+    globalThis.__scoreRebuilds = 0;
+    const refresh = () => { __scoreQA.workspaceView.render(); if (++globalThis.__scoreRebuilds < 5) requestAnimationFrame(refresh); };
+    requestAnimationFrame(refresh);
+  });
+  const before = await notationSnapshot(page, 100);
   await zoom(page, 50);
-  const after = await page.locator('#notation .fillhead').first().boundingBox();
+  const after = await notationSnapshot(page, 50);
   assert.ok(Math.abs(after.width / before.width - .5) < .01);
-  assert.equal(await page.locator('#notation .staff').count(), 40);
-  assert.equal(await page.evaluate(() => JSON.stringify(__scoreQA.pattern)), pattern);
+  assert.equal(before.staffCount, 40); assert.equal(after.staffCount, 40);
+  assert.equal(before.pattern, pattern); assert.equal(after.pattern, pattern);
+  await page.waitForFunction(() => globalThis.__scoreRebuilds === 5);
   await page.locator('#scoreOnly').check();
   assert.equal(await page.locator('.lower').isVisible(), false);
   assert.equal(await page.locator('#scoreView').getAttribute('aria-pressed'), 'true');
