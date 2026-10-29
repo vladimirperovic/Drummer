@@ -178,6 +178,24 @@
         0,
         0
       ],
+      "rimshot": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
       "xstick": [
         0,
         0,
@@ -376,6 +394,7 @@
       "tom1",
       "tom2",
       "snare",
+      "rimshot",
       "xstick",
       "tom3",
       "kick",
@@ -393,6 +412,20 @@
   "level": "normalno",
   "calib": 0,
   "durationMs": 1500,
+  "passes": [],
+  "stats": {
+    "accuracy": 50,
+    "expected": 3,
+    "all": {
+      "good": 1,
+      "ok": 1,
+      "miss": 1,
+      "extra": 0,
+      "expected": 0
+    },
+    "per": {}
+  },
+  "hitCount": 2,
   "hits": [
     {
       "inst": "crash2",
@@ -519,7 +552,6 @@
       "bpm": 120
     }
   ],
-  "passes": [],
   "results": [
     {
       "inst": "kick",
@@ -529,17 +561,5 @@
       "expectedId": "0:8:kick",
       "err": null
     }
-  ],
-  "stats": {
-    "accuracy": 50,
-    "expected": 3,
-    "all": {
-      "good": 1,
-      "ok": 1,
-      "miss": 1,
-      "extra": 0,
-      "expected": 0
-    },
-    "per": {}
-  }
+  ]
 }

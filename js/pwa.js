@@ -23,11 +23,18 @@ export async function setupPwa(host) {
     catch { status('Server nije dostupan. Nastavi offline i proveri kasnije.'); }
     updateButtons();
   };
+  // Blocked updates explain the exact reason at the bottom of the screen, wherever the user is.
+  const blocked = () => {
+    if (host.canReload()) return false;
+    status('Zaustavi vežbu i sačuvaj izmene ritma i programa pre ažuriranja.');
+    const reason = host.blockReason?.(); if (reason) host.toast?.(reason);
+    return true;
+  };
   $('pwaUpdate').onclick = async () => {
     if (!registration?.waiting && !needsReload) return;
-    if (!host.canReload()) { status('Zaustavi vežbu i sačuvaj izmene ritma i programa pre ažuriranja.'); return; }
+    if (blocked()) return;
     if (!await host.flush()) { status('Sačuvaj kopiju podataka pre ažuriranja.'); return; }
-    if (!host.canReload()) { status('Zaustavi vežbu i sačuvaj izmene ritma i programa pre ažuriranja.'); return; }
+    if (blocked()) return;
     reloadForUpdate = true;
     if(needsReload)location.reload();
     else registration.waiting.postMessage({ type: 'ACTIVATE_UPDATE' });

@@ -1,6 +1,8 @@
-// Local MusicXML reader. The original pitched score stays separate from the
-// drum practice pattern; no notes are remapped to percussion instruments.
+// Local MusicXML reader. The original score stays a reading view; a drum part
+// can additionally be converted into a practice pattern (js/score-drums.js).
 import { t } from './i18n.js';
+import { INSTRUMENTS } from './patterns.js';
+import { drumParts, drumKeys, drumPartToPattern } from './score-drums.js';
 
 const MAX_FILE = 10 * 1024 * 1024, MAX_XML = 16 * 1024 * 1024;
 const fail = message => { throw new Error(message); };
@@ -149,14 +151,14 @@ function loadLibrary() {
   return libraryPromise;
 }
 
-export function createScoreImporter({ button, input, isBusy = () => false, onOpen = () => {}, onClose = () => {}, toast = () => {} }) {
+export function createScoreImporter({ button, input, isBusy = () => false, onOpen = () => {}, onClose = () => {}, toast = () => {}, onDrumPattern = null }) {
   const dialog = document.createElement('dialog'); dialog.id = 'scoreImportDialog'; dialog.className = 'score-import-dialog';
   dialog.setAttribute('aria-labelledby', 'scoreImportTitle');
-  dialog.innerHTML = `<header class="score-import-toolbar"><div class="score-import-heading"><h2 id="scoreImportTitle" data-user-text></h2><p id="scoreImportMeta" class="muted"></p></div><label>Veličina nota <input id="importedScoreScale" type="range" min="40" max="140" step="5" value="80" aria-label="Veličina nota"><output id="importedScoreScaleValue" data-user-text>80%</output></label><button id="scoreImportReplace">Druga partitura</button><button id="scoreImportClose">Vrati na bubanj</button></header><p class="score-import-notice">Originalna partitura za čitanje. Bubnjarsko bodovanje i snimanje ostaju vezani za izabrani ritam.</p><p id="scoreImportStatus" role="status" aria-live="polite"></p><div id="scoreImportScroll" class="score-import-scroll"><div id="scoreImportCanvas" data-user-text translate="no"></div></div>`;
+  dialog.innerHTML = `<header class="score-import-toolbar"><div class="score-import-heading"><h2 id="scoreImportTitle" data-user-text></h2><p id="scoreImportMeta" class="muted"></p></div><label>Veličina nota <input id="importedScoreScale" type="range" min="40" max="140" step="5" value="80" aria-label="Veličina nota"><output id="importedScoreScaleValue" data-user-text>80%</output></label><button id="scoreImportReplace">Druga partitura</button><button id="scoreImportClose">Vrati na bubanj</button></header><p class="score-import-notice">Originalna partitura za čitanje. Bubnjarsko bodovanje i snimanje ostaju vezani za izabrani ritam.</p><section id="scoreDrums" class="score-drums" hidden><h3>Bubnjarska deonica → ritam za vežbu</h3><div class="score-drums-form"><label>Deonica <select id="scoreDrumPart" data-user-text></select></label><label>Od takta <input id="scoreDrumFrom" type="number" min="1" step="1" value="1"></label><label>Taktova <select id="scoreDrumBars">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option>${n}</option>`).join('')}</select></label><label>Podela <select id="scoreDrumGrid"><option value="auto">Automatski</option><option value="16">Šesnaestine</option><option value="12">Triole</option></select></label><button id="scoreDrumApply" class="primary">Otvori u editoru</button></div><p id="scoreDrumSummary" class="score-drums-summary" role="status"></p><details><summary>Instrumenti iz partiture</summary><div id="scoreDrumMap" class="score-drums-map"></div></details></section><p id="scoreImportStatus" role="status" aria-live="polite"></p><div id="scoreImportScroll" class="score-import-scroll"><div id="scoreImportCanvas" data-user-text translate="no"></div></div>`;
   document.body.append(dialog);
   const byId = id => dialog.querySelector('#' + id), status = byId('scoreImportStatus'), canvas = byId('scoreImportCanvas');
   const scale = byId('importedScoreScale'), scroll = byId('scoreImportScroll');
-  let renderer = null, current = null, token = 0, zoomTimer = 0, resizeTimer = 0, lastWidth = 0;
+  let renderer = null, current = null, token = 0, zoomTimer = 0, resizeTimer = 0, lastWidth = 0, drums = null;
   const setStatus = message => { status.textContent = t(message); status.hidden = !message; };
   function draw() {
     if (!renderer || !current || !dialog.open) return;
@@ -165,8 +167,48 @@ export function createScoreImporter({ button, input, isBusy = () => false, onOpe
     byId('importedScoreScaleValue').textContent = `${scale.value}%`;
     scale.setAttribute('aria-valuetext', `${scale.value}%`);
   }
+  // Drum part → pattern: the mapping starts from instrument names, GM numbers
+  // and staff positions, and can be corrected before opening the editor.
+  function setupDrums(score) {
+    const parts = onDrumPattern ? drumParts(score.document) : [];
+    drums = parts.length ? { document: score.document, title: score.title, parts } : null;
+    byId('scoreDrums').hidden = !drums;
+    if (!drums) return;
+    byId('scoreDrumPart').replaceChildren(...parts.map(part => new Option(`${part.name} (${part.measures})`, part.id)));
+    byId('scoreDrumFrom').value = 1; byId('scoreDrumBars').value = String(Math.min(2, parts[0].measures)); byId('scoreDrumGrid').value = 'auto';
+    choosePart(parts[0].id);
+  }
+  function choosePart(id) {
+    const part = drums.parts.find(p => p.id === id), keys = drumKeys(drums.document, id);
+    Object.assign(drums, { part, keys, map: Object.fromEntries(keys.map(k => [k.id, k.suggested || ''])) });
+    byId('scoreDrumFrom').max = part.measures;
+    const map = byId('scoreDrumMap'); map.replaceChildren();
+    for (const key of keys) {
+      const label = document.createElement('label'), name = document.createElement('span');
+      name.textContent = [key.name, key.step && `${key.step}${key.octave || ''}`, key.midi != null && `MIDI ${key.midi}`, `${key.count}×`].filter(Boolean).join(' · '); name.dataset.userText = '';
+      const select = document.createElement('select'); select.dataset.drumKey = key.id;
+      select.append(new Option(t('Preskoči'), ''), ...INSTRUMENTS.map(inst => new Option(t(inst.label), inst.id)));
+      select.value = drums.map[key.id]; label.append(name, select); map.append(label);
+    }
+    previewDrums();
+  }
+  function previewDrums() {
+    if (!drums) return null;
+    let result = null;
+    try {
+      result = drumPartToPattern(drums.document, { partId: drums.part.id, from: Number(byId('scoreDrumFrom').value), bars: Number(byId('scoreDrumBars').value),
+        quantize: byId('scoreDrumGrid').value, map: drums.map, name: drums.title ? `${drums.title} — ${drums.part.name}` : drums.part.name });
+      const extra = [result.ignored && `${t('preskočeno')}: ${result.ignored}`, result.collisions && `${t('spojeno u isti korak')}: ${result.collisions}`,
+        result.outside && `${t('van takta')}: ${result.outside}`, result.tremolo && `${t('tremolo kao jedan udarac')}: ${result.tremolo}`].filter(Boolean).join(' · ');
+      byId('scoreDrumSummary').textContent = `${t('Takt')} ${result.from}–${result.from + result.bars - 1} / ${result.measures} · ${result.pattern.beats}/${result.pattern.beatUnit} · `
+        + `${result.pattern.division === 12 ? t('triole') : t('šesnaestine')} · ${result.bpm} BPM${result.tempoFound ? '' : ` (${t('tempo nije zapisan')})`} · ${t('Udarci')}: ${result.imported}${extra ? ' · ' + extra : ''}`
+        + (result.imported ? '' : ` · ${t('Nema mapiranih udaraca u izabranom delu.')}`);
+    } catch (error) { byId('scoreDrumSummary').textContent = t(error.message); }
+    byId('scoreDrumApply').disabled = !result?.imported || isBusy();
+    return result;
+  }
   function close() {
-    token++; clearTimeout(zoomTimer); clearTimeout(resizeTimer);
+    token++; clearTimeout(zoomTimer); clearTimeout(resizeTimer); drums = null;
     if (dialog.open) dialog.close();
     renderer?.clear(); renderer = null; current = null; canvas.replaceChildren();
     onClose(); button?.focus();
@@ -182,6 +224,7 @@ export function createScoreImporter({ button, input, isBusy = () => false, onOpe
       if (!dialog.open) dialog.showModal();
       byId('scoreImportTitle').textContent = score.title;
       byId('scoreImportMeta').textContent = `${t('Deonice')}: ${score.parts} · ${t('Taktovi')}: ${score.measures}`;
+      try { setupDrums(score); } catch { drums = null; byId('scoreDrums').hidden = true; }
       setStatus('Učitavam originalnu partituru…');
       renderer?.clear(); renderer = null; current = null; canvas.replaceChildren();
       const library = await loadLibrary(); if (request !== token || !dialog.open) return false;
@@ -202,6 +245,13 @@ export function createScoreImporter({ button, input, isBusy = () => false, onOpe
   if (button) button.onclick = () => input.click();
   input.onchange = event => { const file = event.target.files[0]; input.value = ''; if (file) open(file); };
   byId('scoreImportReplace').onclick = () => input.click(); byId('scoreImportClose').onclick = close;
+  byId('scoreDrumPart').onchange = event => choosePart(event.target.value);
+  for (const id of ['scoreDrumFrom', 'scoreDrumBars', 'scoreDrumGrid']) byId(id).onchange = () => previewDrums();
+  byId('scoreDrumMap').onchange = event => { const select = event.target.closest('[data-drum-key]'); if (select && drums) { drums.map[select.dataset.drumKey] = select.value; previewDrums(); } };
+  byId('scoreDrumApply').onclick = () => {
+    const result = previewDrums(); if (!result?.imported || isBusy()) return;
+    if (onDrumPattern(result.pattern) !== false) close();
+  };
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
   dialog.addEventListener('keydown', event => { event.stopPropagation(); if (event.key === 'Escape') { event.preventDefault(); close(); } });
   scale.oninput = () => { byId('importedScoreScaleValue').textContent = `${scale.value}%`; clearTimeout(zoomTimer); zoomTimer = setTimeout(() => { try { draw(); } catch { setStatus('MusicXML partitura nije mogla da se prikaže.'); } }, 100); };

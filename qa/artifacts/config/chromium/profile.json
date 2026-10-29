@@ -1,6 +1,6 @@
 {
   "type": "drummer-kit-profile",
-  "version": 1,
+  "version": 2,
   "profile": {
     "id": "",
     "name": "Portable kit",
@@ -23,7 +23,7 @@
       "36": "kick",
       "37": "xstick",
       "38": "snare",
-      "40": "snare",
+      "40": "rimshot",
       "42": "hh",
       "43": "tom3",
       "44": "hhp",
@@ -40,6 +40,10 @@
       "57": "crash2",
       "58": "tom3",
       "59": "ride"
+    },
+    "routing": {
+      "inputs": [],
+      "outputs": {}
     }
   }
 }

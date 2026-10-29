@@ -76,7 +76,7 @@ After Stop, the journal opens your notation report. Black notes show the task; r
 ```sh
 git clone https://github.com/vladimirperovic/Drummer.git
 cd Drummer
-python -m http.server 8123 --bind 127.0.0.1
+python alati/server.py
 ```
 
 Open [127.0.0.1:8123](http://127.0.0.1:8123/). On macOS/Linux use `python3` if needed; macOS also has `pokreni.command`. Opening `index.html` directly is not supported because the app uses ES modules and a service worker.
@@ -94,7 +94,7 @@ Open Settings → App and data and wait until it is ready before going offline. 
 ```sh
 npm ci --prefix qa
 npm --prefix qa test
-python -m unittest discover -s qa -p test_analysis.py -v
+python -m unittest discover -s qa -p "test_*.py" -v
 ```
 
 Browser tests, implementation notes and contribution steps are in [CONTRIBUTING.md](CONTRIBUTING.md) and [qa/README.md](qa/README.md). `node alati/build-pages.mjs` prepares a static `dist/`; GitHub Actions publishes it to Pages on pushes to `main`.

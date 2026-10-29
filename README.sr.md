@@ -22,34 +22,52 @@ Izbor **SR / EN** je gore desno. Menja ceo interfejs, poruke, pomoć, nazive ugr
 3. Na macOS-u dupli klik na `pokreni.command`, ili u terminalu:
 
 ```bash
-python3 -m http.server 8123 --bind 127.0.0.1
+python3 alati/server.py
 ```
 
 Na Windowsu, iz foldera projekta u PowerShell-u:
 
 ```powershell
-python -m http.server 8123 --bind 127.0.0.1
+python alati\server.py
 ```
 
 Otvori http://127.0.0.1:8123 u browseru i dozvoli MIDI kad browser pita. Koristi istu adresu i port: lokalno sačuvani podaci pripadaju toj adresi i browser profilu.
 
-Bez bubnja se svira tastaturom: `F`/`J` dobos, `V`/`B`/`N` kik, `D`/`K` hi-hat, `S` otvoren hi-hat, `A` hi-hat nogom,
+Bez bubnja se svira tastaturom: `F`/`J` dobos, `X` rimshot, `V`/`B`/`N` kik, `D`/`K` hi-hat, `S` otvoren hi-hat, `A` hi-hat nogom,
 `G` tom 1, `H` tom 2, `L` floor tom, `E` crash, `U` crash 2, `I` ride, `O` zvono, `C` cross-stick. `Shift` = akcenat, `Alt` = ghost,
 razmak = start/stop, strelice = tempo.
 
+## Režimi: Note i Pesma
+
+Gore levo biraš režim rada:
+
+- **Note** — sviranje po notama: bubanj, ritmovi, editor, vežbanje i izveštaj po notama. Gore je notni list.
+- **Pesma** — sviranje uz snimak: **1 Učitaj i analiziraj** (AI izdvaja bubanj i prepoznaje udarce) → **2 Sviraj uz pesmu** (original, samo bubanj ili bez bubnja, 50–100% brzine, deo pesme od–do) → **3 Izveštaj**. Gore je indikator uživo: plavo kad žuriš, ljubičasto kad si tačno na udarcu, crveno kad kasniš, uz tok pesme sa tvojim udarcima.
+
+Svaki režim ima svoj meni: **Note** — Bubanj, Ritmovi, Uredi, Vežbanje, Rezultati, Podešavanja; **Pesma** — Bubanj, Analiza, Sviraj, Izveštaj, Podešavanja. Izbor režima se pamti. U režimu Pesma Start i razmak pokreću pesmu.
+
+## Sviranje uz pesmu
+
+Tvoji udarci se porede sa stvarnim vremenima udaraca bubnja iz snimka, bez fiksnog tempa, pa i pesma snimljena bez klika daje tačno „rano/kasno". Poređenje je po grupama koje AI razlikuje (bas, doboš, tomovi, hi-hat, činele): bilo koji tom važi za tomove, bilo koja činela za činele. Višak udaraca ne smanjuje ocenu jer AI ne čuje svaku ghost notu; promašaji se broje.
+
+Izveštaj na kraju pokazuje tačnost, prosek (žuriš/kasniš u ms), rasipanje, pogođene, promašene i višak, zatim **Kroz pesmu** (kolona po taktu: gore rano, dole kasno, crvene tačke promašaji) i **Udarci: pesma i ti** (crne crte su udarci iz pesme, obojene tačke tvoji udarci, prazni krugovi promašaji, × višak; dva takta odjednom, ◀ ▶ za dalje). Klik na takt u pregledu ili na „Najviše vežbe traži" otvara taj deo. Poslednjih pet sviranja čuva se u browseru. Analiza i audio ostaju u memoriji samo do osvežavanja stranice.
+
+**Brzina AI obrade.** Izdvajanje bubnja (Demucs) i prepoznavanje udaraca (ADTOF) rade na ovom računaru, u browseru. `alati/server.py` (i `pokreni.command`) šalje COOP/COEP zaglavlja, pa AI koristi više niti procesora; offline verzija dodaje ista zaglavlja preko service workera, pa i na GitHub Pages radi od drugog otvaranja. Pri prvoj obradi svakog modela aplikacija izmeri GPU (WebGPU) i CPU na probnom ulazu i zapamti brži; panel Analiza piše šta je izabrano i zašto. Izmereno na M1: Demucs ne radi na WebGPU (ONNX Runtime nema jedan čvor njegovog ISTFT dela), ADTOF je na GPU oko 5× sporiji, a CPU je najbrži sa 4 niti (pola logičkih jezgara). Izdvajanje bubnja za pesmu od 3:35 palo je sa ~600 s na ~260–290 s; prepoznavanje traje nekoliko sekundi.
+
+Učitavaju se MP3, FLAC, WAV, OGG i M4A (sve što Chrome/Edge umeju da dekodiraju), do 100 MB i 10 minuta, mono ili stereo.
+
 ## Navigacija
 
-Ispod nota je jedan meni sa sedam sekcija (na telefonu je to traka na dnu ekrana):
+Ispod nota je meni režima Note (na telefonu je to traka na dnu ekrana). Režim Pesma ima svoj meni: Bubanj, Analiza, Sviraj, Izveštaj i Podešavanja.
 
 | Sekcija | Šta je unutra |
 | --- | --- |
 | **Bubanj** | 2D/3D bubanj za sviranje mišem ili prstom, **Moj bubanj** (sastav seta, raspored, učenje padova) |
 | **Ritmovi** | biblioteka (moji i gotovi ritmovi, favoriti), **Uvoz MIDI**, **Štampa / PDF**, snimanje novog ritma sviranjem |
 | **Uredi** | mreža za upis nota, undo/redo, kopiranje taktova i generator rudimenata |
-| **Vežbanje** | **Fokus A–B**, **Programi**, **Trener tempa** i tihi taktovi |
-| **Pesma** | tok rada sa snimkom: **1 Analiza pesme** (AI) → **2 Aranžman** → **3 Sviraj uz pesmu** (podloga); link na MusicXML partituru |
+| **Vežbanje** | **Fokus A–B**, **Programi**, **Trener tempa** i tihi taktovi, **Aranžman** (deonice sa notama) i **Podloga** (ritam uz audio sa zadatim tempom) |
 | **Rezultati** | **Trenutna vežba**, **Dnevnik** sa izveštajem po notama, **Replay** |
-| **Podešavanja** | **Uređaj i MIDI** (profili, kalibracija kašnjenja, mapa, rutiranje), **Tajming i zvuk** (strogost, jačine, tastatura), **Aplikacija i podaci** (offline, rezervna kopija, MCP) |
+| **Podešavanja** | **Uređaj i MIDI** (profili, kalibracija kašnjenja, mapa, rutiranje), **Provera trigera**, **Tajming i zvuk** (strogost, jačine, tastatura), **Aplikacija i podaci** (offline, rezervna kopija, MCP) |
 
 **Pretraga** (lupa u meniju ili **Ctrl+K**) nalazi svaku sekciju, podešavanje, kontrolu i ritam na srpskom ili engleskom; Enter otvori tačan tab i označi kontrolu.
 
@@ -61,7 +79,7 @@ Sekcije **Vežbanje**, **Pesma** i **Rezultati**:
 
 - **Fokus**: uključi A–B, izaberi prvi i poslednji takt i instrumente za ocenjivanje. Dugmad Svi/Ruke/Noge ubrzavaju izbor. Ostali udarci se čuju i snimaju, ali ne umanjuju ocenu. „Predloži iz poslednje sesije” bira problematičan takt/instrument i smanjuje tempo za 10 BPM. Za ponavljanje uključi Ponavljaj.
 - **Dnevnik**: sesija se čuva posle Stop ili automatskog završetka. Vidi trajanje, tempo, tačnost, tajming i dinamiku po instrumentu, graf po danima i promenu u odnosu na prethodnu uporedivu sesiju. Najbolji BPM računa se iz završenih prolaza sa najmanje 90% tačnosti, za isti ritam, fokus i strogost.
-- **Pesma → Sviraj uz pesmu**: izaberi lokalni audio fajl, unesi njegov originalni BPM i vreme prvog takta. Klik na waveform takođe postavlja prvi takt. A–B bira odgovarajući deo fajla; Start sinhronizuje pesmu i metronom posle odbrojavanja. Brzine su 50%, 75%, 100% i 125%, unutar 30–260 BPM. Promena brzine menja i visinu tona. Audio fajl ostaje u memoriji i ponovo se bira posle osvežavanja stranice.
+- **Vežbanje → Podloga**: izaberi lokalni audio fajl, unesi njegov originalni BPM i vreme prvog takta. Klik na waveform takođe postavlja prvi takt. A–B bira odgovarajući deo fajla; Start sinhronizuje pesmu i metronom posle odbrojavanja. Brzine su 50%, 75%, 100% i 125%, unutar 30–260 BPM. Promena brzine menja i visinu tona. Audio fajl ostaje u memoriji i ponovo se bira posle osvežavanja stranice.
 - **Programi**: dodaj trenutni ritam i fokus, zadaj trajanje u sekundama, BPM, cilj tačnosti i pauzu. Možeš promeniti redosled i sačuvati program. Jedno pokretanje izvršava sve stavke i zapisuje svaku u dnevnik. Program čuva svoje kopije ritmova. Odbrojavanje i završni prozor za kasne udarce dodaju se navedenom trajanju.
 - **Replay**: izaberi sesiju, uspori slušanje, pauziraj i pomeraj poziciju. Graf poredi očekivane i stvarne udarce, uključujući promašaje; možeš prikazati pojedinačni prolaz. JSON čuva originalna vremena sa decimalama, velocity i MIDI note. Standardni MIDI fajl čuva iste udarce sa preciznošću 1 ms, na kanalu 10. Replay koristi trenutno izabrani zvuk bubnja; ne snima audio podlogu.
 
@@ -139,7 +157,7 @@ Kit je folder u `kits/` sa `kit.json` i WAV fajlovima, upisan u `kits/index.json
 }
 ```
 
-Instrumenti: `kick`, `snare`, `xstick`, `hh`, `hho`, `hhp`, `tom1`, `tom2`, `tom3`, `crash`, `crash2`, `ride`, `bell`.
+Instrumenti: `kick`, `snare`, `rimshot`, `xstick`, `hh`, `hho`, `hhp`, `tom1`, `tom2`, `tom3`, `crash`, `crash2`, `ride`, `bell`. Kit bez `rimshot` semplova za rimshot svira `snare`.
 `lo`/`hi` je raspon jačine udarca (1–127); više fajlova u istom rasponu se smjenjuju.
 
 ## EZdrummer i drugi programi
@@ -147,6 +165,20 @@ Instrumenti: `kick`, `snare`, `xstick`, `hh`, `hho`, `hhp`, `tom1`, `tom2`, `tom
 TD-17 šalje udarce istovremeno i Drummer-u i EZdrummeru: EZdrummer svira zvuk, Drummer prikazuje note i ocjenjuje.
 Da Drummer pusti ritam kroz EZdrummer: uključi IAC Driver u aplikaciji *Audio MIDI Setup*, u Drummer-u izaberi
 taj izlaz u Podešavanjima, a u EZdrummeru IAC kao MIDI ulaz.
+
+## Rimshot
+
+TD-17 šalje rimshot (opna i obod istovremeno) kao notu 40, a običan udarac u dobos kao 38. Drummer ih sada razlikuje: rimshot ima svoj red u editoru, taster `X`, zvuk i notu precrtanu kosom crtom. Postojeća mapa i profili jednom prebacuju notu 40 sa doboša na rimshot; ako je posle toga ručno vratiš, izbor ostaje.
+
+Rimshot i dobos su isti pad, pa se udarac uvek računa za tajming. Kad ritam ima zapisan rimshot, ocena posebno prati vrstu udarca (kolona **Udarac** u rezultatima, poruka „bez rimshota” ili „rimshot umjesto običnog” uz poslednji udarac). U ritmovima bez rimshota sviranje rimshota na dobošu ne smeta, kao i ranije. Obodi tomova ostaju deo toma.
+
+## Provera trigera
+
+**Podešavanja → Provera trigera** snima sirove MIDI poruke sa bubnja i uživo pokazuje: jačine po zoni (histogram, min/sredina/max, procenat na 127), duple okidače, crosstalk između padova, raspon hi-hat pedale (CC4) i nemapirane note. Uz to daje preporuke za trigger parametre modula (Sensitivity, Threshold, Curve, Retrig Cancel, Mask Time, Crosstalk Cancel, hi-hat offset). Pragovi su isti kao u `alati/analiza.py`; dugme **Izvezi za analiza.py** čuva snimak u istom JSON formatu kao `midirec`. Tokom provere vežba se ne pokreće. Tastatura i miš se ne proveravaju.
+
+## Bubnjevi iz partiture
+
+Kada MusicXML partitura (**Uvezi partituru**) ima bubnjarsku deonicu (perkusioni ključ ili `unpitched` note), iznad partiture se pojavljuje **Bubnjarska deonica → ritam za vežbu**. Izaberi deonicu, prvi takt, 1–8 taktova i podelu (automatski, šesnaestine ili triole), proveri mapu instrumenata i klikni **Otvori u editoru**. Instrumenti se prepoznaju po imenu iz partiture, GM MIDI broju (`midi-unpitched`) ili položaju na notnom sistemu; udaraljke kojih nema u setu (npr. kravlje zvono) preskaču se dok im ne dodeliš instrument. Akcenti postaju akcenti, note u zagradi ghost note. Ponavljanja, volte i tremolo se ne razvijaju (tremolo je jedan udarac). Mera i tempo se uzimaju sa početka izabranog dela; deo koji menja meru treba skratiti.
 
 ## Alati
 

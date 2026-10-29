@@ -29,14 +29,14 @@ const expanded = async p => {await open(p);await p.locator('#kitPreset').selectO
 const three = async p => {await p.locator('#kit3d').click();await p.waitForFunction(()=>__qa.kit.mode==='3d'&&!!__qa.kit.three);await p.locator('#kit3dHost').scrollIntoViewIfNeeded();};
 
 await scenario('Configurator: standard defaults and every count including one/two bass drums',async p=>{
-  await open(p);assert.equal(await p.locator('#kit-kicks').inputValue(),'1');assert.equal(await p.locator('#kitLearnList button').count(),13);
+  await open(p);assert.equal(await p.locator('#kit-kicks').inputValue(),'1');assert.equal(await p.locator('#kitLearnList button').count(),14);
   await p.locator('#kit-kicks').selectOption('2');assert.equal(await p.locator('[data-part=kick2]').count(),1);
   await p.locator('#kit-kicks').selectOption('1');assert.equal(await p.locator('[data-kit-art]').count(),1);
-  await p.locator('#kitPreset').selectOption('expanded');assert.equal(await p.locator('#kitLearnList button').count(),19);
+  await p.locator('#kitPreset').selectOption('expanded');assert.equal(await p.locator('#kitLearnList button').count(),20);
   assert.equal(await p.locator('#kit2dHost [data-part]').count(),14);
   await p.setViewportSize({width:1440,height:1600});await p.locator('#view-kit').screenshot({path:dir+'configurator.png'});await p.setViewportSize({width:1440,height:1100});
   await p.locator('#kitConfigurator summary').click();await p.locator('#view-kit').screenshot({path:dir+'expanded-2d.png'});
-  await p.locator('#appNav [data-section=editor]').click();assert.equal(await p.locator('#grid .cell[data-slot="0"]').count(),19);
+  await p.locator('#appNav [data-section=editor]').click();assert.equal(await p.locator('#grid .cell[data-slot="0"]').count(),20);
   await p.locator('[data-inst=kick2][data-slot="0"]').click();assert.equal(await p.locator('[data-inst=kick2][data-slot="0"]').getAttribute('data-v'),'2');
 });
 await scenario('Configurator: left-handed positions mirror with stable hit targets',async p=>{
@@ -44,7 +44,7 @@ await scenario('Configurator: left-handed positions mirror with stable hit targe
   await p.locator('#kitHand').selectOption('left');const left=await p.locator('[data-part=kick] ellipse').first().getAttribute('cx');assert.equal(+left,-right);
   await p.locator('#kitConfigurator summary').click();await p.locator('#view-kit').screenshot({path:dir+'left-2d.png'});
 });
-await scenario('Configurator: all nineteen MIDI learn targets flash only their own 2D surfaces',async p=>{
+await scenario('Configurator: all twenty MIDI learn targets flash only their own 2D surfaces',async p=>{
   await expanded(p);
   const r=await p.evaluate(async()=>{
     const {INSTRUMENTS}=await import('/js/patterns.js');const seen=[];
@@ -58,7 +58,7 @@ await scenario('Configurator: all nineteen MIDI learn targets flash only their o
       seen.push(i.id);
     }
     return seen;
-  });assert.equal(r.length,19);
+  });assert.equal(r.length,20);
 });
 await scenario('Configurator: both bass drums score and record separately, with distinct editor colors',async p=>{
   await expanded(p);await p.locator('#appNav [data-section=editor]').click();
@@ -152,7 +152,7 @@ await scenario('Configurator: saved custom kit and both renderers are available 
 await scenario('Configurator: minimum kit, canceled learning and rapid 3D rebuilds do not leak renderers',async p=>{
   await expanded(p);await p.locator('[data-kit-learn=kick2]').click();await p.locator('#kit-kicks').selectOption('1');assert.equal(await p.evaluate(()=>__qa.midi.learn),null);
   for(const key of ['racks','floors','crashes','rides'])await p.locator('#kit-'+key).selectOption('0');
-  await p.locator('#kit-snares').selectOption('1');assert.equal(await p.locator('[data-part]').count(),3);assert.equal(await p.locator('#kitLearnList button').count(),6);
+  await p.locator('#kit-snares').selectOption('1');assert.equal(await p.locator('[data-part]').count(),3);assert.equal(await p.locator('#kitLearnList button').count(),7);
   await three(p);await p.evaluate(()=>{for(let n=0;n<8;n++)__qa.applyKit({...__qa.settings.kitConfig,kicks:n%2+1});});
   await p.waitForFunction(()=>__qa.kit.mode==='3d'&&__qa.kit.three.targets.has('kick2'));assert.equal(await p.locator('#kit3dHost canvas').count(),1);
 });

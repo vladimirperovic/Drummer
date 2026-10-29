@@ -1,8 +1,8 @@
 {
   "browser": "Chromium",
   "browserVersion": "151.0.7922.34",
-  "generatedAt": "2026-10-19T17:35:46.904Z",
-  "passed": 15,
+  "generatedAt": "2026-10-29T22:11:08.525Z",
+  "passed": 16,
   "failed": 0,
   "results": [
     {
@@ -10,11 +10,15 @@
       "status": "PASS"
     },
     {
+      "name": "Catalog: twenty real notation previews match notes, retain names and show first-two-bar captions",
+      "status": "PASS"
+    },
+    {
       "name": "Catalog: all eighty new presets load their correct meter, notes and English lesson",
       "status": "PASS"
     },
     {
-      "name": "Workspace: editor and library occupy full width and stack at desktop and phone sizes",
+      "name": "Workspace: sections and navigation occupy full width at desktop and phone sizes",
       "status": "PASS"
     },
     {

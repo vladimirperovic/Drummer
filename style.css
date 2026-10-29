@@ -442,6 +442,8 @@ button.linklike { border: 0; background: none; padding: 0; color: var(--ink); te
   /* Tablet: all seven sections stay visible without scrolling the menu. */
   .appnav { padding: 6px 10px 0; gap: 0; }
   .appnav button { padding: 6px 8px; gap: 5px; }
+  /* Ctrl K hint does not fit beside seven Serbian labels at 768 px. */
+  .nav-search kbd { display: none; }
 }
 
 /* Telefon: kompaktno zaglavlje, navigacija na dnu ekrana. */
@@ -525,4 +527,64 @@ button.linklike { border: 0; background: none; padding: 0; color: var(--ink); te
   .appnav .nav-search { margin-left: 0; }
   .nav-search kbd, .command-search-hint { display: none; }
   .command-search { margin-top: 12px; max-height: calc(100dvh - 24px); }
+}
+
+/* Zaglavlje i notni list: gore sviranje i tempo, ispod prekidači i alati; naslov ritma i opcije nota u jednom redu. */
+.bar { padding: 10px 20px 8px; }
+.bar-primary { flex-wrap: nowrap; }
+.hit-feedback { flex: 1 1 200px; max-width: none; }
+.lasthit { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-tools { flex: none; flex-wrap: nowrap; }
+.bar-tools .status { border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px 5px 9px; max-width: 200px; }
+.bar-tools .status .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-tools .status.on { border-color: #b9dcc4; background: #f1f8f3; }
+.bar-secondary { align-items: center; margin-top: 8px; padding-top: 8px; gap: 8px 12px; }
+.bar-secondary .opts { gap: 6px; }
+.sound-options { padding-left: 12px; }
+.bar-secondary .tog { gap: 6px; min-height: 32px; padding: 4px 12px 4px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); font-size: 12.5px; transition: background-color .12s, border-color .12s; }
+.bar-secondary .tog:hover { border-color: var(--ink2); }
+.bar-secondary .tog:has(input:checked) { background: var(--soft); border-color: var(--ink); font-weight: 600; }
+.bar-secondary .tog.rec:has(input:checked) { background: #fdecea; border-color: var(--red); }
+.bar-secondary .tog input { margin: 0; }
+.bar-secondary #clickSub { min-height: 32px; border-radius: 999px; padding: 3px 8px; }
+.bar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.bar-actions button, #scoreView, #importSong { min-height: 34px; padding: 4px 12px; background: var(--paper); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.bar-actions button:hover:not(:disabled) { background: var(--soft); }
+#captureRhythm::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; background: var(--red); vertical-align: 0; }
+#captureRhythm:disabled::before { background: var(--grey); }
+.sheet-head { align-items: baseline; gap: 4px 12px; }
+.sheet-head h1 { font-size: 22px; }
+.score-options { color: var(--ink2); gap: 6px 14px; }
+@media (min-width: 941px) {
+  .sheet { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr); column-gap: 24px; padding-top: 10px; }
+  .sheet-head { grid-area: 1 / 1; align-self: center; }
+  .score-options { grid-area: 1 / 2; align-self: center; padding: 0; }
+  .practice-status { grid-area: 2 / 1 / 3 / -1; }
+  #notation { grid-area: 3 / 1 / 4 / -1; margin-top: 2px; }
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  /* Status i jezik ostaju gore desno; poslednji udarac prelazi ispod tempa kad nema mesta. */
+  .bar-primary { align-items: flex-start; gap: 10px 16px; }
+  .brand { font-size: 22px; padding-top: 12px; }
+  .transport-group { gap: 8px 12px; }
+  .hit-feedback { flex: 1 1 220px; }
+  .bar-tools { gap: 8px; padding-top: 8px; }
+  .bar-tools .status { max-width: 150px; }
+  .sound-options { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 700px) {
+  /* Red 1: start i tempo; red 2: poslednji udarac, MIDI status i jezik. */
+  .bar-primary { flex-wrap: wrap; }
+  .transport-group { display: contents; }
+  .hit-feedback { flex: 1 1 150px; }
+  /* Na telefonu sam udarac govori dovoljno; natpis ostaje za čitač ekrana. */
+  .hit-caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .bar-tools { width: auto; margin-left: auto; overflow: visible; }
+  .bar-tools .status { max-width: 112px; padding: 3px 8px; }
+  .bar-secondary { gap: 6px; }
+  .bar-secondary .opts { gap: 6px; }
+  .sound-options { padding-left: 0; }
+  .bar-actions { order: -1; margin-left: 0; flex: none; gap: 6px; }
+  .bar-actions button, #scoreView, #importSong { min-height: 32px; padding: 3px 10px; }
+  .sheet-head h1 { font-size: 18px; }
 }

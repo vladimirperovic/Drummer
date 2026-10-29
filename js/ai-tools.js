@@ -5,7 +5,7 @@ import { downloadBlob } from './storage.js';
 import { createDrumTranscriber, getTranscriberModelInfo } from './ai-transcriber.js';
 import { createDrumSeparator, getSeparatorModelInfo } from './drum-separator.js';
 import { ADTOF_CLASSES, activationEvents, estimateDrumTempo, transcriptionMidi } from './ai-transcription-model.js';
-import { AI_WASM_ASSET, isAiAssetCached, clearAiModelCache } from './ai-model-cache.js';
+import { AI_WASM_ASSET, AI_WEBGPU_WASM_ASSET, isAiAssetCached, clearAiModelCache, hasWebGpu, aiThreadCount } from './ai-model-cache.js';
 import { decodeAiAudio, encodeAiWav, aiAudioBuffer } from './ai-audio.js';
 import { navigate, adoptPane } from './navigation.js';
 
@@ -18,17 +18,41 @@ export function createAiTools(host = {}) {
   panel.id = 'tool-ai'; panel.className = 'studio-panel ai-tools-panel'; panel.hidden = true;
   container.append(panel); adoptPane(panel, 'ai', container.dataset.sectionPanel || 'song');
   panel.innerHTML = `<h2>Pesma → bubnjevi → note</h2><p class="muted">Audio se obrađuje na ovom uređaju. Internet je potreban samo za opciono preuzimanje modela; audio se ne šalje na server.</p>
-    <label class="btn ai-file-label">Izaberi audio (MP3, WAV…)<input id="aiAudioFile" type="file" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" hidden></label><p id="aiAudioInfo" class="muted">Mono ili stereo, do 100 MB i 10 minuta.</p>
+    <label class="btn ai-file-label">Izaberi audio (MP3, WAV…)<input id="aiAudioFile" type="file" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" hidden></label><p id="aiAudioInfo" class="muted">Mono ili stereo, do 100 MB i 10 minuta.</p><p id="aiBackend" class="muted"></p>
     <div class="ai-controls"><label>Slušaj<select id="aiAudition"><option value="original">Original</option><option value="drums" disabled>Samo bubnjevi</option><option value="without" disabled>Bez bubnjeva</option></select></label><button id="aiExportWav" disabled>Izvezi izabrani WAV</button></div><audio id="aiPlayer" controls preload="metadata" hidden></audio>
     <div class="ai-options"><section class="ai-model-card"><h3>1. Izdvoji samo bubnjeve</h3><p>Demucs odvaja bubnjeve od ostatka pesme. Možeš slušati bubnjeve ili ostatak kao pratnju.</p><p class="ai-license">Demucs ONNX · MIT · <a href="https://huggingface.co/StemSplitio/htdemucs-ft-drums-onnx" target="_blank" rel="noopener">Model i licenca</a></p><p class="muted">Obrada cele pesme može trajati više minuta i zahteva dosta memorije. Prekid je dostupan u svakom trenutku.</p><button id="aiSeparate" disabled></button></section>
     <section class="ai-model-card"><h3>2. Pretvori bubnjeve u note</h3><p>ADTOF prepoznaje pet grupa: bas, doboš, tomove, hi-hat i činele. Rezultat je predlog za proveru i uređivanje.</p><label>Izvor za note<select id="aiTranscriptionSource"><option value="original">Original</option><option value="drums" disabled>Samo bubnjevi</option></select></label><p class="ai-license">ADTOF model: CC BY-NC-SA 4.0 — samo nekomercijalna upotreba. Licenca modela je odvojena od MIT licence aplikacije. <a href="https://huggingface.co/thebluescreen/adtof-drums-onnx" target="_blank" rel="noopener">Model i licenca</a></p><p class="muted">Model je treniran na celim pesmama. Izdvojeni bubnjevi nisu uvek bolji izvor; uporedi oba rezultata.</p><button id="aiTranscribe" disabled></button></section></div>
     <progress id="aiProgress" max="1" value="0" hidden></progress><p id="aiStatus" class="ai-status" role="status" aria-live="polite"></p><div class="ai-controls"><button id="aiCancel" hidden>Prekini AI obradu</button><button id="aiClearCache">Obriši preuzete AI modele</button></div>
     <section id="aiReview" class="ai-review" hidden><h3>Proveri predlog nota</h3><p class="muted">Tomovi, otvoren/zatvoren hi-hat i vrste činela nisu razdvojeni ovim modelom. Mapiraj grupe i ispravi note u editoru. Jačina MIDI nota je podrazumevana, nije prepoznata dinamika.</p>
     <div id="aiClassMap" class="ai-class-map"></div><div class="ai-controls"><label>Osetljivost<input id="aiSensitivity" type="range" min="50" max="200" step="5" value="100"></label><label>BPM<input id="aiBpm" type="number" min="30" max="260" value="120"></label><button id="aiEstimateTempo">Predloži tempo</button><label>Doba<input id="aiBeats" type="number" min="2" max="7" value="4"></label><label>Jedinica<select id="aiBeatUnit"><option value="4">/4</option><option value="8">/8</option></select></label><label>Podela<select id="aiDivision"><option value="16">Šesnaestine</option><option value="12">Triole</option></select></label><label>Prva doba (sekunde)<input id="aiOffset" type="number" min="0" step="0.01" value="0"></label></div>
-    <div class="ai-controls"><label>Pregled od takta<input id="aiPreviewBar" type="number" min="1" value="1"></label><label>Pratnja<select id="aiBacking"><option value="original">Original</option><option value="without" disabled>Bez bubnjeva</option></select></label></div><p id="aiNotesInfo" class="muted"></p><div id="aiNotePreview" class="ai-note-preview"></div><div class="ai-controls"><button id="aiExportMidi">Izvezi MIDI</button><button id="aiApply" class="primary">Koristi kao referencu cele pesme</button></div></section>`;
+    <div class="ai-controls"><label>Pregled od takta<input id="aiPreviewBar" type="number" min="1" value="1"></label><label>Pratnja<select id="aiBacking"><option value="original">Original</option><option value="without" disabled>Bez bubnjeva</option></select></label></div><p id="aiNotesInfo" class="muted"></p><div id="aiNotePreview" class="ai-note-preview"></div><div class="ai-controls"><button id="aiPlayAlong" class="primary">▶ Sviraj uz pesmu</button><button id="aiApply">Napravi aranžman sa notama</button><button id="aiExportMidi">Izvezi MIDI</button></div></section>`;
   const el = id => panel.querySelector('#' + id), models = { transcription: getTranscriberModelInfo(), separation: getSeparatorModelInfo() };
   let file = null, original = null, drums = null, without = null, analysis = null, events = [], controller = null, generation = 0, running = false, playing = false, destroyed = false;
-  let transcriber, separator; const audioUrls = new Map(), cacheState = { transcription: false, separation: false };
+  let transcriber, separator, gpu = false, lastRun = null; const audioUrls = new Map(), cacheState = { transcription: false, separation: false };
+  // Izbor GPU/CPU se meri pri prvoj obradi svakog modela i pamti u ovom browseru.
+  const PREF_KEY = 'drummer.aiBackend.v1';
+  const prefs = () => { try { const value = JSON.parse(localStorage.getItem(PREF_KEY)); return value && typeof value === 'object' ? value : {}; } catch { return {}; } };
+  const preference = key => { const saved = prefs()[models[key].id]?.chosen; return saved === 'wasm' || saved === 'webgpu' ? saved : 'auto'; };
+  function remember(key, result) {
+    if (!result?.benchmark) return;
+    try { localStorage.setItem(PREF_KEY, JSON.stringify({ ...prefs(), [models[key].id]: { ...result.benchmark, threads: result.threads, at: new Date().toISOString() } })); } catch {}
+  }
+  // Runtimes a model still needs: CPU always; the GPU build only while GPU is still being measured or was faster.
+  const runtimes = key => [AI_WASM_ASSET, ...(gpu && preference(key) !== 'wasm' ? [AI_WEBGPU_WASM_ASSET] : [])];
+  const cpuLabel = threads => threads > 1 ? format('CPU sa {threads} niti', { threads }) : t('CPU sa jednom niti');
+  function choiceLabel(key) {
+    const saved = prefs()[models[key].id];
+    if (!saved?.chosen) return gpu ? format('GPU ili {cpu}, meri se pri prvoj obradi', { cpu: cpuLabel(aiThreadCount()) }) : cpuLabel(aiThreadCount());
+    if (saved.chosen === 'webgpu') return saved.cpuMs ? format('GPU (WebGPU), {ratio}× brže od CPU', { ratio: (saved.cpuMs / saved.gpuMs).toFixed(1) }) : 'GPU (WebGPU)';
+    const why = saved.reason ? t('GPU ne podržava ovaj model') : saved.gpuMs && saved.cpuMs ? format('GPU je {ratio}× sporiji', { ratio: (saved.gpuMs / saved.cpuMs).toFixed(1) }) : '';
+    return cpuLabel(aiThreadCount()) + (why ? ` (${why})` : '');
+  }
+  function backendInfo() {
+    const lines = [format('Izdvajanje: {choice}.', { choice: choiceLabel('separation') }), format('Prepoznavanje: {choice}.', { choice: choiceLabel('transcription') })];
+    if (aiThreadCount() === 1) lines.push(t('Za više jezgara pokreni aplikaciju komandom python3 alati/server.py ili je ponovo otvori posle pripreme offline verzije.'));
+    if (lastRun) lines.push(format('Poslednja obrada: {where}, {seconds} s.', { where: lastRun.backend === 'webgpu' ? 'GPU (WebGPU)' : cpuLabel(lastRun.threads), seconds: Math.round(lastRun.inferenceMs / 1000) }));
+    el('aiBackend').textContent = lines.join(' ');
+  }
   const busy = () => running || playing, blocked = () => running || !!host.isBusy?.();
   function notifyBusy() { host.onBusyChange?.(busy()); }
   function status(source, values) { el('aiStatus').textContent = format(source, values); }
@@ -40,14 +64,20 @@ export function createAiTools(host = {}) {
     for (const control of panel.querySelectorAll('input,select,button')) control.disabled = locked;
     el('aiCancel').disabled = false; el('aiCancel').hidden = !running;
     el('aiSeparate').disabled = locked || !original; el('aiTranscribe').disabled = locked || !original;
-    el('aiExportWav').disabled = locked || !original; el('aiApply').disabled = locked || !events.length; el('aiExportMidi').disabled = locked || !events.length;
+    el('aiExportWav').disabled = locked || !original; el('aiApply').disabled = locked || !events.length; el('aiPlayAlong').disabled = locked || !events.length; el('aiExportMidi').disabled = locked || !events.length;
     for (const id of ['aiAudition', 'aiTranscriptionSource', 'aiBacking']) for (const option of el(id).options) if (option.value !== 'original') option.disabled = !drums;
-    el('aiSeparate').textContent = cacheState.separation ? t('Izdvoji bubnjeve') : format('Preuzmi i izdvoji ({mb} MB)', { mb: mb(models.separation.downloadBytes + AI_WASM_ASSET.bytes) });
-    el('aiTranscribe').textContent = cacheState.transcription ? t('Prepoznaj note') : format('Preuzmi i prepoznaj ({mb} MB)', { mb: mb(models.transcription.totalDownloadBytes) });
+    const size = key => mb(models[key].downloadBytes + runtimes(key).reduce((sum, asset) => sum + asset.bytes, 0));
+    el('aiSeparate').textContent = cacheState.separation ? t('Izdvoji bubnjeve') : format('Preuzmi i izdvoji ({mb} MB)', { mb: size('separation') });
+    el('aiTranscribe').textContent = cacheState.transcription ? t('Prepoznaj note') : format('Preuzmi i prepoznaj ({mb} MB)', { mb: size('transcription') });
+    backendInfo();
   }
   async function refreshCache() {
-    const runtime = await isAiAssetCached(AI_WASM_ASSET);
-    for (const [key, model] of Object.entries(models)) cacheState[key] = runtime && await isAiAssetCached(model);
+    gpu = await hasWebGpu();
+    for (const [key, model] of Object.entries(models)) {
+      let cached = await isAiAssetCached(model);
+      for (const asset of runtimes(key)) cached &&= await isAiAssetCached(asset);
+      cacheState[key] = cached;
+    }
     refresh();
   }
   function progress(update) {
@@ -109,17 +139,17 @@ export function createAiTools(host = {}) {
     });
   };
   el('aiSeparate').onclick = () => run(async (signal, current) => {
-    separator ||= createDrumSeparator({ onProgress: progress }); await separator.prepare({ allowDownload: true, signal });
+    separator ||= createDrumSeparator({ onProgress: progress }); remember('separation', await separator.prepare({ allowDownload: true, signal, backend: preference('separation') }));
     const result = await separator.separate({ channels: channelsOf(original), sampleRate: original.sampleRate }, { signal }); if (!current()) return;
-    drums = result.channels; const source = channelsOf(original);
+    drums = result.channels; lastRun = result; const source = channelsOf(original);
     without = drums.map((channel, index) => Float32Array.from(channel, (value, sample) => source[Math.min(index, source.length - 1)][sample] - value));
     for (const key of ['drums', 'without']) { if (audioUrls.has(key)) URL.revokeObjectURL(audioUrls.get(key)); audioUrls.delete(key); }
     el('aiAudition').value = 'drums'; el('aiBacking').value = 'without'; audition(); status('Bubnjevi su izdvojeni. Poslušaj rezultat ili uporedi transkripciju oba izvora.');
   });
   el('aiTranscribe').onclick = () => run(async (signal, current) => {
     transcriber ||= createDrumTranscriber({ onProgress: progress });
-    const result = await transcriber.transcribe({ channels: selectedChannels(el('aiTranscriptionSource').value), sampleRate: 44100 }, { allowDownload: true, signal }); if (!current()) return;
-    analysis = result; review(); status('Predlog nota je spreman. Proveri mapiranje, tempo i prvu dobu pre primene.');
+    const result = await transcriber.transcribe({ channels: selectedChannels(el('aiTranscriptionSource').value), sampleRate: 44100 }, { allowDownload: true, signal, backend: preference('transcription') }); if (!current()) return;
+    remember('transcription', result); analysis = result; lastRun = result; review(); status('Predlog nota je spreman. Proveri mapiranje, tempo i prvu dobu pre primene.');
   });
   for (const id of ['aiClassMap', 'aiSensitivity', 'aiBpm', 'aiBeats', 'aiBeatUnit', 'aiDivision', 'aiOffset', 'aiPreviewBar']) el(id).addEventListener('change', review);
   el('aiEstimateTempo').onclick = () => { const estimate = estimateDrumTempo(events); if (estimate) { el('aiBpm').value = estimate; review(); status('Predlog tempa: {bpm} BPM. Proveri slušanjem; tempo može biti upola ili dvostruko veći.', { bpm: estimate }); } else status('Nema dovoljno bas/doboš udaraca za predlog tempa.'); };
@@ -137,6 +167,16 @@ export function createAiTools(host = {}) {
         division: +el('aiDivision').value, offsetSeconds: Math.max(0, Math.min(original.duration, +el('aiOffset').value || 0)), audioBuffer: original,
         backingBuffer: el('aiBacking').value === 'without' && without ? aiAudioBuffer(without) : original });
       if (applied !== false) status('AI predlog je prosleđen u referencu za vežbanje.');
+    } catch (error) { el('aiStatus').textContent = t(error.message); }
+  };
+  // Režim Pesma: stvarna vremena udaraca i sva tri zvuka (original, samo bubanj, bez bubnja).
+  el('aiPlayAlong').onclick = () => {
+    if (blocked() || !events.length) return; stopAudio();
+    try {
+      host.onSongReference?.({ events: structuredClone(events), durationSeconds: original.duration, fileName: file.name,
+        bpm: Math.max(30, Math.min(260, +el('aiBpm').value || 120)), meter: { beats: Math.max(2, Math.min(7, Math.round(+el('aiBeats').value || 4))), beatUnit: +el('aiBeatUnit').value },
+        offsetSeconds: Math.max(0, Math.min(original.duration, +el('aiOffset').value || 0)),
+        buffers: { original, drums: drums ? aiAudioBuffer(drums) : null, without: without ? aiAudioBuffer(without) : null } });
     } catch (error) { el('aiStatus').textContent = t(error.message); }
   };
   el('aiCancel').onclick = cancel;

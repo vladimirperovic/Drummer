@@ -9,7 +9,7 @@ A browser drum practice app designed for the Roland TD-17KVX, with Web MIDI inpu
 Use Chrome, Edge or Brave. Connect the drum module by USB, start the local server from this folder, and open [Drummer](http://127.0.0.1:8123/):
 
 ```powershell
-python -m http.server 8123 --bind 127.0.0.1
+python alati/server.py
 ```
 
 On macOS use `python3`, or open `pokreni.command`. Allow MIDI access when prompted. Keep the same address, port and browser profile to access your saved data.
@@ -95,7 +95,7 @@ Built-in synthesized drums work immediately. Custom WAV kits live under `kits/` 
 {"name":"My kit","license":"Your sample license","instruments":{"snare":[{"file":"snare.wav","lo":1,"hi":127}]}}
 ```
 
-Supported IDs: `kick`, `snare`, `xstick`, `hh`, `hho`, `hhp`, `tom1`, `tom2`, `tom3`, `crash`, `crash2`, `ride`, `bell`. Samples sharing a velocity range rotate. The bundled kit list is empty; the synth is the fallback.
+Supported IDs: `kick`, `snare`, `rimshot`, `xstick`, `hh`, `hho`, `hhp`, `tom1`, `tom2`, `tom3`, `crash`, `crash2`, `ride`, `bell`. A kit without `rimshot` samples plays `snare` for rimshots. Samples sharing a velocity range rotate. The bundled kit list is empty; the synth is the fallback.
 
 For an external instrument such as EZdrummer, route the MIDI output through a virtual MIDI port. On macOS, enable IAC Driver in Audio MIDI Setup and select it in both apps. Your module can also feed Drummer for scoring and an external instrument for sound.
 
@@ -104,6 +104,20 @@ Patterns, settings, profiles, journals, programs and arrangements are local to t
 `alati/midirec.swift` is a macOS CoreMIDI recorder; `alati/analiza.py` analyzes velocity, double triggers, crosstalk, pedal activity and timing. Compile the recorder with `swiftc -O alati/midirec.swift -o alati/midirec` on macOS.
 
 Test commands and evidence are in [qa/README.md](qa/README.md) and [qa/IZVESTAJ.txt](qa/IZVESTAJ.txt). Automated browser tests simulate MIDI; physical TD-17 hardware, real acoustic latency and EZdrummer integration have not been tested here.
+
+## Modes: Notes and Song
+
+The switch at the top left chooses how you practice. **Notes** keeps the score at the top with the kit, patterns, editor, practice tools and note-by-note report. **Song** replaces the score with a live meter and the song timeline: **1 Load and analyze** (the local AI separates the drums and detects the hits) → **2 Play along** (original, drums only or without drums, 50–100% speed, a from–to part) → **3 Report**. The meter is blue when you are early, purple when you are on the hit and red when you are late. Each mode has its own menu: Notes shows Drum kit, Patterns, Edit, Practice, Results and Settings; Song shows Drum kit, Analysis, Play, Report and Settings. Start and Space play the song in Song mode.
+
+Your hits are compared with the actual drum-hit times in the recording, with no fixed tempo, so songs recorded without a click still give a true early/late reading. Matching uses the AI groups (kick, snare, toms, hi-hat, cymbals); extra hits do not lower the score, misses do. The report shows accuracy, average offset, spread, matched/missed/extra hits, an offset column per bar and a two-bar lane view where black lines are the song's hits and colored dots are yours. The last five runs stay in this browser. AI runs on this computer in the browser. `alati/server.py` sends COOP/COEP headers so the AI uses several CPU threads; the offline app adds the same headers through its service worker, including on GitHub Pages from the second visit. On the first run of each model the app times GPU (WebGPU) and CPU on a probe input and remembers the faster one; the Analysis panel shows the choice and why. Measured on an M1: Demucs cannot run on WebGPU (ONNX Runtime lacks a node of its ISTFT stage), ADTOF is about 5× slower on the GPU, and the CPU is fastest with 4 threads (half the logical cores). Separating a 3:35 song dropped from about 600 s to 260–290 s; hit detection takes a few seconds. MP3, FLAC, WAV, OGG and M4A load (anything Chrome/Edge can decode), up to 100 MB and 10 minutes.
+
+## Rimshots, trigger check and drums from scores
+
+**Rimshot:** the TD-17 sends a rimshot as note 40 and a normal snare stroke as 38. Rimshots have their own editor row, the `X` key, a sound and a slashed notehead. Existing MIDI maps and profiles move note 40 from snare to rimshot once. A rimshot and a snare stroke are the same pad, so timing always counts; when a pattern writes rimshots, the stroke type is scored separately (**Stroke** column in results). Tom rims still count as the tom.
+
+**Settings → Trigger check** records raw MIDI from the drums and shows, live, velocity per zone (histogram, min/median/max, share at 127), double triggers, crosstalk, the hi-hat pedal (CC4) range and unmapped notes, with suggestions for the module's trigger parameters. Thresholds match `alati/analiza.py`, and **Export for analiza.py** saves the same JSON-lines format as `midirec`.
+
+**Drums from a score:** when an imported MusicXML score has a drum part, **Drum part → practice pattern** appears above it. Choose the part, first bar, 1–8 bars and grid, review the instrument map (by score instrument name, GM `midi-unpitched` number or staff position) and **Open in editor**. Accents and parenthesized ghost notes are kept; repeats are not expanded and tremolos become single strokes.
 
 ## Reading scores and reviewing your performance
 

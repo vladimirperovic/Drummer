@@ -6,8 +6,10 @@ import studioNext from './studio-next-i18n.js';
 import routingNext from './routing-next-i18n.js';
 import captureNext from './capture-next-i18n.js';
 import aiNext from './ai-tools-i18n.js';
+import drumNext from './drum-next-i18n.js';
+import tooltipsNext from './tooltips-i18n.js';
 export const EN = {
-  ...editorNext, ...studioNext, ...routingNext, ...captureNext, ...aiNext,
+  ...editorNext, ...studioNext, ...routingNext, ...captureNext, ...aiNext, ...drumNext, ...tooltipsNext,
   'Otkaži':'Cancel',
   'Glavni meni': 'Main menu', 'Traži': 'Search', 'Pretraga funkcija i ritmova': 'Search features and patterns',
   'Pretraga funkcija i ritmova (Ctrl+K)': 'Search features and patterns (Ctrl+K)', 'Traži funkciju, podešavanje ili ritam…': 'Search for a feature, setting or pattern…',
@@ -278,6 +280,10 @@ export function t(value, lang = language) {
     .replace(/Gotovo: tvoji udarci stižu (\d+) ms (poslije|prije) klika\. To se sada uračunava\./g, (_, ms, side) => `Done: your hits arrive ${ms} ms ${side === 'poslije' ? 'after' : 'before'} the click. This is now compensated.`)
     .replace(/Najneujednačeniji je (.*?) \(±(\d+) ms\), uspori pa ga ustabili\./g, 'Most inconsistent: $1 (±$2 ms). Slow down and stabilize it.')
     .replace(/Najviše promašaja: (.*?)\./g, 'Most misses: $1.')
+    .replace(/Rimshot: udari opnu i obod istovremeno \((\d+) udaraca bez oboda\)\./g, 'Rimshot: hit the head and rim together ($1 strokes missed the rim).')
+    .replace(/Dobos: (\d+) puta rimshot gdje treba običan udarac\./g, 'Snare: $1 rimshots where a normal stroke is written.')
+    .replace(/^Ritam „(.*)“ ima nesačuvane izmene\. Sačuvaj ga dugmetom Sačuvaj pored naziva, pa ponovo klikni Primeni novu verziju\.$/, 'Pattern “$1” has unsaved changes. Save it with the Save button next to its name, then click Apply update again.')
+    .replace(/^Mera (\d+)\/(\d+) nije podržana\. Izaberi deo sa merom od 2 do 7 doba, \/4 ili \/8\.$/, 'The $1/$2 meter is not supported. Choose a section with 2 to 7 beats in /4 or /8.')
     .replace(/Pazi na dinamiku na (.*?) \(akcenti jače, ghost note tiše\)\./g, 'Watch dynamics on $1 (stronger accents, quieter ghost notes).')
     .replace(/: (žuriš|kasniš) oko (\d+) ms\./g, (_, side, ms) => `: about ${ms} ms ${side === 'žuriš' ? 'early' : 'late'}.`);
   return translated.replace(matcher, match => DICT[match]);

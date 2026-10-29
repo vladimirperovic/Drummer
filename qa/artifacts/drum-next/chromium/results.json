@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Rimshot: TD-17 note 40 is its own articulation with sound, key, editor row and notehead",
+    "status": "PASS"
+  },
+  {
+    "name": "Rimshot: articulation is scored separately only when the pattern writes rimshots",
+    "status": "PASS"
+  },
+  {
+    "name": "Rimshot: an older saved MIDI map and profile move note 40 to rimshot once",
+    "status": "PASS"
+  },
+  {
+    "name": "Triggers: live check finds double triggers, crosstalk, saturation and a short pedal range",
+    "status": "PASS"
+  },
+  {
+    "name": "Triggers: English view and phone width",
+    "status": "PASS"
+  },
+  {
+    "name": "Score: a MusicXML drum part becomes an editable practice pattern",
+    "status": "PASS"
+  },
+  {
+    "name": "Score: pitched-only scores keep the reading view without a drum panel",
+    "status": "PASS"
+  },
+  {
+    "name": "Song: mode switch swaps notation for the live meter and keeps note sections out of the way",
+    "status": "PASS"
+  },
+  {
+    "name": "Song: playing along shows early/late live and a whole-song report against the song hits",
+    "status": "PASS"
+  },
+  {
+    "name": "Song: count-in, half speed and a pattern cannot start during the song",
+    "status": "PASS"
+  }
+]

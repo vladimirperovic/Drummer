@@ -40,10 +40,16 @@ async function scenario(name, fn, { offline = false } = {}) {
   } finally { await context.close(); }
 }
 const editor = async p => p.locator('[data-section=editor]').click();
-const SECTION = { import: 'library', print: 'library', offline: 'settings', mcp: 'settings', ai: 'song', backing: 'song', arrangement: 'song',
+const SECTION = { import: 'library', print: 'library', offline: 'settings', mcp: 'settings', ai: 'song', backing: 'practice', arrangement: 'practice',
   focus: 'practice', program: 'practice', trainer: 'practice', journal: 'results', replay: 'results', stats: 'results' };
 const PANE = { offline: 'app', mcp: 'app' };
-const pane = async (p, name) => { await p.locator(`#appNav [data-section=${SECTION[name]}]`).click(); await p.locator(`.subtabs [data-pane=${PANE[name] || name}]`).click(); };
+// Song mode hides the note sections; the header mode switch brings them back.
+// Each mode has its own menu: song steps are menu items, note sections have sub-tabs.
+const pane = async (p, name) => {
+  const song = SECTION[name] === 'song', target = p.locator(song ? `#appNav [data-pane=${name}]` : `#appNav [data-section=${SECTION[name]}]`);
+  if (!(await target.isVisible())) await p.locator(`[data-mode=${song ? 'song' : 'notes'}]`).click();
+  await target.click(); if (!song) await p.locator(`.subtabs [data-pane=${PANE[name] || name}]`).click();
+};
 const tools = pane, studio = pane;
 const setting = async p => { await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=device]').click(); };
 const input = async (p, id, value) => { await p.locator(`#${id}`).fill(String(value)); await p.locator(`#${id}`).press('Tab'); };
@@ -166,7 +172,9 @@ await scenario('Expansion: profile controls are locked during exercise and progr
 });
 await scenario('Expansion: English covers all static screens, instrument labels and accessibility text', async p => {
   await p.locator('#languageSelect').selectOption('en'); await p.waitForFunction(() => document.documentElement.lang === 'en');
-  for (const name of ['kit','library','editor','practice','song','results','settings']) await p.locator(`#appNav [data-section=${name}]`).click();
+  for (const name of ['kit','library','editor','practice','results','settings']) await p.locator(`#appNav [data-section=${name}]`).click();
+  await p.locator('[data-mode=song]').click(); for (const name of ['ai','songplay','songreport']) await p.locator(`#appNav [data-pane=${name}]`).click();
+  await p.locator('[data-mode=notes]').click();
   for (const name of ['focus','program','trainer','journal','replay','stats','backing','arrangement','ai']) await studio(p,name);
   for (const name of ['import','print','offline']) await tools(p,name);
   await p.locator('.subtabs [data-pane=timing]').click();
@@ -188,10 +196,10 @@ await scenario('Expansion: language persists, toggles back, and does not change 
   await p.locator('#languageSelect').selectOption('en'); assert.equal(await p.locator('#edName').inputValue(), 'Moja pesma čć Ritmovi');
   p.once('dialog', d => d.accept('Moja pesma čć Ritmovi'));
   await lib(p); await p.locator('#saveBtn').click(); await p.reload(); await p.waitForFunction(() => !!window.__qa);
-  assert.equal(await p.locator('#languageSelect').inputValue(), 'en'); assert.equal(await p.locator('#appNav [data-section=song]').innerText(), 'Song');
+  assert.equal(await p.locator('#languageSelect').inputValue(), 'en'); assert.equal(await p.locator('[data-mode=song]').innerText(), 'Song');
   assert.equal(await p.evaluate(() => JSON.stringify(__qa.pattern.steps)), original);
   assert.equal(await p.locator('#mine .load span').first().innerText(), 'Moja pesma čć Ritmovi');
-  await p.locator('#languageSelect').selectOption('sr'); assert.equal(await p.locator('#appNav [data-section=song]').innerText(), 'Pesma');
+  await p.locator('#languageSelect').selectOption('sr'); assert.equal(await p.locator('[data-mode=song]').innerText(), 'Pesma');
 });
 await scenario('Expansion: English translates live errors, score counts, journal and confirmations', async p => {
   await p.locator('#languageSelect').selectOption('en');
@@ -245,7 +253,7 @@ await scenario('Expansion: PWA manifest, icons and all app modules are cached fo
   const cached = await p.evaluate(async()=>{const keys=await caches.keys();const c=await caches.open(keys.find(k=>k.startsWith('drummer:')));return(await c.keys()).map(r=>new URL(r.url).pathname);});
   for(const path of ['/index.html','/js/i18n.js','/js/midi-file.js','/js/printing.js']) assert.ok(cached.includes(path));
   await p.locator('#languageSelect').selectOption('en'); await context.setOffline(true); await p.reload();
-  await p.locator('#presets .load').first().waitFor({ state: 'attached' }); assert.equal(await p.locator('#appNav [data-section=song]').innerText(),'Song');
+  await p.locator('#presets .load').first().waitFor({ state: 'attached' }); assert.equal(await p.locator('[data-mode=song]').innerText(),'Song');
   await p.locator('#countIn').uncheck(); await p.locator('#loop').uncheck(); await input(p,'bpm',260);
   await p.locator('#playBtn').click(); await p.waitForFunction(()=>document.querySelector('#playBtn').textContent.includes('Stop'));
   await p.waitForFunction(()=>document.querySelector('#playBtn').textContent.includes('Start'));

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Rimshot as its own articulation: TD-17 note 40, `X` key, editor row, sound and slashed notehead. Timing treats it as the snare pad; when a pattern writes rimshots, the stroke type is scored separately. Older maps and profiles move note 40 to rimshot once.
+- Settings → Trigger check: live velocity per zone, double triggers, crosstalk, hi-hat pedal range and unmapped notes, with module trigger suggestions and export in the `midirec`/`analiza.py` format.
+- MusicXML drum parts convert into editable practice patterns (part, bars, grid and instrument map), alongside the reading view.
+- Two modes in the header: Notes (score, patterns, editor, practice) and Song (load and analyze → play along with original, drums-only or drumless audio → report). Arrangement and pattern backing moved to Practice.
+- Song play-along compares hits with the recording's actual drum-hit times, shows a live blue (early) / purple (on time) / red (late) meter and timeline, and ends with a whole-song report: per-bar offset columns, a lane view of song hits versus yours, group statistics and the five most recent runs.
+- Faster local AI: `alati/server.py` (and the offline service worker) make the page cross-origin isolated so ONNX Runtime uses several threads; each model's first run measures WebGPU against CPU and remembers the faster backend, falling back to CPU if the GPU fails mid-run. Separating a 3:35 song on an M1 dropped from about 600 s to 260–290 s.
+- Song mode meter redesigned in the notebook style: a thin staff-like line with millisecond ticks and a notehead marker colored blue (early), purple (on time) or red (late).
+- Cleaner top area: transport and last hit on one row, practice toggles as pills with the record, score and notes-only actions beside them, and the pattern title sharing a row with the notation options so the staff gets more height.
 - Search (Ctrl+K or the magnifier in the menu) finds every section, setting, control and pattern in Serbian or English; header options toggle directly, other results open their tab and highlight the control.
 - One navigation for everything below the score: Drum kit, Patterns, Edit, Practice, Song, Results and Settings, each with its own sub-tabs. On phones it becomes a bottom bar.
 - Song groups AI analysis, the arrangement and the backing track as three connected steps, with a link to MusicXML scores. Results groups the current score, journal and replay; Settings groups device/MIDI, timing/sound and app/data (offline, backup, MCP).

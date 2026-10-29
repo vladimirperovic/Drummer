@@ -2,11 +2,26 @@
 // prema mapi; fabrička mapa odgovara TD-17, a "Nauči" dodjeljuje sljedeći udareni pad.
 
 import { INSTRUMENTS, INST } from './patterns.js';
-import { saveMidiMap, reportError } from './storage.js';
+import { saveMidiMap, reportError, STORAGE_KEYS } from './storage.js';
 import { normalizeRouting, resolveRoute, sourceMetadata, ROUTING_KEY } from './midi-routing.js';
 export { normalizeRouting } from './midi-routing.js';
 
 const MAP_KEY = 'trener.midiMapa.v1';
+const RIMSHOT_KEY = 'drummer.rimshotMap.v1';
+
+// Starije mape šalju notu 40 (rimshot na TD-17) na dobos. Jednom je prebaci na rimshot,
+// u trenutnoj mapi i u sačuvanim profilima; ocjena je ista jer je to isti pad.
+export const withRimshot = map => map?.[40] === 'snare' ? { ...map, 40: 'rimshot' } : map;
+function migrateRimshot() {
+  try {
+    if (localStorage.getItem(RIMSHOT_KEY)) return;
+    const map = JSON.parse(localStorage.getItem(MAP_KEY));
+    if (map && typeof map === 'object') localStorage.setItem(MAP_KEY, JSON.stringify(withRimshot(map)));
+    const profiles = JSON.parse(localStorage.getItem(STORAGE_KEYS.profiles));
+    if (Array.isArray(profiles)) localStorage.setItem(STORAGE_KEYS.profiles, JSON.stringify(profiles.map(p => p?.map ? { ...p, map: withRimshot(p.map) } : p)));
+    localStorage.setItem(RIMSHOT_KEY, '1');
+  } catch {}
+}
 
 export function defaultMap() {
   const m = {};
@@ -25,6 +40,7 @@ export class MidiInput {
     this.learn = null;
     this.outId = '';
     this.activeOutputs = new Map();
+    migrateRimshot();
     try { this.map = normalizeMidiMap(JSON.parse(localStorage.getItem(MAP_KEY))); } catch { this.map = defaultMap(); }
     try { this.routing = normalizeRouting(JSON.parse(localStorage.getItem(ROUTING_KEY))); } catch { this.routing = normalizeRouting(); }
   }
@@ -62,6 +78,7 @@ export class MidiInput {
     const [status, d1, d2] = e.data;
     const type = status & 0xf0;
     const metadata = sourceMetadata(source, status);
+    this.h.onRaw?.(e.data, e.timeStamp, metadata);
     if (type === 0x90 && d2 > 0) {
       if (source) this.h.onNote?.(d1, d2, metadata); else this.h.onNote?.(d1, d2);
       if (this.learn) {

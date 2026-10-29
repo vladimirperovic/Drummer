@@ -127,7 +127,7 @@ await scenario('Editor modifiers, erase, resize and copy first bar', async p => 
   await cell.click({ button: 'right' }); assert.equal(await cell.getAttribute('data-v'), '0');
   await cell.click({ modifiers: ['Shift'] }); await p.locator('#edBars').selectOption('2'); await p.locator('#edCopyBar').click();
   assert.equal(await p.locator('[data-inst=crash2][data-slot="16"]').getAttribute('data-v'), '3');
-  await p.locator('#edDiv').selectOption('12'); assert.equal(await p.locator('#grid .cell').count(), 13 * 24);
+  await p.locator('#edDiv').selectOption('12'); assert.equal(await p.locator('#grid .cell').count(), 14 * 24);
   assert.equal(await p.locator('#clickSub option').count(), 2);
 });
 
@@ -256,7 +256,7 @@ await scenario('BUG: concurrent Start requests create only one playback timer', 
   }); assert.equal(count, 1);
 });
 
-await scenario('BUG: all 19 instruments produce non-silent synthesized audio', async p => {
+await scenario('BUG: all 20 instruments produce non-silent synthesized audio', async p => {
   const energies = await p.evaluate(async () => {
     const { AudioEngine } = await import('/js/audio.js'); const { INSTRUMENTS } = await import('/js/patterns.js');
     const energies = {};
@@ -346,7 +346,7 @@ await scenario('Continuous playback completes eight loops without growing pendin
 });
 
 // Functional acceptance scenarios for the five new practice features.
-const STUDIO_SECTION = { focus: 'practice', program: 'practice', journal: 'results', replay: 'results', backing: 'song', arrangement: 'song' };
+const STUDIO_SECTION = { focus: 'practice', program: 'practice', journal: 'results', replay: 'results', backing: 'practice', arrangement: 'practice' };
 const showStudio = async (p, name) => { await p.locator(`#appNav [data-section=${STUDIO_SECTION[name]}]`).click(); await p.locator(`.subtabs [data-pane=${name}]`).click(); await p.waitForTimeout(150); };
 const onePass = async (p, { perfect = false } = {}) => {
   await p.evaluate(async perfect => {

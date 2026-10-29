@@ -49,9 +49,9 @@ export function createDrumSeparator({ onProgress = () => {} } = {}) {
       catch (error) { terminate(error); }
     });
   }
-  async function prepare({ allowDownload = false, signal } = {}) {
+  async function prepare({ allowDownload = false, signal, backend = 'auto' } = {}) {
     if (prepared) { if (signal?.aborted) throw aborted(); return getSeparatorModelInfo(); }
-    const result = await request('prepare', { allowDownload }, signal); prepared = true; return result;
+    const result = await request('prepare', { allowDownload, backend }, signal); prepared = true; return result;
   }
   return {
     prepare(options) { if (processing) return Promise.reject(new Error('SEPARATOR_BUSY')); return prepare(options); },

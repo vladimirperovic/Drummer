@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="ai-tools.css">
 <link rel="stylesheet" href="editor-tools.css">
 <link rel="stylesheet" href="studio-next.css">
+<link rel="stylesheet" href="drum-next.css">
 <meta name="description" content="Practice drums with MIDI, readable sheet music, timing feedback and a customizable 2D/3D kit. Free, open source and offline-ready.">
 <meta property="og:title" content="Drummer — Drum practice in your browser">
 <meta property="og:description" content="MIDI drum practice, MusicXML scores, timing reports and an interactive drum kit. No account required.">
@@ -26,6 +27,10 @@
 <header class="bar">
   <div class="bar-primary">
   <a class="brand" id="homeLink" href="./" aria-label="Početni prikaz">Drummer</a>
+  <div class="mode-switch" role="group" aria-label="Režim rada">
+    <button type="button" data-mode="notes" aria-pressed="true" title="Sviraj po notama: ritmovi, editor, vežbanje"><svg class="ico" aria-hidden="true"><use href="#i-library"/></svg><span>Note</span></button>
+    <button type="button" data-mode="song" aria-pressed="false" title="Sviraj uz pesmu: analiza bubnja, pratnja, izveštaj"><svg class="ico" aria-hidden="true"><use href="#i-song"/></svg><span>Pesma</span></button>
+  </div>
   <div class="transport-group">
   <button id="playBtn" class="play" title="Start / stop (razmak)">▶ Start</button>
   <div class="tempo" title="Tempo (strelice gore/dolje, Shift ±5)">
@@ -40,10 +45,6 @@
   </div>
   <div class="bar-tools">
     <button id="appUpdate" class="app-update" hidden>Nova verzija je spremna</button>
-    <button id="captureRhythm">Snimaj novi ritam</button>
-    <button id="importSong" title="Otvori MusicXML notni zapis">Uvezi partituru</button>
-    <input id="scoreFile" type="file" accept=".musicxml,.xml,.mxl" hidden>
-    <button id="scoreView" aria-pressed="false" title="Prikaži samo komande i note; Esc vraća editor">⤢ Samo note</button>
     <div id="midiStatus" class="status"><span class="dot"></span><span class="txt">MIDI…</span></div>
     <label class="language-picker" translate="no"><span class="sr-only">Language / Jezik</span><select id="languageSelect" aria-label="Language / Jezik"><option value="sr">SR</option><option value="en">EN</option></select></label>
   </div>
@@ -59,6 +60,12 @@
     <label class="tog"><input type="checkbox" id="playPattern"> Sviraj ritam</label>
     <label class="tog"><input type="checkbox" id="liveSound"> Moj zvuk</label>
     <label class="tog rec"><input type="checkbox" id="record"> Snimaj</label>
+  </div>
+  <div class="bar-actions">
+    <button id="captureRhythm">Snimaj novi ritam</button>
+    <button id="importSong" title="Otvori MusicXML notni zapis">Uvezi partituru</button>
+    <input id="scoreFile" type="file" accept=".musicxml,.xml,.mxl" hidden>
+    <button id="scoreView" aria-pressed="false" title="Prikaži samo komande i note; Esc vraća editor">⤢ Samo note</button>
   </div>
   </div>
 </header>
@@ -85,6 +92,7 @@
   <div id="notation"></div>
   <div id="countOverlay" class="countin" hidden></div>
 </section>
+<section id="songStage" class="song-stage" aria-label="Sviranje uz pesmu"></section>
 <div id="sheetResize" class="sheet-resize" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="Visina notnog sistema" aria-valuemin="180" aria-valuemax="800" aria-valuenow="300" title="Povuci gore/dole za visinu nota; strelice menjaju visinu"><span></span></div>
 
 <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -99,11 +107,13 @@
 </svg>
 <nav id="appNav" class="appnav" aria-label="Glavni meni">
   <button data-section="kit" class="active" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-kit"/></svg><span>Bubanj</span></button>
-  <button data-section="library"><svg class="ico" aria-hidden="true"><use href="#i-library"/></svg><span>Ritmovi</span></button>
-  <button data-section="editor"><svg class="ico" aria-hidden="true"><use href="#i-editor"/></svg><span>Uredi</span></button>
-  <button data-section="practice"><svg class="ico" aria-hidden="true"><use href="#i-practice"/></svg><span>Vežbanje</span></button>
-  <button data-section="song"><svg class="ico" aria-hidden="true"><use href="#i-song"/></svg><span>Pesma</span></button>
-  <button data-section="results"><svg class="ico" aria-hidden="true"><use href="#i-results"/></svg><span>Rezultati</span></button>
+  <button data-section="library" data-for="notes"><svg class="ico" aria-hidden="true"><use href="#i-library"/></svg><span>Ritmovi</span></button>
+  <button data-section="editor" data-for="notes"><svg class="ico" aria-hidden="true"><use href="#i-editor"/></svg><span>Uredi</span></button>
+  <button data-section="practice" data-for="notes"><svg class="ico" aria-hidden="true"><use href="#i-practice"/></svg><span>Vežbanje</span></button>
+  <button data-section="results" data-for="notes"><svg class="ico" aria-hidden="true"><use href="#i-results"/></svg><span>Rezultati</span></button>
+  <button data-pane="ai" data-for="song" title="Učitaj pesmu, izdvoji bubanj i prepoznaj udarce"><svg class="ico" aria-hidden="true"><use href="#i-song"/></svg><span>Analiza</span></button>
+  <button data-pane="songplay" data-for="song" title="Sviraj uz original, samo bubanj ili bez bubnja"><svg class="ico" aria-hidden="true"><use href="#i-practice"/></svg><span>Sviraj</span></button>
+  <button data-pane="songreport" data-for="song" title="Rano, tačno i kasno kroz pesmu"><svg class="ico" aria-hidden="true"><use href="#i-results"/></svg><span>Izveštaj</span></button>
   <button data-section="settings"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><span>Podešavanja</span></button>
   <button id="searchOpen" class="nav-search" title="Pretraga funkcija i ritmova (Ctrl+K)" aria-keyshortcuts="Control+K"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><span>Traži</span><kbd>Ctrl K</kbd></button>
 </nav>
@@ -217,6 +227,8 @@
       <button data-pane="focus" class="active">Fokus A–B</button>
       <button data-pane="program">Programi</button>
       <button data-pane="trainer">Trener tempa</button>
+      <button data-pane="arrangement">Aranžman</button>
+      <button data-pane="backing">Podloga</button>
     </nav>
     <section id="studio-focus" class="studio-panel" data-pane-panel="focus">
       <h2>Vežbaj deo koji zapinje</h2>
@@ -257,18 +269,10 @@
       </label>
       <p class="muted">Trener ne menja tempo dok svira pesma ili program.</p>
     </section>
-  </section>
-
-  <section id="section-song" class="app-section" data-section-panel="song" aria-label="Pesma" hidden>
-    <nav class="subtabs flow-steps" aria-label="Rad sa pesmom">
-      <button data-pane="ai" class="active"><b>1</b> Analiza pesme <small>izdvoji bubnjeve, prepoznaj note</small></button>
-      <button data-pane="arrangement"><b>2</b> Aranžman <small>deonice, tempo, ponavljanja</small></button>
-      <button data-pane="backing"><b>3</b> Sviraj uz pesmu <small>podloga, prvi takt, brzina</small></button>
-    </nav>
-    <p class="muted section-note">Imaš notni zapis pesme? <button id="songOpenScore" class="linklike">Otvori MusicXML partituru</button></p>
 
     <section id="studio-backing" class="studio-panel" data-pane-panel="backing" hidden>
-      <h2>Sviraj uz pesmu</h2>
+      <h2>Podloga za ritam</h2>
+      <p class="muted">Ritam iz editora sa audio podlogom: zadaješ tempo pesme i prvi takt. Za sviranje uz celu pesmu sa analizom bubnja koristi režim Pesma.</p>
       <div class="row"><label class="btn">Izaberi audio fajl<input id="backingFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac" hidden></label><button id="backingRemove" disabled>Ukloni pesmu</button></div>
       <p id="backingName" class="muted">Još nema pesme. Audio fajl se ponovo bira posle osvežavanja stranice.</p>
       <canvas id="waveform" width="1000" height="140" role="img" aria-label="Talasni oblik pesme; klik bira početak prvog takta"></canvas>
@@ -281,6 +285,16 @@
       <label class="tog"><input id="backingOn" type="checkbox" disabled> Sviraj pesmu uz vežbu</label>
       <p id="backingHint" class="muted">Klik na talasni oblik postavlja prvi takt. A–B bira deo pesme. Start poravnava pesmu, note i odbrojavanje. Promena brzine menja i visinu tona.</p>
     </section>
+  </section>
+
+  <section id="section-song" class="app-section" data-section-panel="song" aria-label="Pesma" hidden>
+    <nav class="subtabs flow-steps" aria-label="Rad sa pesmom">
+      <button data-pane="ai" class="active"><b>1</b> Učitaj i analiziraj <small>izdvoji bubanj, prepoznaj udarce</small></button>
+      <button data-pane="songplay"><b>2</b> Sviraj uz pesmu <small>original, samo bubanj ili bez bubnja</small></button>
+      <button data-pane="songreport"><b>3</b> Izveštaj <small>rano, tačno i kasno kroz pesmu</small></button>
+    </nav>
+    <p class="muted section-note">Imaš notni zapis pesme? <button id="songOpenScore" class="linklike">Otvori MusicXML partituru</button></p>
+
   </section>
 
   <section id="section-results" class="app-section" data-section-panel="results" aria-label="Rezultati" hidden>
@@ -331,6 +345,7 @@
   <section id="section-settings" class="app-section" data-section-panel="settings" aria-label="Podešavanja" hidden>
     <nav class="subtabs" aria-label="Podešavanja">
       <button data-pane="device" class="active">Uređaj i MIDI</button>
+      <button data-pane="triggers">Provera trigera</button>
       <button data-pane="timing">Tajming i zvuk</button>
       <button data-pane="app">Aplikacija i podaci</button>
     </nav>
@@ -358,6 +373,8 @@
         <select id="midiOut"><option value="">Ne, sviraj ovdje</option></select>
       </label>
     </div>
+
+    <div id="settings-triggers" class="panel settings-pane" data-pane-panel="triggers" hidden></div>
 
     <div id="settings-timing" class="panel settings-pane" data-pane-panel="timing" hidden>
       <h3>Tajming</h3>

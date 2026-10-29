@@ -15,7 +15,10 @@ export const INSTRUMENTS = [
   { id: 'hho', label: 'Hi-hat otvoren', pos: -1, head: 'x', open: true, voice: 'up', midiIn: [46, 26], midiOut: 46, color: '#4dabf7', keys: ['KeyS'], target: 'hihat' },
   { id: 'tom1', label: 'Tom 1', pos: 1, head: 'normal', voice: 'up', midiIn: [48, 50], midiOut: 48, color: '#9c8cff', keys: ['KeyG'], target: 'tom1' },
   { id: 'tom2', label: 'Tom 2', pos: 2, head: 'normal', voice: 'up', midiIn: [45, 47], midiOut: 45, color: '#b98cf0', keys: ['KeyH'], target: 'tom2' },
-  { id: 'snare', label: 'Dobos', pos: 3, head: 'normal', voice: 'up', midiIn: [38, 40], midiOut: 38, color: '#ff6b6b', keys: ['KeyF', 'KeyJ'], target: 'snare' },
+  { id: 'snare', label: 'Dobos', pos: 3, head: 'normal', voice: 'up', midiIn: [38], midiOut: 38, color: '#ff6b6b', keys: ['KeyF', 'KeyJ'], target: 'snare' },
+  // Rimshot (opna i obod istovremeno) TD-17 šalje kao notu 40. Isti je pad kao dobos, pa je optional:
+  // postojeći ritmovi zadržavaju potpis u dnevniku dok ga ne koriste.
+  { id: 'rimshot', label: 'Rimshot', pos: 3, head: 'rimshot', voice: 'up', midiIn: [40], midiOut: 40, color: '#c92a2a', keys: ['KeyX'], target: 'snare', optional: true },
   { id: 'xstick', label: 'Cross-stick', pos: 3, head: 'circlex', voice: 'up', midiIn: [37], midiOut: 37, color: '#ff9e9e', keys: ['KeyC'], target: 'rim' },
   { id: 'tom3', label: 'Floor tom', pos: 5, head: 'normal', voice: 'up', midiIn: [43, 58], midiOut: 43, color: '#cf7dff', keys: ['KeyL'], target: 'tom3' },
   { id: 'kick', label: 'Kick', pos: 7, head: 'normal', voice: 'down', midiIn: [36], midiOut: 36, color: '#ffa94d', keys: ['KeyV', 'KeyB', 'KeyN'], target: 'kick' },
@@ -28,6 +31,9 @@ export const INSTRUMENTS = [
   { id: 'crash3', label: 'Crash 3', pos: -4, head: 'x', voice: 'up', midiIn: [], midiOut: 52, color: '#deb53c', keys: ['KeyQ'], target: 'crash3', optional: true },
 ];
 export const INST = Object.fromEntries(INSTRUMENTS.map(i => [i.id, i]));
+// Artikulacije istog pada: udarac se uparuje sa notom pada, a vrsta udarca se ocjenjuje posebno.
+const SAME_PAD = { hho: 'hh', rimshot: 'snare' };
+export const padKey = id => SAME_PAD[id] || id;
 export const DYN_VEL = [0, 40, 92, 122];
 
 export const slotsPerBeat = p => (p.division === 12 ? 3 : p.beatUnit === 8 ? 2 : 4);

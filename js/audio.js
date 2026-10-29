@@ -4,6 +4,8 @@
 // Više fajlova u istom rasponu jačine se smjenjuju (round robin).
 
 const SOUND_FAMILY = { kick2: 'kick', snare2: 'snare', xstick2: 'xstick', crash3: 'crash2' };
+// WAV kit bez rimshot semplova svira dobos; sintetički zvuk ima svoj rimshot.
+const SAMPLE_FAMILY = { ...SOUND_FAMILY, rimshot: 'snare' };
 const CHOKE = { hho: 'hihat' };
 
 export class AudioEngine {
@@ -129,7 +131,7 @@ export class AudioEngine {
   useSynth() { this.kitLoadId++; this.kit = null; }
 
   pickSample(instId, v) {
-    const list = this.kit.layers[instId] || this.kit.layers[SOUND_FAMILY[instId]];
+    const list = this.kit.layers[instId] || this.kit.layers[SAMPLE_FAMILY[instId]];
     if (!list?.length) return null;
     const vel = Math.max(1, Math.round(v * 127));
     const fits = list.filter(s => vel >= s.lo && vel <= s.hi);
@@ -221,6 +223,13 @@ const SYNTH = {
     tone(a, t, 'triangle', 240, 175, 0.04, 0.5 * v, 0.1, out);
     noise(a, t, 0.25, [['highpass', 1300], ['lowpass', 9000]], 0.75 * v, 0.2, out);
     return t + 0.25;
+  },
+  rimshot: (a, t, v, out) => {
+    tone(a, t, 'triangle', 330, 210, 0.03, 0.55 * v, 0.08, out);
+    noise(a, t, 0.3, [['highpass', 1800], ['lowpass', 11000]], 0.85 * v, 0.24, out);
+    noise(a, t, 0.03, [['bandpass', 3200, 4]], 1.6 * v, 0.025, out);
+    tone(a, t, 'square', 1450, 900, 0.01, 0.12 * v, 0.02, out);
+    return t + 0.3;
   },
   xstick: (a, t, v, out) => {
     noise(a, t, 0.06, [['bandpass', 1900, 6]], 1.4 * v, 0.05, out);

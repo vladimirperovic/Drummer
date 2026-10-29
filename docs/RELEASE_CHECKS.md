@@ -10,4 +10,4 @@ The roadmap and local AI release was checked with Node 26, Python 3.12 and Playw
 
 Model execution and synthetic separation checks establish that the browser pipeline works; they are not an accuracy benchmark for commercial songs. Physical Roland hardware and every browser/GPU combination were not tested. Current AI inference uses CPU/WASM, not WebGPU. Review generated notation before using it as the practice reference.
 
-Run the standard checks with `npm --prefix qa test`, `npm --prefix qa run test:browser`, and `python -m unittest discover -s qa -p test_analysis.py -v`. Optional real-model instructions are in the headers of `qa/ai-transcription-browser.mjs` and `qa/drum-separator-browser.mjs`.
+Run the standard checks with `npm --prefix qa test`, `npm --prefix qa run test:browser`, and `python -m unittest discover -s qa -p "test_*.py" -v`. Optional real-model instructions are in the headers of `qa/ai-transcription-browser.mjs` and `qa/drum-separator-browser.mjs`.

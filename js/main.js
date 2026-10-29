@@ -1,6 +1,6 @@
 import {
   INSTRUMENTS, INST, DYN_VEL, PRESETS, blankPattern, normalize, resize, patternInfo,
-  slotsPerBeat, slotsPerBar, totalSlots, beatMs, slotOffsetMs, slotDurationMs, slotAtMs, groupStarts,
+  slotsPerBeat, slotsPerBar, totalSlots, beatMs, slotOffsetMs, slotDurationMs, slotAtMs, groupStarts, padKey,
 } from './patterns.js';
 import { renderNotation } from './notation.js';
 import { createKitView } from './kit-view.js';
@@ -27,6 +27,9 @@ import { createAiTools } from './ai-tools.js';
 import { candidateArrangement } from './ai-reference.js';
 import { setupNavigation, navigate, currentView } from './navigation.js';
 import { createCommandSearch } from './command-search.js';
+import { TriggerCheck } from './trigger-check.js';
+import { SongPractice } from './song-practice.js';
+import { setupTooltips } from './tooltips.js';
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
@@ -65,7 +68,8 @@ store.setErrorHandler(() => {
 const audio = new AudioEngine();
 for (const [k, v] of Object.entries(settings.vol)) audio.setVolume(k, v);
 const scorer = new Scorer();
-const midi = new MidiInput({ onHit, onStatus, onNote, onPedal: v => kit.pedal(v), onChoke: id => audio.choke(id) });
+const midi = new MidiInput({ onHit, onStatus, onNote, onPedal: v => kit.pedal(v), onChoke: id => audio.choke(id),
+  onRaw: (data, time, metadata) => triggerCheck?.message(data, time, metadata) });
 midi.outId = settings.midiOut;
 
 let library = store.loadLibrary();
@@ -79,7 +83,7 @@ const savedPattern = [...library, ...PRESETS].find(p => p.id && p.id === pattern
 const draftContent = p => JSON.stringify(['name', 'bars', 'beats', 'beatUnit', 'division', 'swing', 'groups', 'sticking', 'steps'].map(key => p[key]));
 let dirty = settings.currentDirty === true || (settings.currentDirty == null && !!settings.current && (!savedPattern || draftContent(pattern) !== draftContent(normalize(savedPattern))));
 settings.currentDirty = dirty;
-let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator, editorTools, rhythmCapture, aiTools;
+let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator, editorTools, rhythmCapture, aiTools, triggerCheck, songPractice;
 let edCells = [];
 let calibration = null;
 
@@ -107,6 +111,8 @@ async function start(options = {}) {
   if (play.on || play.starting) return false;
   if (missingKitInstruments(pattern, settings.kitConfig).length) { toast('Ritam koristi delove koji nisu u tvom setu. Uključi ih u Moj bubanj ili izmeni ritam.'); return false; }
   if (calibration) { toast('Sačekaj da se kalibracija završi.'); return false; }
+  if (triggerCheck?.busy) { toast('Završi proveru trigera pre vežbe.'); return false; }
+  if (songPractice?.active) return false;
   if (!options.program) studio?.cancelProgram();
   const token = ++play.token;
   play.starting = true; renderTransport();
@@ -122,6 +128,7 @@ async function start(options = {}) {
     if (token !== play.token) return false;
     showLatency(); scorer.reset(); scorer.currentLoop = 0;
     scorer.level = settings.level; scorer.calib = settings.calib; notation.clearMarks();
+    scorer.articulation = pattern.steps.rimshot.some(Boolean);
     Object.assign(play, { on: true, queue: [], cur: null, firstAudio: null, endAt: 0, loopScores: [], range,
       completed: new Set(), loopBpms: new Map(), boundaries: [], durationSeconds: Number(options.durationSeconds) || 0,
       durationSlots: options.durationBars ? Math.round(options.durationBars) * slotsPerBar(pattern) : 0,
@@ -165,7 +172,8 @@ function stop(reason = 'manual', {preserveScheduled = false, boundaryPerf} = {})
   studio?.stopped(reason, session);
 }
 
-const toggle = () => rhythmCapture?.busy ? rhythmCapture.finish() : (play.on || play.starting ? stop() : start());
+const toggle = () => rhythmCapture?.busy ? rhythmCapture.finish()
+  : document.body.dataset.mode === 'song' && !play.on && !play.starting ? songPractice.toggle() : (play.on || play.starting ? stop() : start());
 
 function schedule() {
   if (play.transitioning) return;
@@ -309,6 +317,11 @@ function onHit(instId, vel, perf, source = 'keyboard', midiNote, metadata, defer
     return;
   }
   let res = null;
+  if (songPractice?.active) {
+    res = songPractice.hit(instId, vel, perf);
+    if (!deferred) kit.hit(instId, res ? res.kind : 'free');
+    showLastHit(instId, vel, res); return;
+  }
   if (rhythmCapture?.busy) {
     rhythmCapture.hit(instId, vel, perf, source, midiNote, metadata);
     kit.hit(instId, 'free'); showLastHit(instId, vel, null); return;
@@ -354,6 +367,7 @@ function showLastHit(instId, vel, res) {
   let txt = INST[instId].label;
   if (vel != null) txt += ` · jačina ${vel}`;
   if (res) txt += res.kind === 'miss' ? ' · promašeno' : res.kind === 'extra' ? ' · višak' : ` · ${fmtErr(res.err)}`;
+  if (res?.artOk === false) txt += res.inst === 'rimshot' ? ' · bez rimshota' : ' · rimshot umjesto običnog';
   el.textContent = txt;
   el.className = 'lasthit ' + (res ? res.kind : 'free');
 }
@@ -398,7 +412,7 @@ function onStatus(st) {
   $('#midiInfo').textContent = st.ok ? `Povezano: ${st.text}` : st.text;
   midiOutputs = st.outputs || [];
   profiles?.devices(st.inputs);
-  renderMidiOut();
+  renderMidiOut(); triggerCheck?.render();
 }
 
 function onNote(note, vel, metadata) {
@@ -443,8 +457,9 @@ const rerender = debounce(() => {
 
 function renderTransport() {
   const b = $('#playBtn');
-  b.textContent = play.starting ? '■ Otkaži' : play.on ? '■ Stop' : '▶ Start';
-  b.classList.toggle('playing', play.on || play.starting);
+  const songOn = !!songPractice?.active;
+  b.textContent = play.starting ? '■ Otkaži' : play.on || songOn ? '■ Stop' : '▶ Start';
+  b.classList.toggle('playing', play.on || play.starting || songOn);
   $('#bpm').value = pattern.bpm;
   for (const id of ['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record']) $('#' + id).checked = settings[id];
   renderClickSub();
@@ -731,15 +746,17 @@ function renderStats() {
   $('#loopBars').innerHTML = play.loopScores.slice(-30)
     .map((v, i) => `<i style="height:${Math.max(4, v)}%" class="${v >= 90 ? 'good' : v >= 70 ? 'ok' : 'miss'}" title="Prolaz ${i + 1}: ${v}%"></i>`).join('')
     || '<span class="muted">Pojaviće se kad prođeš kroz ritam.</span>';
+  const articulation = Object.values(s.per).some(r => r.artChecked);
   const rows = INSTRUMENTS.filter(i => s.per[i.id]).map(i => {
     const r = s.per[i.id];
     const mean = r.mean == null ? '–' : fmtErr(r.mean);
     const spread = r.spread == null ? '–' : `±${Math.round(r.spread)} ms`;
     const dyn = r.sampleCount ? Math.round((100 * r.dynOk) / r.sampleCount) + '%' : '–';
-    return `<tr><td><i style="background:${i.color}"></i>${esc(i.label)}</td><td>${r.good + r.ok}/${r.expected}${r.extra ? ` <small>+${r.extra}</small>` : ''}</td><td>${mean}</td><td>${spread}</td><td>${dyn}</td></tr>`;
+    const art = r.artChecked ? Math.round((100 * r.artOk) / r.artChecked) + '%' : '–';
+    return `<tr><td><i style="background:${i.color}"></i>${esc(i.label)}</td><td>${r.good + r.ok}/${r.expected}${r.extra ? ` <small>+${r.extra}</small>` : ''}</td><td>${mean}</td><td>${spread}</td><td>${dyn}</td>${articulation ? `<td>${art}</td>` : ''}</tr>`;
   });
   $('#statTable').innerHTML = rows.length
-    ? `<thead><tr><th>Instrument</th><th>Pogođeno</th><th>Prosjek</th><th>Rasipanje</th><th>Dinamika</th></tr></thead><tbody>${rows.join('')}</tbody>`
+    ? `<thead><tr><th>Instrument</th><th>Pogođeno</th><th>Prosjek</th><th>Rasipanje</th><th>Dinamika</th>${articulation ? '<th title="Rimshot gdje je zadat, običan udarac gdje nije">Udarac</th>' : ''}</tr></thead><tbody>${rows.join('')}</tbody>`
     : '';
   $('#advice').textContent = advice(s);
 }
@@ -756,6 +773,9 @@ function advice(s) {
   if (missy) tips.push(`Najviše promašaja: ${missy.i.label.toLowerCase()}.`);
   const dyn = list.filter(x => x.r.dynOk / x.r.sampleCount < 0.6)[0];
   if (dyn) tips.push(`Pazi na dinamiku na ${dyn.i.label.toLowerCase()} (akcenti jače, ghost note tiše).`);
+  const rim = s.per.rimshot, plain = s.per.snare;
+  if (rim?.artChecked >= 4 && rim.artOk / rim.artChecked < 0.8) tips.push(`Rimshot: udari opnu i obod istovremeno (${rim.artChecked - rim.artOk} udaraca bez oboda).`);
+  if (plain?.artChecked >= 4 && plain.artOk / plain.artChecked < 0.8) tips.push(`Dobos: ${plain.artChecked - plain.artOk} puta rimshot gdje treba običan udarac.`);
   if (!tips.length && s.accuracy >= 90) tips.push('Odlično! Probaj tempo +5 ili uključi tihe taktove.');
   return tips.join(' ') || 'Dobro ide, nastavi.';
 }
@@ -1015,7 +1035,7 @@ function bind() {
   window.addEventListener('pagehide', () => { rhythmCapture?.close(); stop('unload'); saveSettings.flush(); });
 }
 
-const kitBusy = () => play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || studio?.replay.playing || studio?.replay.starting;
+const kitBusy = () => play.on || play.starting || !!triggerCheck?.busy || !!songPractice?.active || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || studio?.replay.playing || studio?.replay.starting;
 function applyKit(value, persist = true) {
   if (kitBusy()) return false;
   const config = normalizeKit(value);
@@ -1057,10 +1077,17 @@ studio = new PracticeStudio({ audio, getPattern: () => pattern, getLevel: () => 
 studio.journalReady.then(()=>{ if(studio.journal.recoveredRestore){saveSettings.cancel();location.reload();} });
 profiles = new DeviceProfiles({ midi, settings, saveSettings, stop, toast, renderMap: renderMapTable, applyKit, profileChanged: () => configurator?.render(),
   isBusy: kitBusy });
+triggerCheck = new TriggerCheck({ midi, toast, isBusy: kitBusy,
+  onBusyChange: renderTransport }, $('#settings-triggers'));
 configurator = new KitConfigurator({ settings, midi, profiles, apply: applyKit, renderMap: renderMapTable,
   isBusy: kitBusy });
 createScoreImporter({ button: $('#importSong'), input: $('#scoreFile'), toast, isBusy: kitBusy,
-  onOpen: () => { stop(); studio.replay.stop(); studio.cancelProgram(); } });
+  onOpen: () => { stop(); studio.replay.stop(); studio.cancelProgram(); },
+  onDrumPattern: p => {
+    if (kitBusy() || (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?'))) return false;
+    if (!editorTools.apply(normalize(p), 'score-import')) return false;
+    markDirty(); renderAll(); navigate('editor'); toast('Bubnjevi iz partiture su u editoru. Sačuvaj ritam u biblioteku.'); return true;
+  } });
 workbench = new Workbench({ midi, toast, loadPattern: p => {
   if (kitBusy() || (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?'))) return false;
   editorTools.apply(normalize(p),'midi-import'); return true;
@@ -1092,8 +1119,11 @@ rhythmCapture = new RhythmCapture({ audio,getPattern:()=>pattern,calibration:()=
     if (!store.saveLibrary(list)) return false;
     library=list; libraryPages.mine=1; dirty=false; loadPattern(saved); toast(`Sačuvano: ${saved.name}`); return true;
   } });
-aiTools=createAiTools({container:$('#section-song'),isBusy:kitBusy,onBusyChange:renderTransport,toast,onCandidate:applyAiCandidate});
+aiTools=createAiTools({container:$('#section-song'),isBusy:kitBusy,onBusyChange:renderTransport,toast,onCandidate:applyAiCandidate,
+  onSongReference:candidate=>{ if(!songPractice.setReference(candidate))return false; navigate('songplay'); toast('Pesma je spremna. Start pokreće sviranje uz pesmu.'); return true; }});
+songPractice = new SongPractice({ audio, settings, toast, isBusy: kitBusy, onBusyChange: renderTransport });
 setupNavigation();
+setupTooltips();
 const commandSearch = createCommandSearch({ toast, patterns: () => [...library, ...PRESETS], loadPattern });
 $('#searchOpen').onclick = () => commandSearch.open();
 function applyAiCandidate(candidate){
@@ -1154,7 +1184,11 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
     })) }),
   setLanguage: language => { $('#languageSelect').value = language; $('#languageSelect').dispatchEvent(new Event('change')); },
 });
-setupPwa({ canReload: () => !kitBusy() && !dirty && !studio.programDirty,
+setupPwa({ canReload: () => !kitBusy() && !dirty && !studio.programDirty, toast,
+  blockReason: () => aiTools?.busy ? 'Zaustavi plejer pesme ili AI obradu, pa ponovo klikni Primeni novu verziju.'
+    : kitBusy() ? 'Zaustavi sviranje, pa ponovo klikni Primeni novu verziju.'
+    : dirty ? `Ritam „${pattern.name}“ ima nesačuvane izmene. Sačuvaj ga dugmetom Sačuvaj pored naziva, pa ponovo klikni Primeni novu verziju.`
+    : studio.programDirty ? 'Program vežbanja ima nesačuvane izmene. Sačuvaj ga u Vežbanje → Programi, pa ponovo klikni Primeni novu verziju.' : null,
   showUpdates: () => { workspaceView.toggle(false); navigate('app'); $('#tool-offline').scrollIntoView({ block: 'nearest' }); },
   flush: async () => [saveSettings.flush(),store.saveLibrary(library),await studio.flushJournal(),store.savePrograms(studio.programs),store.saveProfiles(profiles.items),midi.save()].every(Boolean) });
 loadKitList().then(() => settings.kit && chooseKit(settings.kit));
@@ -1201,7 +1235,7 @@ async function advanceArrangement() {
 }
 
 function bufferSectionHit(inst,vel,perf,source,note,metadata){
-  const next=play.nextSection,pad=id=>id==='hho'?'hh':id,time=perf-settings.calib,windowMs=LEVELS[settings.level][1];
+  const next=play.nextSection,pad=padKey,time=perf-settings.calib,windowMs=LEVELS[settings.level][1];
   let closest=Infinity,key=null;
   for(const instrument of INSTRUMENTS){if(pad(instrument.id)!==pad(inst))continue;
     for(let slot=0;slot<next.scheduled;slot++){

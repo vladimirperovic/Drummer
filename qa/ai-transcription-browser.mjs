@@ -69,7 +69,7 @@ try {
     Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) });
   });
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(base); await page.locator('#presets .load').first().waitFor({ state: 'attached' });
-  await page.locator('#appNav [data-section=song]').click(); await page.locator('.subtabs [data-pane=ai]').click();
+  if (await page.locator('#appNav [data-pane=ai]').isHidden()) await page.locator('[data-mode=song]').click(); await page.locator('#appNav [data-pane=ai]').click();
   assert.match(await page.locator('#tool-ai h2').textContent(), /Song/);
   await page.locator('#aiAudioFile').setInputFiles({ name: 'synthetic-kicks.wav', mimeType: 'audio/wav', buffer: Buffer.from(encodeAiWav([audio], 44100)) });
   await page.waitForFunction(() => !__aiIntegration.ai.busy && !document.getElementById('aiTranscribe').disabled);
@@ -77,7 +77,7 @@ try {
   await page.locator('#aiApply').click();
   assert.ok(await page.evaluate(() => __aiIntegration.studio.arrangements.draft.sections.length > 0));
   assert.equal(await page.evaluate(() => __aiIntegration.studio.backing.buffer.duration), 8);
-  await page.locator('#appNav [data-section=song]').click(); await page.locator('.subtabs [data-pane=ai]').click();
+  if (await page.locator('#appNav [data-pane=ai]').isHidden()) await page.locator('[data-mode=song]').click(); await page.locator('#appNav [data-pane=ai]').click();
   await page.screenshot({ path: artifacts + 'ai-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

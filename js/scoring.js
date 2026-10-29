@@ -1,12 +1,11 @@
 // Ocjenjivanje: svaki udarac se uparuje sa najbližom očekivanom notom istog instrumenta.
+import { padKey } from './patterns.js';
 
 // [tačno, skoro] u milisekundama
 export const LEVELS = { strogo: [15, 45], normalno: [25, 70], lagano: [40, 100] };
 
-// Otvoren i zatvoren hi-hat su isti pad: udarac se računa, a otvorenost je stvar pedale
-const SAME_PAD = { hho: 'hh' };
-const padKey = id => SAME_PAD[id] || id;
-
+// Otvoren i zatvoren hi-hat su isti pad (otvorenost je stvar pedale), kao i dobos i rimshot.
+// Kad ritam traži rimshot, vrsta udarca na dobošu ocjenjuje se posebno, kao dinamika.
 const dynamicsOk = (dyn, vel) => (dyn === 3 ? vel >= 95 : dyn === 1 ? vel <= 55 : vel >= 40 && vel <= 118);
 
 export class Scorer {
@@ -14,6 +13,7 @@ export class Scorer {
     this.level = 'normalno';
     this.calib = 0;
     this.currentLoop = 0;
+    this.articulation = false;
     this.reset();
   }
 
@@ -41,6 +41,7 @@ export class Scorer {
     return this.record({
       kind: Math.abs(best.err) <= good ? 'good' : 'ok',
       inst: best.n.inst, err: best.err, vel, dynOk: dynamicsOk(best.n.dyn, vel), note: best.n,
+      ...(this.articulation && padKey(inst) === 'snare' ? { played: inst, artOk: inst === best.n.inst } : {}),
     }, best.n.loop);
   }
 
@@ -59,10 +60,11 @@ export class Scorer {
 
   record(r, loop) {
     this.results.push(r);
-    const s = this.instrumentStats.get(r.inst) || { good: 0, ok: 0, miss: 0, extra: 0, errs: [], vels: [], dynOk: 0, mean: 0, m2: 0 };
+    const s = this.instrumentStats.get(r.inst) || { good: 0, ok: 0, miss: 0, extra: 0, errs: [], vels: [], dynOk: 0, artOk: 0, artChecked: 0, mean: 0, m2: 0 };
     s[r.kind]++; this.totals[r.kind]++;
     if (r.err != null) {
       s.errs.push(r.err); s.vels.push(r.vel); if (r.dynOk) s.dynOk++;
+      if (r.artOk != null) { s.artChecked++; if (r.artOk) s.artOk++; }
       const delta = r.err - s.mean;
       s.mean += delta / s.errs.length;
       s.m2 += delta * (r.err - s.mean);
@@ -93,6 +95,7 @@ export class Scorer {
       const s = { good: state.good, ok: state.ok, miss: state.miss, extra: state.extra,
         get errs() { return errs ||= state.errs.slice(0, count); },
         get vels() { return vels ||= state.vels.slice(0, count); }, dynOk: state.dynOk,
+        artOk: state.artOk, artChecked: state.artChecked,
         expected: state.good + state.ok + state.miss,
         mean: count ? state.mean : null,
         spread: count > 1 ? Math.sqrt(Math.max(0, state.m2 / count)) : null };

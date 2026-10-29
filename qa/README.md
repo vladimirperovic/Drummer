@@ -9,13 +9,13 @@ Iz korena repozitorijuma:
 ```powershell
 npm ci --prefix qa
 npm --prefix qa test
-python -m unittest discover -s qa -p test_analysis.py -v
+python -m unittest discover -s qa -p "test_*.py" -v
 ```
 
 Za browser testove pokrenuti server u posebnom terminalu:
 
 ```powershell
-python -m http.server 8123 --bind 127.0.0.1
+python alati/server.py
 ```
 
 Zatim:

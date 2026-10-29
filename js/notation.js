@@ -121,8 +121,10 @@ export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine
   function drawHead(inst, x, y, dyn, slot, y0) {
     const g = el('g', { class: `head dyn${dyn}`, 'data-inst': inst.id, 'data-x': x, 'data-y': y }, notesLayer);
     for (let lp = -2; lp >= inst.pos; lp -= 2) el('line', { x1: x - 10, x2: x + 10, y1: y0 + lp * HALF, y2: y0 + lp * HALF, class: 'ledger' }, g);
-    if (inst.head === 'normal') {
+    if (inst.head === 'normal' || inst.head === 'rimshot') {
       el('ellipse', { cx: x, cy: y, rx: HEAD_W, ry: 4.4, transform: `rotate(-20 ${x} ${y})`, class: 'fillhead' }, g);
+      // Rimshot: glava precrtana kosom crtom
+      if (inst.head === 'rimshot') el('line', { x1: x - 8.5, y1: y + 6.5, x2: x + 8.5, y2: y - 6.5, class: 'xhead' }, g);
     } else if (inst.head === 'diamond') {
       el('path', { d: `M${x} ${y - 5.5} L${x + 6} ${y} L${x} ${y + 5.5} L${x - 6} ${y} Z`, class: 'fillhead' }, g);
     } else {

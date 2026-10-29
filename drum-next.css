@@ -1,0 +1,130 @@
+/* Provera trigera i uvoz bubnjarske deonice iz MusicXML-a */
+.trigger-check { max-width: 980px; }
+.trig-actions { flex-wrap: wrap; gap: 8px; }
+.trig-status { margin: 10px 0; font-variant-numeric: tabular-nums; }
+.trig-status.live { color: var(--red); font-weight: 600; }
+.trig-status.live::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; background: var(--red); animation: trig-pulse 1.2s ease-in-out infinite; }
+@keyframes trig-pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .trig-status.live::before { animation: none; } }
+.trig-advice { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.trig-advice li { padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 6px; line-height: 1.4; }
+.trig-advice li.warn { border-left-color: var(--red); }
+.trig-advice li.ok { border-left-color: var(--green); }
+.trig-scroll { max-width: 100%; overflow-x: auto; }
+.trig-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.trig-table th, .trig-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.trig-table th { font-weight: 600; color: var(--ink2); }
+.trig-table td.hot { color: var(--red); font-weight: 700; }
+.trig-hist { display: inline-flex; align-items: flex-end; gap: 2px; height: 22px; width: 96px; padding: 0 2px; border-bottom: 1px solid var(--ink2); vertical-align: middle; }
+.trig-hist i { flex: 1; min-width: 0; border-radius: 2px 2px 0 0; }
+.trig-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 18px; margin: 12px 0; }
+.trig-lists h4 { margin: 6px 0 4px; }
+.trig-lists ul { margin: 0; padding-left: 18px; }
+.trig-more details { margin-top: 8px; }
+.trig-more summary { cursor: pointer; font-weight: 600; }
+.score-drums { flex: none; padding: 10px 12px; border: 1px solid var(--line, #ddd); border-radius: 8px; background: var(--soft, #f6f6f4); }
+.score-drums h3 { margin: 0 0 8px; font-size: 15px; }
+.score-drums-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 14px; }
+.score-drums-form label { display: grid; gap: 3px; font-size: 12px; }
+.score-drums-form input[type=number] { width: 5.5em; }
+.score-drums-summary { margin: 8px 0 4px; font-size: 13px; }
+.score-drums details summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.score-drums-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 14px; max-height: 30vh; overflow: auto; padding: 6px 0; }
+.score-drums-map label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.score-drums-map span { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .score-drums { padding: 8px; } .score-drums-form button { width: 100%; } }
+
+/* Režimi: Note (notni list) i Pesma (indikator i tok pesme umesto nota). */
+.mode-switch { display: inline-flex; flex: none; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); }
+.mode-switch button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 4px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ink2); font-weight: 600; }
+.mode-switch button:hover { color: var(--ink); background: #ececea; }
+.mode-switch button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+.mode-switch .ico { width: 18px; height: 18px; }
+.song-stage { display: none; padding: 12px 20px 10px; border-bottom: 1px solid var(--line); }
+body[data-mode=song] .song-stage { display: block; }
+body[data-mode=song] .sheet, body[data-mode=song] #sheetResize, body[data-mode=song] .tempo, body[data-mode=song] .timing-options,
+body[data-mode=song] .tog:has(#playPattern), body[data-mode=song] .tog:has(#record), body[data-mode=song] .bar-actions,
+body[data-mode=song] #appNav [data-for=notes], body:not([data-mode=song]) #appNav [data-for=song], #section-song > .flow-steps { display: none; }
+body[data-mode=song] .sound-options { padding-left: 0; border-left: 0; }
+.song-stage-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
+.song-stage-head h1 { margin: 0; font: 700 22px/1.2 Georgia, "Times New Roman", serif; overflow-wrap: anywhere; }
+.song-stage-body { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.song-stage-body[hidden], .song-empty[hidden] { display: none; }
+.song-meter { --tone: rgb(142, 68, 173); display: grid; gap: 10px; align-content: center; padding: 12px 18px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.song-meter.idle { --tone: var(--muted); }
+.song-meter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.song-meter-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.song-meter-value { font: 700 26px/1.1 Georgia, "Times New Roman", serif; color: var(--tone); font-variant-numeric: tabular-nums; text-align: right; }
+.song-meter.idle .song-meter-value { font: 400 14px/1.3 system-ui, sans-serif; color: var(--muted); }
+/* Linija kao notni sistem, podeoci u milisekundama, a oznaka je notna glava u boji odstupanja. */
+.song-meter-track { position: relative; height: 34px; margin: 0 6px; }
+.song-meter-track::before { content: ''; position: absolute; left: 0; right: 0; top: 14px; height: 1.5px; background: var(--ink); }
+.song-meter-zone { position: absolute; top: 6px; height: 18px; left: 45%; width: 10%; background: var(--soft); border-radius: 3px; }
+.song-meter-tick { position: absolute; top: 9px; width: 1px; height: 11px; margin-left: -.5px; background: var(--ink2); }
+.song-meter-tick.center { top: 4px; height: 21px; width: 1.5px; background: var(--ink); }
+.song-meter-tick b { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.song-meter-tick.center b { display: none; }
+.song-meter-needle { position: absolute; top: 15px; left: 50%; width: 17px; height: 12px; border-radius: 50%; background: var(--tone); transform: translate(-50%, -50%) rotate(-20deg); box-shadow: 0 0 0 2px var(--paper); transition: left .12s ease-out, background-color .12s; }
+.song-meter.idle .song-meter-needle { background: var(--paper); border: 1.5px solid var(--muted); }
+.song-meter-scale { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: var(--ink2); }
+.song-timeline { width: 100%; height: 120px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.song-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 14px 16px; border: 1px dashed #c8c8c5; border-radius: 10px; }
+.song-empty p { margin: 0; }
+.song-panel .song-controls label { min-width: 120px; }
+.song-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 10px 0 6px; }
+.song-card { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.song-card span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.song-card strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.song-card[data-tone] { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 10%, white); }
+.song-card[data-tone] strong { color: var(--tone); }
+.song-scroll { max-width: 100%; overflow-x: auto; }
+.song-windows { display: block; }
+.song-window { cursor: pointer; }
+.song-window:hover rect:first-child { fill: rgba(0, 0, 0, .04); }
+.song-mid { stroke: #b7b7b1; stroke-width: 1; }
+.song-axis { font-size: 10px; fill: var(--muted); }
+.song-weak { margin: 8px 0; }
+.song-lane-nav { align-items: center; gap: 10px; }
+.song-lanes { display: block; width: 100%; min-width: 640px; height: auto; }
+.song-lane-label { font-size: 12px; fill: var(--ink2); }
+.song-lane-line { stroke: #ececea; }
+.song-bar { stroke: #b7b7b1; } .song-beat { stroke: #ececea; }
+.song-ref { stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.song-missed { fill: none; stroke: #d93025; stroke-width: 2; }
+.song-extra { stroke: #9a9a9a; stroke-width: 2; }
+.song-families td, .song-families th { white-space: nowrap; }
+@media (max-width: 1100px) and (min-width: 701px) { .mode-switch { margin-top: 4px; } }
+@media (max-width: 700px) {
+  /* Na telefonu prekidač su dve ikonice (nota, talas); naziv ostaje za čitač ekrana i title. */
+  .mode-switch { order: 4; }
+  .mode-switch button { min-height: 34px; min-width: 38px; justify-content: center; padding: 3px 8px; }
+  .mode-switch span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .hit-feedback { flex-basis: 120px; }
+  .bar-tools { order: 5; }
+  .bar-tools .status .txt { display: none; }
+  .song-stage { padding: 10px 12px; }
+  .song-stage-body { grid-template-columns: minmax(0, 1fr); }
+  .song-meter-value { font-size: 24px; }
+}
+
+/* Telefon: red 1 start i tempo; red 2 režim levo, MIDI i jezik desno; red 3 poslednji udarac; nova verzija
+   kao traka ispod. Komande i opcije su u redovima (bez vodoravnog skrolovanja), jer se sve koriste dok se svira. */
+@media (max-width: 700px) {
+  .bar { position: static; }
+  .bar-tools { display: contents; }
+  .play { order: 1; }
+  .tempo { order: 2; }
+  .mode-switch { order: 3; }
+  .bar-tools .status { order: 4; margin-left: auto; }
+  .language-picker { order: 5; }
+  .hit-feedback { order: 6; flex: 1 1 100%; }
+  .bar-tools .app-update { order: 7; flex: 1 1 100%; min-height: 34px; }
+  .bar-secondary { flex-wrap: wrap; overflow: visible; gap: 5px 3px; }
+  .bar-secondary .opts { display: contents; }
+  .bar-actions { order: -1; flex: 1 1 100%; flex-wrap: nowrap; gap: 5px; }
+  .bar-actions button, #scoreView, #importSong { flex: 1 1 auto; min-height: 32px; padding: 3px 6px; font-size: 11.5px; }
+  #captureRhythm::before { width: 8px; height: 8px; margin-right: 5px; }
+  .bar-secondary .tog { min-height: 30px; padding: 2px 6px 2px 5px; gap: 4px; font-size: 11.5px; }
+  .bar-secondary .tog input { width: 13px; height: 13px; }
+  .bar-secondary #clickSub { min-height: 30px; max-width: 118px; padding: 2px 4px; font-size: 11.5px; }
+}

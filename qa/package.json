@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test core.test.mjs practice.test.mjs expansion.test.mjs catalog.test.mjs agent.test.mjs kit-config.test.mjs score-view.test.mjs performance-report.test.mjs studio-next.test.mjs editor-tools.test.mjs routing-stats.test.mjs rhythm-capture.test.mjs ai-transcription.test.mjs drum-separator.test.mjs ai-reference.test.mjs",
-    "test:browser": "node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs && node layout-browser.mjs && node pointer-browser.mjs && node score-view-browser.mjs && node performance-report-browser.mjs && node ui-feedback-browser.mjs && node score-import-browser.mjs && node release-browser.mjs && node editor-tools-browser.mjs && node studio-next-browser.mjs && node routing-performance-browser.mjs && node rhythm-capture-browser.mjs && node ai-reference-browser.mjs",
+    "test": "node --test core.test.mjs practice.test.mjs expansion.test.mjs catalog.test.mjs agent.test.mjs kit-config.test.mjs score-view.test.mjs performance-report.test.mjs studio-next.test.mjs editor-tools.test.mjs routing-stats.test.mjs rhythm-capture.test.mjs ai-transcription.test.mjs drum-separator.test.mjs ai-reference.test.mjs drum-next.test.mjs",
+    "test:browser": "node browser.mjs && node expansion-browser.mjs && node catalog-browser.mjs && node library-browser.mjs && node config-browser.mjs && node layout-browser.mjs && node pointer-browser.mjs && node score-view-browser.mjs && node performance-report-browser.mjs && node ui-feedback-browser.mjs && node score-import-browser.mjs && node release-browser.mjs && node editor-tools-browser.mjs && node studio-next-browser.mjs && node routing-performance-browser.mjs && node rhythm-capture-browser.mjs && node ai-reference-browser.mjs && node drum-next-browser.mjs && node tooltips-browser.mjs",
     "test:ai": "node ai-transcription-browser.mjs && node drum-separator-browser.mjs",
-    "test:python": "python -m unittest discover -s . -p test_analysis.py -v"
+    "test:python": "python -m unittest discover -s . -p \"test_*.py\" -v"
   },
   "devDependencies": {
     "playwright": "1.62.0",

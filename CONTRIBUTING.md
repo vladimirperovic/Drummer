@@ -7,10 +7,10 @@ Use an issue for a bug or a feature proposal, or open a pull request with a focu
 Drummer is buildless HTML, CSS and browser ES modules. Python 3 serves the app; Node.js 24 and Python 3.12 are used in CI. No account, server database or application secrets are required.
 
 ```sh
-python -m http.server 8123 --bind 127.0.0.1
+python alati/server.py
 npm ci --prefix qa
 npm --prefix qa test
-python -m unittest discover -s qa -p test_analysis.py -v
+python -m unittest discover -s qa -p "test_*.py" -v
 ```
 
 For browser checks, keep the HTTP server running, run `npx --prefix qa playwright install chromium`, then `npm --prefix qa run test:browser`. Tests use isolated browser profiles and simulated MIDI. See [QA instructions](qa/README.md).

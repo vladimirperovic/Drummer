@@ -1,5 +1,5 @@
 import { bounded } from './practice.js';
-import { normalizeMidiMap, normalizeRouting } from './midi.js';
+import { normalizeMidiMap, normalizeRouting, withRimshot } from './midi.js';
 import { MidiRoutingUI } from './midi-routing-ui.js';
 import * as store from './storage.js';
 import { t } from './i18n.js';
@@ -66,7 +66,7 @@ export class DeviceProfiles {
       const data = JSON.parse(await file.text());
       if (this.host.isBusy()) return false;
       if (data.type !== 'drummer-kit-profile' || ![1, 2].includes(data.version) || !data.profile || typeof data.profile.name !== 'string' || !data.profile.map || typeof data.profile.map !== 'object' || Array.isArray(data.profile.map) || !data.profile.kitConfig) throw new Error();
-      const profile = normalizeProfile({ ...data.profile, id: store.newId() });
+      const profile = normalizeProfile({ ...data.profile, map: withRimshot(data.profile.map), id: store.newId() });
       const items = [...this.items, profile]; if (!store.saveProfiles(items)) return false;
       this.items = items; this.apply(profile); this.render(); this.host.toast('Profil je uvezen.'); return true;
     } catch { this.host.toast('Fajl nije ispravan profil bubnja.'); return false; }

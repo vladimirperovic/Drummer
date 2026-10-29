@@ -7,9 +7,9 @@ import { defaultMap, normalizeMidiMap, MidiInput } from '../js/midi.js';
 import { sessionKey, practiceRange } from '../js/practice.js';
 import { EN } from '../js/i18n.js';
 
-test('legacy profile and missing kit data retain the standard 13 articulations', () => {
+test('legacy profile and missing kit data retain the standard 13 articulations plus snare rimshot', () => {
   assert.deepEqual(normalizeProfile({ name: 'Old kit', map: {38:'snare'} }).kitConfig, DEFAULT_KIT);
-  assert.equal(kitInstruments().length, 13); assert.equal(isDefaultKit(undefined), true);
+  assert.equal(kitInstruments().length, 14); assert.equal(kitInstruments().some(i => i.id === 'rimshot'), true); assert.equal(isDefaultKit(undefined), true);
   for (const p of PRESETS) assert.deepEqual(missingKitInstruments(p), []);
 });
 test('kit counts reject coercion and clamp finite numeric values including one/two kicks', () => {
@@ -46,7 +46,8 @@ test('new instrument notes survive normalization, resizing and JSON round trip',
   const p=blankPattern(); for(const i of INSTRUMENTS.filter(i=>i.optional)) p.steps[i.id][0]=3;
   const q=resize(normalize(JSON.parse(JSON.stringify(p))),{bars:2});
   for(const i of INSTRUMENTS.filter(i=>i.optional)) assert.equal(q.steps[i.id][0],3);
-  assert.deepEqual(missingKitInstruments(q).map(i=>i.id),INSTRUMENTS.filter(i=>i.optional).map(i=>i.id));
+  // Rimshot is optional only for journal signatures; it is part of every kit's snare.
+  assert.deepEqual(missingKitInstruments(q).map(i=>i.id),INSTRUMENTS.filter(i=>i.optional && i.id!=='rimshot').map(i=>i.id));
   assert.deepEqual(missingKitInstruments(q,KIT_PRESETS.expanded),[]);
 });
 test('profile retains layout and separate bass mappings without aliasing its input', () => {

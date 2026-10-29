@@ -146,7 +146,7 @@ await scenario('Backup: preview is read-only, keep-both remaps conflicts, succes
 });
 
 await scenario('Arrangements: edit sections, meter and exact repeats, save, export and recover after reload', async page => {
-  await page.locator('#appNav [data-section=song]').click(); await page.locator('.subtabs [data-pane=arrangement]').click();
+  await page.locator('#appNav [data-section=practice]').click(); await page.locator('.subtabs [data-pane=arrangement]').click();
   await page.locator('#arrangementName').fill('Whole song'); await page.locator('#arrangementAdd').click();
   await page.locator('#arrangementSections [data-field=name]').fill('Intro'); await page.locator('#arrangementSections [data-field=name]').press('Tab');
   await page.locator('#arrangementSections [data-field=repeats]').fill('3'); await page.locator('#arrangementSections [data-field=repeats]').press('Tab');
@@ -155,7 +155,7 @@ await scenario('Arrangements: edit sections, meter and exact repeats, save, expo
   await page.locator('#arrangementSave').click(); const id = await page.locator('#arrangementSelect').inputValue(); assert.ok(id);
   const download = page.waitForEvent('download'); await page.locator('#arrangementExport').click(); assert.match((await download).suggestedFilename(), /aranzman/);
   await page.reload(); await page.waitForFunction(() => !!globalThis.__qa); await page.evaluate(() => __qa.studio.journalReady);
-  await page.locator('#appNav [data-section=song]').click(); await page.locator('.subtabs [data-pane=arrangement]').click(); await page.locator('#arrangementSelect').selectOption(id);
+  await page.locator('#appNav [data-section=practice]').click(); await page.locator('.subtabs [data-pane=arrangement]').click(); await page.locator('#arrangementSelect').selectOption(id);
   assert.equal(await page.locator('#arrangementSections [data-field=repeats]').inputValue(), '3'); assert.equal(await page.locator('#arrangementSections [data-field=beatUnit]').inputValue(), '8');
   assert.equal(await page.locator('#arrangementName').inputValue(), 'Whole song');
   await page.locator('#studio-arrangement').screenshot({ path: `${artifacts}/arrangement.png` });

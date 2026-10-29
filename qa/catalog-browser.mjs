@@ -94,7 +94,8 @@ await scenario('Workspace: sections and navigation occupy full width at desktop 
     await p.setViewportSize({ width, height: 1000 });
     const r = await p.evaluate(() => {
       const section = document.querySelector('#section-editor').getBoundingClientRect(), nav = document.querySelector('#appNav').getBoundingClientRect();
-      const buttons = [...document.querySelectorAll('#appNav button')].map(b => b.getBoundingClientRect());
+      // Only the current mode's menu is shown (Notes or Song).
+      const buttons = [...document.querySelectorAll('#appNav button')].filter(b => b.getClientRects().length).map(b => b.getBoundingClientRect());
       return { sectionWidth: section.width, navWidth: nav.width, navInside: buttons.every(b => b.left >= -1 && b.right <= innerWidth + 1 && b.height >= 44),
         overflow: document.documentElement.scrollWidth - innerWidth };
     });

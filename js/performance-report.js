@@ -88,7 +88,10 @@ export function performanceBar(session, loop, bar, index = null) {
 
 function drawHead(parent, inst, x, y, className, radius = 5.6) {
   const g = svgEl('g', { class: className }, parent);
-  if (inst.head === 'normal') svgEl('ellipse', { cx: x, cy: y, rx: radius, ry: radius * .7, transform: `rotate(-20 ${x} ${y})` }, g);
+  if (inst.head === 'normal' || inst.head === 'rimshot') {
+    svgEl('ellipse', { cx: x, cy: y, rx: radius, ry: radius * .7, transform: `rotate(-20 ${x} ${y})` }, g);
+    if (inst.head === 'rimshot') svgEl('path', { d: `M${x - radius - 2} ${y + radius}L${x + radius + 2} ${y - radius}`, fill: 'none' }, g);
+  }
   else if (inst.head === 'diamond') svgEl('path', { d: `M${x} ${y - radius}L${x + radius} ${y}L${x} ${y + radius}L${x - radius} ${y}Z` }, g);
   else {
     svgEl('path', { d: `M${x - radius} ${y - radius}L${x + radius} ${y + radius}M${x + radius} ${y - radius}L${x - radius} ${y + radius}`, fill: 'none' }, g);

@@ -1,11 +1,11 @@
 // Model vežbanja: opseg, dnevnik, programi i standardni MIDI izvoz.
-import { INSTRUMENTS, INST, normalize, slotsPerBar } from './patterns.js';
+import { INSTRUMENTS, INST, normalize, slotsPerBar, padKey } from './patterns.js';
+export { padKey } from './patterns.js';
 
 export const bounded = (value, low, high, fallback) => {
   const n = Number(value);
   return Number.isFinite(n) ? Math.min(high, Math.max(low, n)) : fallback;
 };
-export const padKey = id => id === 'hho' ? 'hh' : id;
 
 export function normalizeFocus(pattern, value = {}) {
   if (!value || typeof value !== 'object') value = {};
@@ -51,7 +51,8 @@ export function compactStats(stats) {
   const per = {};
   for (const [id, s] of Object.entries(stats.per)) {
     per[id] = { good: s.good, ok: s.ok, miss: s.miss, extra: s.extra, expected: s.expected,
-      mean: s.mean, spread: s.spread, dynamics: s.errs.length ? Math.round(100 * s.dynOk / s.errs.length) : null };
+      mean: s.mean, spread: s.spread, dynamics: s.errs.length ? Math.round(100 * s.dynOk / s.errs.length) : null,
+      articulation: s.artChecked ? Math.round(100 * s.artOk / s.artChecked) : null };
   }
   return { accuracy: stats.accuracy, all: { ...stats.all }, expected: stats.expected, per };
 }
@@ -70,7 +71,8 @@ export function normalizeSession(value) {
     all: counts(value.stats?.all), per: {} };
   for (const [id, s] of Object.entries(value.stats?.per || {})) {
     if (!Object.hasOwn(INST, id) || !s || typeof s !== 'object') continue;
-    stats.per[id] = { ...counts(s), mean: nullableNumber(s.mean), spread: nullableNumber(s.spread), dynamics: accuracy(s.dynamics) };
+    stats.per[id] = { ...counts(s), mean: nullableNumber(s.mean), spread: nullableNumber(s.spread), dynamics: accuracy(s.dynamics),
+      ...(s.articulation != null ? { articulation: accuracy(s.articulation) } : {}) };
   }
   // Preserve the first early hit (and negative device calibration) instead of
   // moving it onto the first beat. Other session events still start at zero.

@@ -11,6 +11,8 @@ const KEYWORDS = {
   import: 'midi mid uvoz import', print: 'pdf stampa print papir', focus: 'a-b ab petlja loop deo takt fokus', program: 'program rutina routine',
   trainer: 'trener ubrzaj tempo speed up tihi silent', ai: 'ai demucs adtof transkripcija transcription stem analiza',
   arrangement: 'aranzman arrangement deonice sections refren strofa', backing: 'podloga backing mp3 wav pjesma pesma brzina',
+  songplay: 'sviraj uz pesmu pjesmu play along samo bubanj bez bubnja rano kasno', songreport: 'izvestaj izvjestaj report pesma pjesma rano kasno',
+  triggers: 'trigeri triggers crosstalk dupli okidac double sensitivity threshold',
   stats: 'tacnost accuracy rezultat trenutno', journal: 'dnevnik journal istorija history napredak progress', replay: 'replay preslusaj slusaj listen',
   device: 'td-17 roland midi mapa map profil profile uredjaj', timing: 'strogost zvuk sound volume jacina tastatura keyboard', app: 'offline install pwa backup rezervna kopija mcp codex azuriranje',
   metro: 'metronom klik click', bpm: 'tempo bpm brzina speed', calib: 'latency kasnjenje kalibracija offset', kitConfigurator: 'set tomovi cinele raspored layout levoruki left',
@@ -39,9 +41,9 @@ export function createCommandSearch(host) {
   function build() {
     const out = [], seen = new Set();
     const add = item => { const key = item.group + item.label; if (item.label && !seen.has(key)) { seen.add(key); out.push(item); } };
-    const sectionName = id => document.querySelector(`#appNav [data-section="${id}"] span`)?.textContent || id;
-    for (const button of document.querySelectorAll('#appNav [data-section]')) {
-      const id = button.dataset.section, label = button.textContent.trim();
+    const sectionName = id => document.querySelector(`#appNav [data-section="${id}"] span`)?.textContent || document.getElementById(`section-${id}`)?.getAttribute('aria-label') || id;
+    for (const button of document.querySelectorAll('#appNav [data-section], #appNav [data-pane]')) {
+      const id = button.dataset.section || button.dataset.pane, label = button.textContent.trim();
       add({ group: 'Sekcije', label, keys: `${other(label)} ${KEYWORDS[id] || ''}`, run: () => navigate(id, { reveal: true }) });
     }
     for (const button of document.querySelectorAll('.subtabs [data-pane]')) {

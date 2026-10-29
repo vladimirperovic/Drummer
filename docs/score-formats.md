@@ -21,6 +21,7 @@ The MusicXML specification recommends `.musicxml` for plain documents and `.mxl`
 ## Scope and limits
 
 - This is an original-score **reading view**. It does not grade pitched instruments or automatically arrange piano music for drums. Existing drum practice, MIDI mapping and scoring remain separate.
+- A **drum part** (percussion clef or `unpitched` notes) can additionally become a practice pattern: choose the part, 1–8 bars and the grid, review the instrument map (score instrument name, GM `midi-unpitched` number or staff position) and open it in the editor. Repeats are not expanded, tremolos become single strokes and the selected bars must share one meter.
 - Supported root: `score-partwise`. Convert `score-timewise` using a notation program first.
 - Maximum input 10 MiB, expanded archive 16 MiB, 32 parts, 2,000 part-measures and 20,000 notes. Archive entry count is limited to 128.
 - Standard external MusicXML PUBLIC declarations are stripped without fetching a DTD. Internal/custom DTDs, entities and external image/resources are rejected. ZIP paths, lengths, compression and CRC are checked.

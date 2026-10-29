@@ -36,8 +36,8 @@ export function createDrumTranscriber({ onProgress = () => {} } = {}) {
     });
   }
   return {
-    prepare: ({ allowDownload = false, signal } = {}) => request('prepare', { allowDownload }, { signal }),
-    async transcribe({ channels, sampleRate }, { allowDownload = false, signal } = {}) {
+    prepare: ({ allowDownload = false, signal, backend = 'auto' } = {}) => request('prepare', { allowDownload, backend }, { signal }),
+    async transcribe({ channels, sampleRate }, { allowDownload = false, signal, backend = 'auto' } = {}) {
       if (sampleRate !== ADTOF_SAMPLE_RATE || !Array.isArray(channels) || !channels.length || channels.length > 2
         || channels.some(channel => !(channel instanceof Float32Array) || channel.length !== channels[0].length)) throw new Error('AI transkripcija zahteva audio na 44.100 Hz.');
       const audio = new Float32Array(channels[0].length);
@@ -48,7 +48,7 @@ export function createDrumTranscriber({ onProgress = () => {} } = {}) {
         for (let i = start; i < end; i++) { let value = 0; for (const channel of channels) value += channel[i]; audio[i] = value / channels.length; }
         if (end < audio.length) await new Promise(resolve => setTimeout(resolve, 0));
       }
-      return request('transcribe', { audio, allowDownload }, { signal }, [audio.buffer]);
+      return request('transcribe', { audio, allowDownload, backend }, { signal }, [audio.buffer]);
     },
     dispose,
   };
