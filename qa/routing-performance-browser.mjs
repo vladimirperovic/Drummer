@@ -19,6 +19,13 @@ async function scenario(name, run) {
     Object.defineProperty(navigator, 'requestMIDIAccess', { value: async () => ({ inputs: new Map([['kit-a', a], ['kit-b', b]]), outputs }) });
   });
   await page.route('**/js/main.js', async route => { const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge }); });
+  await page.route('**/js/kit-3d.js', async route => {
+    const response = await route.fetch(), body = await response.text();
+    const exposed = 'camera, targets, renderer, scene, partGroups,';
+    assert.ok(body.includes(exposed), '3D scheduling probe must attach to the live instance');
+    await route.fulfill({ response, body: body.replace(exposed,
+      'get __qaPendingFrame() { return frameId; }, get __qaActive() { return active(); }, ' + exposed) });
+  });
   try {
     await page.goto(base); await page.waitForFunction(() => !!globalThis.__routingQA && !!__routingPorts.a.onmidimessage);
     await run(page); assert.deepEqual(errors, []); results.push({ name, status: 'PASS' }); console.log('PASS ' + name);
@@ -28,6 +35,13 @@ async function scenario(name, run) {
   } finally { await context.close(); }
 }
 const openRouting = async page => { await page.locator('[data-panel=settings]').click(); await page.locator('#midiRouting summary').click(); };
+// Orbit damping converges per rendered frame, so elapsed time depends on GPU speed.
+// Wait for the actual visible scheduler to drain; a continuously rendering kit
+// still fails this bounded wait and the subsequent exact zero-frame assertions.
+const waitForIdleKit = page => page.waitForFunction(() => {
+  const kit = __routingQA.kit.three;
+  return kit?.__qaActive && kit.__qaPendingFrame === 0;
+}, null, { timeout: 15000, polling: 50 });
 
 await scenario('Routing UI learns real device/channel, shares no note collisions, and persists after reload', async page => {
   await openRouting(page); await page.locator('#routingInstrument').selectOption('crash2'); await page.locator('#routingLearn').click();
@@ -80,7 +94,7 @@ await scenario('Visible idle 3D renders zero frames; flash, pedal, camera and la
     const renderer = __routingQA.kit.three.renderer, render = renderer.render.bind(renderer); window.__renderCount = 0;
     renderer.render = (...args) => { __renderCount++; return render(...args); };
   });
-  await page.waitForTimeout(800); const settled = await page.evaluate(() => __renderCount); await page.waitForTimeout(700);
+  await waitForIdleKit(page); const settled = await page.evaluate(() => __renderCount); await page.waitForTimeout(700);
   metrics.idleFramesIn700ms = await page.evaluate(() => __renderCount) - settled; assert.equal(metrics.idleFramesIn700ms, 0);
   await page.evaluate(() => __routingQA.kit.three.pulse('snare')); await page.waitForFunction(() => { const target = __routingQA.kit.three.targets.get('snare')[0]; return !target.mesh.material.color.equals(target.base); });
   await page.waitForFunction(() => { const target = __routingQA.kit.three.targets.get('snare')[0]; return target.mesh.material.color.equals(target.base); });
@@ -107,7 +121,9 @@ await scenario('3D orbit damping settles, tab visibility pauses, and disposal ca
   const box = await page.locator('#kit3dHost canvas').boundingBox();
   const beforeCamera = await page.evaluate(() => __routingQA.kit.three.camera.position.toArray());
   await page.mouse.move(box.x + 10, box.y + 10); await page.mouse.down(); await page.mouse.move(box.x + 100, box.y + 50, { steps: 8 }); await page.mouse.up();
-  await page.waitForTimeout(1500); assert.notDeepEqual(await page.evaluate(() => __routingQA.kit.three.camera.position.toArray()), beforeCamera);
+  const settlingStarted = Date.now();
+  await waitForIdleKit(page); metrics.orbitSettlingMs = Date.now() - settlingStarted;
+  assert.notDeepEqual(await page.evaluate(() => __routingQA.kit.three.camera.position.toArray()), beforeCamera);
   const settled = await page.evaluate(() => __renderCount); await page.waitForTimeout(500); assert.equal(await page.evaluate(() => __renderCount), settled);
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); __routingQA.kit.three.pulse('snare'); });
   await page.waitForTimeout(500); assert.equal(await page.evaluate(() => __renderCount), settled);
