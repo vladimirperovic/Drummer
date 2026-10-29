@@ -1,5 +1,5 @@
 // Bump VERSION whenever a cached application file changes.
-const VERSION = '2026-10-29-roadmap-ai-2';
+const VERSION = '2026-10-29-search-1';
 const ROOT = new URL('./', self.location.href);
 const PREFIX = `drummer:${ROOT.pathname}:`;
 const CACHE = PREFIX + VERSION;
@@ -23,7 +23,7 @@ const ASSETS = ['./', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/main.js', 'js/patterns.js', 'js/notation.js', 'js/kit.js', 'js/audio.js', 'js/midi.js',
   'js/scoring.js', 'js/storage.js', 'js/practice.js', 'js/studio.js', 'js/backing.js', 'js/replay.js',
   'js/profiles.js', 'js/midi-file.js', 'js/workbench.js', 'js/printing.js', 'js/pwa.js', 'js/i18n.js',
-  'js/preset-catalog.js', 'js/workspace-view.js', 'js/kit-view.js', 'js/kit-3d.js', 'js/agent-tools.js',
+  'js/preset-catalog.js', 'js/workspace-view.js', 'js/navigation.js', 'js/command-search.js', 'js/kit-view.js', 'js/kit-3d.js', 'js/agent-tools.js',
   'js/kit-config.js', 'js/kit-config-ui.js', 'js/kit-config-2d.js',
   'js/vendor/three.module.js', 'js/vendor/three.core.js', 'js/vendor/OrbitControls.js', 'js/vendor/THREE-LICENSE.txt', 'js/kit-art-data.js',
   'assets/kit/drummer-2d.png', ...['kick', 'snare', 'tom1', 'tom2', 'tom3', 'rim', 'hihat', 'crash', 'ride', 'bell', 'crash2', 'hhpedal'].map(id => `assets/kit/mask-${id}.png`)];

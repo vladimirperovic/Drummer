@@ -37,7 +37,7 @@ Use **Undo / Redo** (Ctrl+Z / Ctrl+Shift+Z) to recover edits. Copy an inclusive 
 
 ## MIDI import and device profiles
 
-**Tools → MIDI import:** select a Standard MIDI file, track, channel, start position in quarter notes, 1–8 bars, time signature and quantization. Channel 10 is selected when present. Review the note map or copy the active device map. The preview counts imported, skipped and merged hits; import into the editor, then save.
+**Patterns → MIDI import:** select a Standard MIDI file, track, channel, start position in quarter notes, 1–8 bars, time signature and quantization. Channel 10 is selected when present. Review the note map or copy the active device map. The preview counts imported, skipped and merged hits; import into the editor, then save.
 
 Files must be type 0/1 with PPQ timing and at most 10 MB. Type 2 and SMPTE timing are unsupported. A section with tempo changes uses its starting tempo with a warning. Shorten or move sections that cross a time-signature change. Colliding hits retain the strongest dynamic level.
 
@@ -65,7 +65,7 @@ Click **☆** beside any built-in or saved pattern to add it to **Favorites**; c
 
 The library contains **94 patterns**: 14 basics and 20 new arrangements each for **Latin**, **Rock**, **Jazz** and **3/8**. Filter by category or search either language. Cards show meter and difficulty; the selected pattern includes a practice tip. These are original exercises and drum-set adaptations, not song transcriptions. Musical references: [jazz](https://www.drumeo.com/beat/?p=6953) and [bossa nova](https://www.drumeo.com/beat/the-bossa-nova/).
 
-The editor fills the width, with Patterns / Results / Settings below it. Drag the handle below the score to resize it, or focus the handle and use arrow keys. Select **Notation rows → 2 / 4 / 8** to distribute bars across rows (limited by the number of bars). **Notes only** expands notation while retaining transport controls; **Esc** returns to the editor. Playback automatically scrolls to the active row. View preferences are remembered.
+The score fills the width. Below it, one menu opens seven sections — Drum kit, Patterns, Edit, Practice, Song, Results and Settings — and becomes a bottom bar on phones. Song groups the AI analysis, the arrangement and the backing track as three steps; Results groups the current score, the journal and replay. Drag the handle below the score to resize it, or focus the handle and use arrow keys. Select **Notation rows → 2 / 4 / 8** to distribute bars across rows (limited by the number of bars). **Notes only** expands notation while retaining transport controls; **Esc** returns to the editor. Playback automatically scrolls to the active row. View preferences are remembered.
 
 Choose **Drum kit → 3D** for a detailed black-and-white line drawing with hidden rear edges. Drag to rotate, use the wheel or pinch to zoom, or use the rotation/zoom buttons and **Reset view**. With the canvas focused, left/right rotates, up/down or +/− zooms, and Home resets. White shells retain black drumhead centers that change color on hits; cymbals flash across their full surface. Playback, MIDI and keyboard hits use the same colors in 2D and 3D, without shrinking circles.
 
@@ -75,17 +75,17 @@ The original procedural model includes rims, tension rods, mounting hardware, cy
 
 ## MCP connector
 
-**Tools → MCP connector** shows connection status, an enable switch and the last call. Drummer exposes **13 WebMCP tools** to the open Codex browser for live state, pattern search/loading, favorites, tempo, playback options, start/stop, A–B focus, views, language and results. For example: “Find a jazz pattern, add it to favorites and set 100 BPM.” Click inside the app before starting audio for the first time.
+**Settings → App and data → MCP connector** shows connection status, an enable switch and the last call. Drummer exposes **13 WebMCP tools** to the open Codex browser for live state, pattern search/loading, favorites, tempo, playback options, start/stop, A–B focus, views, language and results. For example: “Find a jazz pattern, add it to favorites and set 100 BPM.” Click inside the app before starting audio for the first time.
 
 Keep the page open in a browser with WebMCP support. No separate MCP server, API key or Codex configuration change is required. Unsaved pattern edits cannot be discarded by the connector. There are no library-deletion or MIDI-mapping tools; results contain summaries without raw recordings. See [MCP.md](MCP.md) for the tool contract. Other browsers retain the ordinary app controls.
 
 ## Offline and printing
 
-**Tools → Offline app:** load once while the server is running and wait for the ready message. The same address then works offline with built-in sounds, patterns and local data. Use the install button or browser menu to install when supported. Reload local backing files after reopening. Custom sample kits need to have been loaded online first.
+**Settings → App and data:** load once while the server is running and wait for the ready message. The same address then works offline with built-in sounds, patterns and local data. Use the install button or browser menu to install when supported. Reload local backing files after reopening. Custom sample kits need to have been loaded online first.
 
 To update, start the server, check for updates, save pattern/program edits, stop practice and apply the new version. Saving failures prevent activation. Developers must change `VERSION` in `sw.js` whenever cached application files change.
 
-**Tools → Print / PDF:** select 1–4 bars per row, 1–8 repetitions and optional R/L sticking. The A4 preview includes title, tempo, meter, swing/groups and bar numbers, with three notation rows per page. Choose **Print / Save PDF**, then **Save as PDF**, A4, and disable browser headers.
+**Patterns → Print / PDF:** select 1–4 bars per row, 1–8 repetitions and optional R/L sticking. The A4 preview includes title, tempo, meter, swing/groups and bar numbers, with three notation rows per page. Choose **Print / Save PDF**, then **Save as PDF**, A4, and disable browser headers.
 
 ## Sound and data
 
@@ -99,7 +99,7 @@ Supported IDs: `kick`, `snare`, `xstick`, `hh`, `hho`, `hhp`, `tom1`, `tom2`, `t
 
 For an external instrument such as EZdrummer, route the MIDI output through a virtual MIDI port. On macOS, enable IAC Driver in Audio MIDI Setup and select it in both apps. Your module can also feed Drummer for scoring and an external instrument for sound.
 
-Patterns, settings, profiles, journals, programs and arrangements are local to the browser. **Tools → Backup and restore** exports all these records, favorites and MIDI routing. Select a backup to preview additions, conflicts, replacements and removals. Choose merge or replace, decide how duplicate IDs are handled, and optionally restore settings/current drafts before applying. Backing audio and downloaded models are excluded. Raw journal events migrate to IndexedDB and load on demand; the journal is paginated. Storage failures show a persistent warning with export/retry. Live statistics use incremental counts, mean and variance.
+Patterns, settings, profiles, journals, programs and arrangements are local to the browser. **Settings → App and data → Backup and restore** exports all these records, favorites and MIDI routing. Select a backup to preview additions, conflicts, replacements and removals. Choose merge or replace, decide how duplicate IDs are handled, and optionally restore settings/current drafts before applying. Backing audio and downloaded models are excluded. Raw journal events migrate to IndexedDB and load on demand; the journal is paginated. Storage failures show a persistent warning with export/retry. Live statistics use incremental counts, mean and variance.
 
 `alati/midirec.swift` is a macOS CoreMIDI recorder; `alati/analiza.py` analyzes velocity, double triggers, crosstalk, pedal activity and timing. Compile the recorder with `swiftc -O alati/midirec.swift -o alati/midirec` on macOS.
 
@@ -115,7 +115,7 @@ After a normal Stop or completed exercise, the journal shows **Your performance 
 
 ## AI audio
 
-In **Tools → AI audio**, choose a browser-supported audio file (including MP3), up to 100 MB and 10 minutes. Two separate actions are available:
+In **Song → Song analysis**, choose a browser-supported audio file (including MP3), up to 100 MB and 10 minutes. Two separate actions are available:
 
 1. **Isolate drums:** HT-Demucs produces a drums-only stem. Listen to drums or the original mix minus drums and export WAV.
 2. **Transcribe notes:** ADTOF processes the original mix or the extracted drums. Review tempo, five group mappings and notation; export MIDI or use a whole-song reference with original/drumless accompaniment. Extraction is optional and does not always improve transcription.

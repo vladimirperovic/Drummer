@@ -9,6 +9,7 @@ import { ArrangementEditor, compileArrangement } from './arrangements.js';
 import { BackupRestore } from './backup-restore.js';
 import * as store from './storage.js';
 import { getLanguage, t } from './i18n.js';
+import { navigate, currentView } from './navigation.js';
 
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -119,16 +120,13 @@ export class PracticeStudio {
     return [...all.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
-  show(panel) {
-    document.querySelector('[data-view=practice]').click();
-    for (const button of document.querySelectorAll('[data-studio]')) button.classList.toggle('active', button.dataset.studio === panel);
-    for (const name of ['focus', 'journal', 'backing', 'program', 'replay', 'arrangement']) if ($(`studio-${name}`)) $(`studio-${name}`).hidden = name !== panel;
-    if (panel === 'journal') this.renderJournal();
-    if (panel === 'replay') this.renderReplay();
-  }
+  show(panel) { navigate(panel); }
 
   bind() {
-    for (const button of document.querySelectorAll('[data-studio]')) button.onclick = () => this.show(button.dataset.studio);
+    document.addEventListener('drummer:pane', ({ detail }) => {
+      if (detail.pane === 'journal') this.renderJournal();
+      if (detail.pane === 'replay') this.renderReplay();
+    });
     const changeFocus = () => {
       if (this.host.isPlaying()) return;
       this.focus = normalizeFocus(this.host.getPattern(), { enabled: $('focusOn').checked,
@@ -248,7 +246,9 @@ export class PracticeStudio {
     this.sessions.unshift(session); this.selectedId = session.id;
     this.sessionCache.set(session.id, session); this.journalPage = 1;
     this.persistSession(session); this.renderJournal();
-    if (!this.run && ['manual', 'complete', 'duration'].includes(reason)) this.show('journal');
+    // Show the finished take, except while editing: recording to the grid
+    // should leave the edited notes on screen.
+    if (!this.run && ['manual', 'complete', 'duration'].includes(reason) && currentView().section !== 'editor') this.show('journal');
     return session;
   }
 

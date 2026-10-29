@@ -34,7 +34,9 @@ async function scenario(name, fn, options = {}) {
   }, options);
   if (!options.offline) await p.route('**/js/main.js', async route => { const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge }); });
   try {
-    await p.goto(base); await p.locator('#presets .load').first().waitFor();
+    await p.goto(base); await p.locator('#presets .load').first().waitFor({ state: 'attached' });
+    // A click unlocks browser audio, so scenarios about the locked state start on the home screen.
+    if (!options.home) await openLibrary(p);
     await fn(p, context); assert.deepEqual(errors, [], 'uncaught page errors');
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
   } catch (e) {
@@ -43,6 +45,7 @@ async function scenario(name, fn, options = {}) {
   } finally { await context.close(); }
 }
 const star = (p, id) => p.locator(`.favorite[data-pattern-id="${id}"]`);
+const openLibrary = async p => { await p.locator('#appNav [data-section=library]').click(); await p.locator('.subtabs [data-pane=library]').click(); };
 const firstId = PRESETS[0].id;
 
 await scenario('Library: pagination reaches all 94 unique presets; category and search reset pages', async p => {
@@ -65,7 +68,7 @@ await scenario('Library: starring does not load or edit a rhythm; favorites and 
   await star(p, id).click(); assert.equal(await star(p, id).getAttribute('aria-pressed'), 'true');
   assert.deepEqual(await call(p, 'get_pattern'), before); assert.equal((await call(p, 'get_state')).unsavedPattern, false);
   await p.locator('#favoritesOnly').click(); assert.equal(await p.locator('#presets .load').count(), 1);
-  await p.waitForTimeout(250); await p.reload(); await star(p, id).waitFor();
+  await p.waitForTimeout(250); await p.reload(); await openLibrary(p); await star(p, id).waitFor();
   assert.equal(await p.locator('#favoritesOnly').getAttribute('aria-pressed'), 'true'); assert.equal(await p.locator('#favoriteCount').innerText(), '1');
   await star(p, id).click(); assert.equal(await p.locator('#presets .load').count(), 0); assert.ok(await p.locator('#favoritesEmpty').isVisible());
   assert.equal(await p.evaluate(() => document.activeElement.id), 'favoritesOnly');
@@ -73,8 +76,8 @@ await scenario('Library: starring does not load or edit a rhythm; favorites and 
 });
 await scenario('Library: saved favorites retain IDs through renaming; copies are separate and deletion clears favorite', async p => {
   await star(p, 'saved-0').click();
-  await p.locator('#mine .load').first().click(); await p.locator('[data-view=editor]').click();
-  await p.locator('#edName').fill('Ritam Favorite Rock'); await p.locator('#edName').dispatchEvent('change'); await p.locator('#saveBtn').click();
+  await p.locator('#mine .load').first().click(); await p.locator('#appNav [data-section=editor]').click();
+  await p.locator('#edName').fill('Ritam Favorite Rock'); await p.locator('#edName').dispatchEvent('change'); await openLibrary(p); await p.locator('#saveBtn').click();
   assert.equal(await star(p, 'saved-0').getAttribute('aria-pressed'), 'true');
   await p.locator('#mine .item').first().getByRole('button', { name: 'Dupliraj', exact: true }).click();
   assert.equal(await p.locator('#favoriteCount').innerText(), '1'); assert.equal(await p.locator('#mine .favorite').nth(1).getAttribute('aria-pressed'), 'false');
@@ -115,7 +118,7 @@ await scenario('MCP: all tools register; live catalog pagination, favorites and 
   assert.equal(await star(p, firstId).getAttribute('aria-pressed'), 'true');
   const fav = await call(p, 'list_patterns', { favoritesOnly: true }); assert.equal(fav.total, 1); assert.equal(fav.patterns[0].favorite, true);
   assert.deepEqual((await call(p, 'get_pattern', { id: firstId })).pattern.steps, PRESETS[0].steps);
-  await p.locator('[data-view=tools]').click(); await p.locator('[data-tool=mcp]').click();
+  await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=app]').click();
   assert.match(await p.locator('#mcpStatus').innerText(), /spreman/); assert.equal(await p.locator('#mcpToolCount').innerText(), '13');
   await p.locator('#tool-mcp').screenshot({ path: artifacts + 'mcp-panel.png' });
 });
@@ -140,32 +143,32 @@ await scenario('MCP: bounded playback creates one journal entry; stop and repeat
   const result = await call(p, 'get_results', { limit: 1 }); assert.equal(result.sessionCount, 1); assert.equal(result.recent.length, 1);
   assert.ok(!('hits' in result.recent[0]) && !('timeline' in result.recent[0]));
   await call(p, 'stop'); assert.equal((await call(p, 'get_results')).sessionCount, 1);
-});
+}, { home: true });
 await scenario('MCP: dirty edits stay intact, invalid calls do not mutate and disabling survives reload', async p => {
-  await p.locator('[data-view=editor]').click(); await p.locator('#edName').fill('Unsaved test'); await p.locator('#edName').dispatchEvent('change');
+  await p.locator('#appNav [data-section=editor]').click(); await p.locator('#edName').fill('Unsaved test'); await p.locator('#edName').dispatchEvent('change');
   assert.equal((await call(p, 'load_pattern', { id: PRESETS[1].id })).error.code, 'UNSAVED_EDITS');
   assert.equal(await p.locator('#edName').inputValue(), 'Unsaved test');
   assert.equal((await call(p, 'set_tempo', { bpm: 999 })).error.code, 'INVALID_ARGUMENT');
-  await p.locator('[data-view=tools]').click(); await p.locator('[data-tool=mcp]').click(); await p.locator('#mcpEnabled').uncheck();
+  await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=app]').click(); await p.locator('#mcpEnabled').uncheck();
   assert.equal((await call(p, 'get_state')).error.code, 'DISABLED'); await p.waitForTimeout(250);
-  p.on('dialog', d => d.accept()); await p.reload(); await p.locator('#presets .load').first().waitFor();
+  p.on('dialog', d => d.accept()); await p.reload(); await p.locator('#presets .load').first().waitFor({ state: 'attached' }); await openLibrary(p);
   assert.equal((await call(p, 'set_tempo', { bpm: 100 })).error.code, 'DISABLED');
 });
 await scenario('MCP: unsupported browser keeps ordinary controls usable and displays guidance', async p => {
   await star(p, firstId).click(); await p.locator('#presetsNext').click();
-  await p.locator('[data-view=tools]').click(); await p.locator('[data-tool=mcp]').click();
+  await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=app]').click();
   assert.match(await p.locator('#mcpStatus').innerText(), /nema podršku/); assert.equal(await p.locator('#favoriteCount').innerText(), '1');
 }, { unsupported: true });
 await scenario('MCP: registration failure is shown without breaking the rhythm library', async p => {
-  await p.locator('[data-view=tools]').click(); await p.locator('[data-tool=mcp]').click();
-  assert.match(await p.locator('#mcpStatus').innerText(), /nije mogao/); await p.locator('#presetsNext').click();
+  await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=app]').click();
+  assert.match(await p.locator('#mcpStatus').innerText(), /nije mogao/); await openLibrary(p); await p.locator('#presetsNext').click();
   assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 5/);
 }, { rejectRegistration: true });
 await scenario('Library: favorites and pagination work offline and survive offline reload', async (p, context) => {
   await p.evaluate(async () => navigator.serviceWorker.ready); await p.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await context.setOffline(true); await p.reload(); await star(p, firstId).click();
+  await context.setOffline(true); await p.reload(); await openLibrary(p); await star(p, firstId).click();
   await p.locator('#presetsNext').click(); assert.match(await p.locator('#presetsPageInfo').innerText(), /2 \/ 5/);
-  await p.reload(); await star(p, firstId).waitFor(); assert.equal(await star(p, firstId).getAttribute('aria-pressed'), 'true');
+  await p.reload(); await openLibrary(p); await star(p, firstId).waitFor(); assert.equal(await star(p, firstId).getAttribute('aria-pressed'), 'true');
   await p.locator('#favoritesOnly').click(); assert.equal(await p.locator('#presets .load').count(), 1);
   assert.equal((await call(p, 'list_patterns', { favoritesOnly: true })).total, 1);
 }, { offline: true });

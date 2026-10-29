@@ -49,7 +49,7 @@ Use **Import score** for `.musicxml`, `.xml` or compressed `.mxl` files. For a p
 | File | Purpose in Drummer |
 | --- | --- |
 | `.musicxml`, `.xml`, `.mxl` | Original score reading view, including pitched music |
-| `.mid`, `.midi` | Tools → MIDI import: choose and map a percussion section into the rhythm editor |
+| `.mid`, `.midi` | Patterns → MIDI import: choose and map a percussion section into the rhythm editor |
 | Pattern `.json` | Import/export editable Drummer rhythms |
 | Audio, e.g. `.mp3`, `.wav` | Practice → Backing track: local audio accompaniment |
 
@@ -59,7 +59,7 @@ MusicXML viewing does not turn piano music into a drum exercise or assess pitche
 
 ## AI audio: drums and drum notes
 
-Open **Tools → AI audio** and choose an MP3 or another browser-decodable audio file, up to 100 MB / 10 minutes. **Isolate drums** runs Demucs locally, with drums-only listening, a mix without drums, and WAV export. **Transcribe notes** runs ADTOF on the original mix or extracted drums. Review the estimated tempo, five instrument groups and note suggestions, then export MIDI or apply a whole-song practice reference.
+Open **Song → Song analysis** and choose an MP3 or another browser-decodable audio file, up to 100 MB / 10 minutes. **Isolate drums** runs Demucs locally, with drums-only listening, a mix without drums, and WAV export. **Transcribe notes** runs ADTOF on the original mix or extracted drums. Review the estimated tempo, five instrument groups and note suggestions, then export MIDI or apply a whole-song practice reference.
 
 The first action explicitly downloads the selected model and a shared runtime: approximately **180.5 MB for Demucs** or **17.0 MB for ADTOF**; the 14.85 MB runtime is shared. Verified files are cached for reuse and can be deleted in the AI panel. Audio is never uploaded. Processing uses CPU/WASM workers, can take several minutes and substantial memory, and can be cancelled. Transcription is approximate: toms, hi-hat articulations and cymbal types are grouped, and MIDI velocity is a default rather than detected dynamics.
 
@@ -85,9 +85,9 @@ For Web MIDI, use a supported Chromium browser over HTTPS or localhost. Keyboard
 
 ## Local data and offline use
 
-Patterns, sessions and settings belong to the browser and origin. The public demo and localhost have separate data. **Tools → Backup and restore** exports patterns, full sessions, programs, profiles, favorites, arrangements and settings. Review merge/replace choices and conflicts before applying a restore. Audio files and downloaded AI models are not included. The journal stores recordings in IndexedDB and loads details on demand; storage failures still show export/retry actions.
+Patterns, sessions and settings belong to the browser and origin. The public demo and localhost have separate data. **Settings → App and data → Backup and restore** exports patterns, full sessions, programs, profiles, favorites, arrangements and settings. Review merge/replace choices and conflicts before applying a restore. Audio files and downloaded AI models are not included. The journal stores recordings in IndexedDB and loads details on demand; storage failures still show export/retry actions.
 
-Open Tools → Offline app and wait until it is ready before going offline. AI needs its optional downloads before offline use. See [privacy](PRIVACY.md).
+Open Settings → App and data and wait until it is ready before going offline. AI needs its optional downloads before offline use. See [privacy](PRIVACY.md).
 
 ## Development and deployment
 

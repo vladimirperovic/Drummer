@@ -23,7 +23,7 @@ await context.route('https://**/*', async route => {
   if (url.endsWith('/ort-wasm-simd-threaded.wasm')) return route.fulfill({ status: 200, contentType: 'application/wasm', body: wasm, headers: { 'Access-Control-Allow-Origin': '*' } });
   return route.abort();
 });
-await page.route('**/ai-fixture', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/ai-tools.css"><div id="view-tools"><nav></nav></div>' }));
+await page.route('**/ai-fixture', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/ai-tools.css"><section id="section-song" data-section-panel="song"></section>' }));
 const results = [];
 try {
   await page.goto(base + '/ai-fixture');
@@ -68,8 +68,8 @@ try {
     localStorage.setItem('drummer.language.v1', 'en');
     Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) });
   });
-  await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(base); await page.locator('#presets .load').first().waitFor();
-  await page.locator('[data-view=tools]').click(); await page.locator('[data-tool=ai]').click();
+  await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(base); await page.locator('#presets .load').first().waitFor({ state: 'attached' });
+  await page.locator('#appNav [data-section=song]').click(); await page.locator('.subtabs [data-pane=ai]').click();
   assert.match(await page.locator('#tool-ai h2').textContent(), /Song/);
   await page.locator('#aiAudioFile').setInputFiles({ name: 'synthetic-kicks.wav', mimeType: 'audio/wav', buffer: Buffer.from(encodeAiWav([audio], 44100)) });
   await page.waitForFunction(() => !__aiIntegration.ai.busy && !document.getElementById('aiTranscribe').disabled);
@@ -77,7 +77,7 @@ try {
   await page.locator('#aiApply').click();
   assert.ok(await page.evaluate(() => __aiIntegration.studio.arrangements.draft.sections.length > 0));
   assert.equal(await page.evaluate(() => __aiIntegration.studio.backing.buffer.duration), 8);
-  await page.locator('[data-view=tools]').click(); await page.locator('[data-tool=ai]').click();
+  await page.locator('#appNav [data-section=song]').click(); await page.locator('.subtabs [data-pane=ai]').click();
   await page.screenshot({ path: artifacts + 'ai-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

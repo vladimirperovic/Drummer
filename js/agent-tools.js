@@ -98,6 +98,7 @@ export function createDrummerTools(host) {
     }),
     tool('stop', 'Stop playback, a pending start, replay and the practice program. A running exercise is finalized in the journal, as with the app Stop button.', object(), false, () => { host.stop(); return state(); }),
     tool('set_view', 'Change visible panels, 2D/3D drum view, notes-only mode or notation rows. Does not alter notes or stop playback.', { ...object({
+      section: choice(['kit', 'library', 'editor', 'practice', 'song', 'results', 'settings']),
       view: choice(['kit', 'editor', 'practice', 'tools']), panel: choice(['library', 'stats', 'settings']),
       kitView: choice(['2d', '3d']), notesOnly: bool, rows: { type: 'integer', enum: [0, 1, 2, 4, 8] },
     }), minProperties: 1 }, false, async args => { await host.setView(args); return state(); }),

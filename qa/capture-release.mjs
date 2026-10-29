@@ -17,7 +17,7 @@ await page.route('**/js/main.js', async route => {
 });
 try {
   await page.goto(process.env.DRUMMER_URL || 'http://127.0.0.1:8123');
-  await page.locator('#presets .load').first().waitFor();
+  await page.locator('#presets .load').first().waitFor({ state: 'attached' });
   await page.locator('#kit2dHost [data-play-ready=true]').first().waitFor({ state: 'attached', timeout: 2000 }).catch(() => {});
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: output + 'drummer-desktop.png' });

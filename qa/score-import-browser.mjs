@@ -36,7 +36,7 @@ async function scenario(name, fn, url = base, offline = false) {
   page.on('request', request => { if (/^https?:/.test(request.url()) && !request.url().startsWith(new URL(url).origin)) foreign.push(request.url()); });
   await page.addInitScript(() => { localStorage.setItem('drummer.language.v1', 'en'); Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) }); });
   try {
-    await page.goto(url); await page.locator('#presets .load').first().waitFor(); await fn(page, context);
+    await page.goto(url); await page.locator('#presets .load').first().waitFor({ state: 'attached' }); await fn(page, context);
     assert.deepEqual(errors, []); assert.deepEqual(foreign, [], 'score import never requests remote resources');
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
   } catch (error) {
@@ -142,7 +142,7 @@ try {
   await scenario('MusicXML: deployed subpath resolves local runtime and opens a score offline after preparation', async (page, context) => {
     await page.waitForFunction(() => navigator.serviceWorker.controller, { timeout: 15000 });
     await upload(page, 'online.musicxml', Buffer.from(xml)); await page.locator('#scoreImportClose').click();
-    await context.setOffline(true); await page.reload(); await page.locator('#presets .load').first().waitFor();
+    await context.setOffline(true); await page.reload(); await page.locator('#presets .load').first().waitFor({ state: 'attached' });
     await upload(page, 'offline.mxl', mxl);
     assert.equal(await page.locator('#scoreImportTitle').textContent(), 'Piano integration fixture');
     assert.match(await page.locator('script[src*="opensheetmusicdisplay"]').getAttribute('src'), /\/Drummer\/js\/vendor\//);

@@ -13,3 +13,14 @@ The storage/performance priorities are also implemented: raw sessions use Indexe
 Additional work includes played-rhythm capture, 20-pattern library pages with real notation previews, and optional local AI audio tools. Demucs extracts a drum stem; ADTOF proposes five-group drum notes for review, MIDI export and whole-song practice. Models download only after an explicit action and are not bundled. CPU/WASM separation can be slow or exceed browser memory; transcription is approximate. ADTOF is non-commercial CC BY-NC-SA 4.0, separate from the MIT app. See the [guide](../README.en.md) and [model notices](../THIRD_PARTY_NOTICES.md).
 
 Further quality work can broaden physical MIDI hardware/browser coverage, evaluate GPU acceleration, and improve transcription detail. These are future possibilities, not current guarantees.
+
+## Proposed next — 2026-10-29
+
+See the [audit](AUDIT-2026-10-29.md) for the reasoning behind each item.
+
+1. **Command search (Ctrl+K):** one field that finds any section, setting or pattern in Serbian or English and opens the exact sub-tab.
+2. **Microphone input:** onset detection for practice pads, acoustic kits and phones without Web MIDI, reusing latency calibration and scoring.
+3. **Daily plan from the journal:** a 10–15 minute program built from the weakest bars/instruments and a tempo ladder from 80% of the best BPM, with practice streaks and a weekly goal.
+4. **Share by link or QR code:** encode a pattern, program or arrangement in the URL fragment, validated like JSON import; no server.
+5. **Phone/tablet practice mode:** screen wake lock during practice, dark theme, landscape notes-only layout and a large start/stop target.
+

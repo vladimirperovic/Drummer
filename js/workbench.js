@@ -1,17 +1,14 @@
 import { INSTRUMENTS } from './patterns.js';
 import { parseMidiFile, metadataAt, midiToPattern, fileDrumMap } from './midi-file.js';
 import { renderPrint } from './printing.js';
+import { navigate } from './navigation.js';
 const $ = id => document.getElementById(id);
 
 export class Workbench {
   constructor(host) { this.host = host; this.file = null; this.loadToken = 0; this.bind(); this.playState(); }
-  show(name) {
-    for (const b of document.querySelectorAll('[data-tool]')) b.classList.toggle('active', b.dataset.tool === name);
-    for (const panel of document.querySelectorAll('#view-tools [id^="tool-"]')) panel.hidden = panel.id !== `tool-${name}`;
-    if (name === 'print') this.printPreview();
-  }
+  show(name) { navigate(name); }
   bind() {
-    for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => this.show(b.dataset.tool);
+    document.addEventListener('drummer:pane', ({ detail }) => { if (detail.pane === 'print') this.printPreview(); });
     $('midiFile').onchange = async e => {
       const file = e.target.files[0]; e.target.value = ''; if (!file) return;
       const token = ++this.loadToken; this.file = null; this.playState();
@@ -47,7 +44,7 @@ export class Workbench {
       const result = this.preview(); if (!result || !result.imported) return;
       if (!this.host.loadPattern(result.pattern)) return;
       this.host.markDirty(); this.host.render();
-      document.querySelector('[data-view=editor]').click(); this.host.toast('MIDI je uvezen. Sačuvaj ritam u biblioteku.');
+      navigate('editor'); this.host.toast('MIDI je uvezen. Sačuvaj ritam u biblioteku.');
     };
     for (const id of ['printBars', 'printRepeats', 'printSticking']) $(id).onchange = () => this.printPreview();
     $('printRefresh').onclick = () => this.printPreview();

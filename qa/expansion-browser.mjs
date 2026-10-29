@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { resolve, extname, sep } from 'node:path';
 import { fixture, smf, track, end } from './midi-fixtures.mjs';
+const lib = async page => { await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=library]').click(); };
 
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER || '';
@@ -29,7 +30,7 @@ async function scenario(name, fn, { offline = false } = {}) {
   try {
     await p.goto(base);
     if (!offline) { await p.waitForFunction(() => !!window.__qa, null, { timeout: 15000 }); await p.evaluate(() => __qa.studio.journalReady); }
-    else await p.locator('#presets .load').first().waitFor();
+    else await p.locator('#presets .load').first().waitFor({ state: 'attached' });
     await fn(p, context); assert.deepEqual(errors, [], 'uncaught page errors');
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
   } catch (e) {
@@ -38,10 +39,13 @@ async function scenario(name, fn, { offline = false } = {}) {
     results.push({ name, status: 'FAIL', error: e.stack, errors, screenshot }); console.log(`FAIL ${name}: ${e.message}`);
   } finally { await context.close(); }
 }
-const editor = async p => p.locator('[data-view=editor]').click();
-const tools = async (p, name) => { await p.locator('[data-view=tools]').click(); await p.locator(`[data-tool=${name}]`).click(); };
-const studio = async (p, name) => { await p.locator('[data-view=practice]').click(); await p.locator(`[data-studio=${name}]`).click(); };
-const setting = async p => p.locator('[data-panel=settings]').click();
+const editor = async p => p.locator('[data-section=editor]').click();
+const SECTION = { import: 'library', print: 'library', offline: 'settings', mcp: 'settings', ai: 'song', backing: 'song', arrangement: 'song',
+  focus: 'practice', program: 'practice', trainer: 'practice', journal: 'results', replay: 'results', stats: 'results' };
+const PANE = { offline: 'app', mcp: 'app' };
+const pane = async (p, name) => { await p.locator(`#appNav [data-section=${SECTION[name]}]`).click(); await p.locator(`.subtabs [data-pane=${PANE[name] || name}]`).click(); };
+const tools = pane, studio = pane;
+const setting = async p => { await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=device]').click(); };
 const input = async (p, id, value) => { await p.locator(`#${id}`).fill(String(value)); await p.locator(`#${id}`).press('Tab'); };
 const uploadMidi = async (p, data = fixture()) => {
   await tools(p, 'import'); await p.locator('#midiFile').setInputFiles({ name: 'song.mid', mimeType: 'audio/midi', buffer: Buffer.from(data) });
@@ -101,7 +105,7 @@ await scenario('Expansion: MIDI import previews channel, meter, mapping and dyna
   await p.locator('[data-midi-note="60"]').selectOption('tom1'); await p.locator('#midiImportApply').click();
   const pattern = await p.evaluate(() => __qa.pattern);
   assert.equal(pattern.steps.snare[2], 1); assert.equal(pattern.steps.tom1[8], 2); assert.equal(pattern.beats, 6);
-  await p.locator('#saveBtn').click(); await p.reload(); await p.waitForFunction(() => !!window.__qa);
+  await lib(p); await p.locator('#saveBtn').click(); await p.reload(); await p.waitForFunction(() => !!window.__qa);
   assert.equal(await p.evaluate(() => __qa.pattern.steps.crash2[6]), 3);
 });
 await scenario('Expansion: MIDI track/channel and start selection can be changed before importing', async p => {
@@ -162,11 +166,12 @@ await scenario('Expansion: profile controls are locked during exercise and progr
 });
 await scenario('Expansion: English covers all static screens, instrument labels and accessibility text', async p => {
   await p.locator('#languageSelect').selectOption('en'); await p.waitForFunction(() => document.documentElement.lang === 'en');
-  for (const name of ['kit','editor','practice','tools']) await p.locator(`[data-view=${name}]`).click();
-  for (const name of ['focus','journal','backing','program','replay']) await studio(p,name);
+  for (const name of ['kit','library','editor','practice','song','results','settings']) await p.locator(`#appNav [data-section=${name}]`).click();
+  for (const name of ['focus','program','trainer','journal','replay','stats','backing','arrangement','ai']) await studio(p,name);
   for (const name of ['import','print','offline']) await tools(p,name);
+  await p.locator('.subtabs [data-pane=timing]').click();
   await setting(p);
-  assert.equal(await p.locator('[data-view=practice]').innerText(), 'Practice'); assert.equal(await p.locator('[data-panel=settings]').innerText(), 'Settings');
+  assert.equal(await p.locator('#appNav [data-section=practice]').innerText(), 'Practice'); assert.equal(await p.locator('#appNav [data-section=settings]').innerText(), 'Settings');
   assert.equal(await p.locator('#profileSave').innerText(), 'Save profile');
   assert.match(await p.locator('#mapTable').innerText(), /Snare/);
   assert.match(await p.locator('#playBtn').getAttribute('title'), /Space/);
@@ -182,17 +187,17 @@ await scenario('Expansion: language persists, toggles back, and does not change 
   await editor(p); await input(p, 'edName', 'Moja pesma čć Ritmovi'); const original = await p.evaluate(() => JSON.stringify(__qa.pattern.steps));
   await p.locator('#languageSelect').selectOption('en'); assert.equal(await p.locator('#edName').inputValue(), 'Moja pesma čć Ritmovi');
   p.once('dialog', d => d.accept('Moja pesma čć Ritmovi'));
-  await p.locator('#saveBtn').click(); await p.reload(); await p.waitForFunction(() => !!window.__qa);
-  assert.equal(await p.locator('#languageSelect').inputValue(), 'en'); assert.equal(await p.locator('[data-view=tools]').innerText(), 'Tools');
+  await lib(p); await p.locator('#saveBtn').click(); await p.reload(); await p.waitForFunction(() => !!window.__qa);
+  assert.equal(await p.locator('#languageSelect').inputValue(), 'en'); assert.equal(await p.locator('#appNav [data-section=song]').innerText(), 'Song');
   assert.equal(await p.evaluate(() => JSON.stringify(__qa.pattern.steps)), original);
   assert.equal(await p.locator('#mine .load span').first().innerText(), 'Moja pesma čć Ritmovi');
-  await p.locator('#languageSelect').selectOption('sr'); assert.equal(await p.locator('[data-view=tools]').innerText(), 'Alati');
+  await p.locator('#languageSelect').selectOption('sr'); assert.equal(await p.locator('#appNav [data-section=song]').innerText(), 'Pesma');
 });
 await scenario('Expansion: English translates live errors, score counts, journal and confirmations', async p => {
   await p.locator('#languageSelect').selectOption('en');
   await p.evaluate(async () => { __qa.settings.countIn=false; __qa.settings.loop=false; __qa.setBpm(260); await __qa.start(); });
   await p.waitForFunction(() => !__qa.play.on && __qa.studio.sessions.length);
-  await p.locator('[data-panel=stats]').click(); assert.match(await p.locator('#counts').innerText(), /missed/);
+  await studio(p,'stats'); assert.match(await p.locator('#counts').innerText(), /missed/);
   await studio(p,'journal'); assert.match(await p.locator('#sessionDetail').innerText(), /No earlier comparable session/);
   let message; p.once('dialog', async d => { message = d.message(); await d.dismiss(); });
   await p.locator('[data-delete-session]').click(); assert.match(message, /Delete this session/);
@@ -240,7 +245,7 @@ await scenario('Expansion: PWA manifest, icons and all app modules are cached fo
   const cached = await p.evaluate(async()=>{const keys=await caches.keys();const c=await caches.open(keys.find(k=>k.startsWith('drummer:')));return(await c.keys()).map(r=>new URL(r.url).pathname);});
   for(const path of ['/index.html','/js/i18n.js','/js/midi-file.js','/js/printing.js']) assert.ok(cached.includes(path));
   await p.locator('#languageSelect').selectOption('en'); await context.setOffline(true); await p.reload();
-  await p.locator('#presets .load').first().waitFor(); assert.equal(await p.locator('[data-view=tools]').innerText(),'Tools');
+  await p.locator('#presets .load').first().waitFor({ state: 'attached' }); assert.equal(await p.locator('#appNav [data-section=song]').innerText(),'Song');
   await p.locator('#countIn').uncheck(); await p.locator('#loop').uncheck(); await input(p,'bpm',260);
   await p.locator('#playBtn').click(); await p.waitForFunction(()=>document.querySelector('#playBtn').textContent.includes('Stop'));
   await p.waitForFunction(()=>document.querySelector('#playBtn').textContent.includes('Start'));
@@ -279,7 +284,7 @@ await scenario('Expansion: a real PWA update protects edits and storage failures
     await setting(p); await input(p,'calib',37); await input(p,'profileName','Update profile'); await p.locator('#profileSave').click();
     await tools(p,'offline'); version = 'qa-after'; await p.locator('#pwaCheck').click();
     await p.locator('#pwaUpdate').waitFor();
-    await p.locator('[data-view=kit]').click();
+    await p.locator('#appNav [data-section=kit]').click();
     assert.equal(await p.locator('#appUpdate').isVisible(),true);
     assert.equal(await p.locator('#appUpdate').innerText(),'Update available');
     await p.setViewportSize({width:390,height:844});
@@ -289,7 +294,7 @@ await scenario('Expansion: a real PWA update protects edits and storage failures
     assert.match(await p.locator('#pwaStatus').innerText(), /save pattern and program/);
     assert.equal(await p.evaluate(() => window.__beforeUpdate), true);
     let savePrompt; p.once('dialog', async d => { savePrompt = d.message(); await d.accept('Saved through update'); });
-    await p.locator('[data-panel=library]').click(); await p.locator('#saveBtn').click(); assert.equal(savePrompt,'Pattern name:'); await tools(p,'offline');
+    await p.locator('#appNav [data-section=library]').click(); await p.locator('.subtabs [data-pane=library]').click(); await lib(p); await p.locator('#saveBtn').click(); assert.equal(savePrompt,'Pattern name:'); await tools(p,'offline');
     await p.evaluate(() => { window.__originalSet = Storage.prototype.setItem; Storage.prototype.setItem = () => { throw new Error('quota'); }; });
     await p.locator('#pwaUpdate').click(); assert.match(await p.locator('#pwaStatus').innerText(), /Export a backup/);
     assert.equal(await p.evaluate(() => window.__beforeUpdate), true);

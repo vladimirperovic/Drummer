@@ -21,9 +21,9 @@ async function scenario(name, fn) {
   });
   await page.route('**/js/main.js', async route => { const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge }); });
   try {
-    await page.goto(base); await page.locator('#presets .load').first().waitFor();
+    await page.goto(base); await page.locator('#presets .load').first().waitFor({ state: 'attached' });
     await page.waitForFunction(() => globalThis.__editorQA?.tools);
-    await page.locator('[data-view=editor]').click();
+    await page.locator('#appNav [data-section=editor]').click();
     await page.evaluate(() => __editorQA.loadPattern(__editorQA.blankPattern({ bars: 2, name: 'Editor test' })));
     await fn(page); assert.deepEqual(errors, []);
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
@@ -39,10 +39,11 @@ await scenario('Editor: undo/redo, save-as reset and ordinary save keep a correc
   await cell(page, 0).click(); assert.equal((await state(page)).steps.snare[0], 2);
   await page.keyboard.press('Control+z'); assert.equal((await state(page)).steps.snare[0], 0);
   await page.keyboard.press('Control+Shift+z'); assert.equal((await state(page)).steps.snare[0], 2);
-  await page.locator('#saveBtn').click(); assert.equal(await page.evaluate(() => __editorQA.dirty), false);
+  await page.locator('#quickSave').click(); assert.equal(await page.evaluate(() => __editorQA.dirty), false);
+  assert.equal(await page.locator('#quickSave').isVisible(), false);
   assert.equal(await page.locator('#editorUndo').isEnabled(), false);
   await cell(page, 0).click(); assert.equal((await state(page)).steps.snare[0], 3);
-  await page.locator('#saveBtn').click(); assert.equal(await page.evaluate(() => __editorQA.dirty), false);
+  await page.locator('#appNav [data-section=library]').click(); await page.locator('#saveBtn').click(); await page.locator('#appNav [data-section=editor]').click(); assert.equal(await page.evaluate(() => __editorQA.dirty), false);
   await page.locator('#editorUndo').click(); assert.equal((await state(page)).steps.snare[0], 2); assert.ok(await page.evaluate(() => __editorQA.dirty));
   await page.locator('#editorRedo').click(); assert.equal((await state(page)).steps.snare[0], 3); assert.equal(await page.evaluate(() => __editorQA.dirty), false);
 });
@@ -73,7 +74,7 @@ await scenario('Editor: recording enabled during playback groups all recorded hi
   });
   assert.ok((await state(page)).steps.snare.filter(Boolean).length > 1);
   assert.equal(await page.evaluate(() => __editorQA.tools.history.past.length), 1);
-  await page.locator('[data-view=editor]').click();
+  await page.locator('#appNav [data-section=editor]').click();
   await page.locator('#editorUndo').click(); assert.equal((await state(page)).steps.snare.some(Boolean), false);
 });
 

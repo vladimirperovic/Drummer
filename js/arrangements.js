@@ -2,6 +2,7 @@ import { normalize, resize, barMs } from './patterns.js';
 import { bounded } from './practice.js';
 import * as store from './storage.js';
 import { t } from './i18n.js';
+import { navigate, adoptPane } from './navigation.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export function normalizeArrangement(value = {}) {
@@ -26,11 +27,9 @@ export class ArrangementEditor {
   constructor(studio) {
     this.studio = studio; this.items = store.loadArrangements().map(normalizeArrangement).filter(a => a.id);
     const draft = store.loadArrangementDraft(); this.draft = normalizeArrangement(draft || { name: t('Moja pesma') }); this.dirty = !!draft;
-    const tabs = document.querySelector('[data-studio=program]').parentElement, button = document.createElement('button');
-    button.dataset.studio = 'arrangement'; button.textContent = 'Aranžmani'; button.onclick = () => studio.show('arrangement'); tabs.append(button);
     const panel = document.createElement('section'); panel.id = 'studio-arrangement'; panel.className = 'studio-panel'; panel.hidden = true;
     panel.innerHTML = `<h3>Aranžman cele pesme</h3><p>Dodaj uvod, strofu, refren i prelaz. Svaka deonica čuva svoj ritam, meru, tempo i tačan broj ponavljanja.</p><div class="row"><select id="arrangementSelect" aria-label="Sačuvani aranžmani"></select><button id="arrangementNew">Novi aranžman</button><button id="arrangementSave">Sačuvaj aranžman</button><button id="arrangementDelete">Obriši aranžman</button></div><label>Naziv pesme <input id="arrangementName" type="text" maxlength="120" data-user-text></label><div class="row"><button id="arrangementAdd">Dodaj trenutni ritam kao deonicu</button><button id="arrangementExport">Izvezi aranžman</button><label class="button">Uvezi aranžman<input id="arrangementImport" type="file" accept=".json,application/json" hidden></label></div><ol id="arrangementSections" class="program-list"></ol><p id="arrangementSummary" aria-live="polite"></p><div class="row"><button id="arrangementStart">▶ Pokreni aranžman</button><button id="arrangementStop">■ Zaustavi aranžman</button></div><p id="arrangementStatus" role="status"></p>`;
-    document.getElementById('studio-program').after(panel); this.panel = panel;
+    adoptPane(panel, 'arrangement', 'song'); this.panel = panel;
     const $ = id => panel.querySelector('#' + id); this.$ = $;
     const abandon = () => !this.dirty || confirm(t('Odbaciti nesačuvane izmene aranžmana?'));
     $('arrangementNew').onclick = () => { if (abandon()) { this.draft = normalizeArrangement({ name: t('Moja pesma') }); this.dirty = false; this.render(); } };
@@ -56,7 +55,7 @@ export class ArrangementEditor {
     $('arrangementSections').onclick = event => {
       const button = event.target.closest('[data-action]'); if (!button || this.busy) return;
       const index = Number(button.dataset.index), sections = this.draft.sections, action = button.dataset.action;
-      if (action === 'edit') { if (this.studio.host.loadPattern(sections[index].pattern)) document.querySelector('[data-view=editor]').click(); return; }
+      if (action === 'edit') { if (this.studio.host.loadPattern(sections[index].pattern)) navigate('editor'); return; }
       if (action === 'replace') sections[index].pattern = structuredClone(this.studio.host.getPattern());
       if (action === 'remove') sections.splice(index, 1);
       if (action === 'copy' && sections.length < 128) sections.splice(index + 1, 0, structuredClone(sections[index]));

@@ -34,7 +34,7 @@ async function scenario(name, run) {
     results.push({ name, status: 'FAIL', error: error.stack, errors, screenshot }); console.error('FAIL ' + name + ': ' + error.stack);
   } finally { await context.close(); }
 }
-const openRouting = async page => { await page.locator('[data-panel=settings]').click(); await page.locator('#midiRouting summary').click(); };
+const openRouting = async page => { await page.locator('#appNav [data-section=settings]').click(); await page.locator('.subtabs [data-pane=device]').click(); await page.locator('#midiRouting summary').click(); };
 // Orbit damping converges per rendered frame, so elapsed time depends on GPU speed.
 // Wait for the actual visible scheduler to drain; a continuously rendering kit
 // still fails this bounded wait and the subsequent exact zero-frame assertions.

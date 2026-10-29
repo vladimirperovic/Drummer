@@ -24,7 +24,7 @@ async function scenario(name,fn,options={}) {
   catch(e){await p.screenshot({path:dir+`failure-${results.length+1}.png`,fullPage:true}).catch(()=>{});results.push({name,status:'FAIL',error:e.stack,errors});console.log('FAIL '+name+': '+e.message);}
   finally{await context.close();}
 }
-const open = async p => {await p.locator('[data-view=kit]').click();await p.locator('#kitConfigurator summary').click();};
+const open = async p => {await p.locator('#appNav [data-section=kit]').click();await p.locator('#kitConfigurator summary').click();};
 const expanded = async p => {await open(p);await p.locator('#kitPreset').selectOption('expanded');};
 const three = async p => {await p.locator('#kit3d').click();await p.waitForFunction(()=>__qa.kit.mode==='3d'&&!!__qa.kit.three);await p.locator('#kit3dHost').scrollIntoViewIfNeeded();};
 
@@ -36,7 +36,7 @@ await scenario('Configurator: standard defaults and every count including one/tw
   assert.equal(await p.locator('#kit2dHost [data-part]').count(),14);
   await p.setViewportSize({width:1440,height:1600});await p.locator('#view-kit').screenshot({path:dir+'configurator.png'});await p.setViewportSize({width:1440,height:1100});
   await p.locator('#kitConfigurator summary').click();await p.locator('#view-kit').screenshot({path:dir+'expanded-2d.png'});
-  await p.locator('[data-view=editor]').click();assert.equal(await p.locator('#grid .cell[data-slot="0"]').count(),19);
+  await p.locator('#appNav [data-section=editor]').click();assert.equal(await p.locator('#grid .cell[data-slot="0"]').count(),19);
   await p.locator('[data-inst=kick2][data-slot="0"]').click();assert.equal(await p.locator('[data-inst=kick2][data-slot="0"]').getAttribute('data-v'),'2');
 });
 await scenario('Configurator: left-handed positions mirror with stable hit targets',async p=>{
@@ -61,7 +61,7 @@ await scenario('Configurator: all nineteen MIDI learn targets flash only their o
   });assert.equal(r.length,19);
 });
 await scenario('Configurator: both bass drums score and record separately, with distinct editor colors',async p=>{
-  await expanded(p);await p.locator('[data-view=editor]').click();
+  await expanded(p);await p.locator('#appNav [data-section=editor]').click();
   const r=await p.evaluate(async()=>{
     const {blankPattern}=await import('/js/patterns.js');const pattern=blankPattern();pattern.steps.kick[0]=3;pattern.steps.kick2[0]=1;__qa.loadPattern(pattern);
     __qa.settings.countIn=false;__qa.settings.record=true;await __qa.start();clearInterval(__qa.play.timer);
@@ -73,7 +73,7 @@ await scenario('Configurator: both bass drums score and record separately, with 
     return {good:stats.all.good,one:p.steps.kick[0],two:p.steps.kick2[0],session:(await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits.map(h=>h.inst)};
   });assert.equal(r.good,2);assert.equal(r.one,2);assert.equal(r.two,2);assert.deepEqual(r.session,['kick','kick2']);
   // Stop opens the saved performance report; inspect the recorded editor next.
-  await p.locator('[data-view=editor]').click();
+  await p.locator('#appNav [data-section=editor]').click();
   await p.locator('#grid .cell[data-inst="kick"][data-slot="0"][data-v="2"]').waitFor();
   await p.locator('#grid .cell[data-inst="kick2"][data-slot="0"][data-v="2"]').waitFor();
   const colors=await p.locator('#grid .cell[data-slot="0"][data-v="2"]').evaluateAll(es=>es.map(e=>getComputedStyle(e).backgroundColor));assert.equal(new Set(colors).size,2);
@@ -122,7 +122,7 @@ await scenario('Configurator: legacy profiles migrate to the original kit',async
 },{seed:{'drummer.profiles.v1':[{id:'old',name:'Old TD-17',map:{38:'snare'},calib:17}]}});
 await scenario('Configurator: unavailable pattern lanes remain intact and playback explains missing parts',async p=>{
   await p.evaluate(async()=>{const {blankPattern}=await import('/js/patterns.js');const pat=blankPattern();pat.steps.kick2[0]=3;__qa.loadPattern(pat);});
-  await p.locator('[data-view=editor]').click();assert.equal(await p.locator('[data-inst=kick2][data-slot="0"]').getAttribute('data-v'),'3');
+  await p.locator('#appNav [data-section=editor]').click();assert.equal(await p.locator('[data-inst=kick2][data-slot="0"]').getAttribute('data-v'),'3');
   assert.equal(await p.evaluate(()=>__qa.start()),false);assert.match(await p.locator('#toast').textContent(),/nisu u tvom setu/);
   await expanded(p);assert.equal(await p.evaluate(()=>__qa.pattern.steps.kick2[0]),3);assert.equal(await p.evaluate(()=>__qa.start()),true);await p.evaluate(()=>__qa.stop());
 });
@@ -161,7 +161,7 @@ await scenario('Configurator: two snares have distinct notation heads and both k
   const heads=await p.locator('#notation .notation-svg .head').evaluateAll(es=>es.map(e=>({id:e.dataset.inst,x:e.dataset.x,y:e.dataset.y})));
   assert.equal(heads.length,4);assert.notEqual(heads.find(h=>h.id==='snare').x,heads.find(h=>h.id==='snare2').x);
   assert.equal(await p.locator('#notation .kit-note-badge').count(),2);
-  await p.locator('[data-view=practice]').click();await p.locator('#focusFeet').click();
+  await p.locator('#appNav [data-section=practice]').click();await p.locator('#focusFeet').click();
   assert.deepEqual(await p.locator('#focusInstruments input:checked').evaluateAll(es=>es.map(e=>e.value).sort()),['hhp','kick','kick2']);
 });
 const summary={browserVersion:browser.version(),generatedAt:new Date().toISOString(),passed:results.filter(r=>r.status==='PASS').length,failed:results.filter(r=>r.status==='FAIL').length,results};

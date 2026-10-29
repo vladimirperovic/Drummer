@@ -37,13 +37,31 @@ Bez bubnja se svira tastaturom: `F`/`J` dobos, `V`/`B`/`N` kik, `D`/`K` hi-hat, 
 `G` tom 1, `H` tom 2, `L` floor tom, `E` crash, `U` crash 2, `I` ride, `O` zvono, `C` cross-stick. `Shift` = akcenat, `Alt` = ghost,
 razmak = start/stop, strelice = tempo.
 
+## Navigacija
+
+Ispod nota je jedan meni sa sedam sekcija (na telefonu je to traka na dnu ekrana):
+
+| Sekcija | Šta je unutra |
+| --- | --- |
+| **Bubanj** | 2D/3D bubanj za sviranje mišem ili prstom, **Moj bubanj** (sastav seta, raspored, učenje padova) |
+| **Ritmovi** | biblioteka (moji i gotovi ritmovi, favoriti), **Uvoz MIDI**, **Štampa / PDF**, snimanje novog ritma sviranjem |
+| **Uredi** | mreža za upis nota, undo/redo, kopiranje taktova i generator rudimenata |
+| **Vežbanje** | **Fokus A–B**, **Programi**, **Trener tempa** i tihi taktovi |
+| **Pesma** | tok rada sa snimkom: **1 Analiza pesme** (AI) → **2 Aranžman** → **3 Sviraj uz pesmu** (podloga); link na MusicXML partituru |
+| **Rezultati** | **Trenutna vežba**, **Dnevnik** sa izveštajem po notama, **Replay** |
+| **Podešavanja** | **Uređaj i MIDI** (profili, kalibracija kašnjenja, mapa, rutiranje), **Tajming i zvuk** (strogost, jačine, tastatura), **Aplikacija i podaci** (offline, rezervna kopija, MCP) |
+
+**Pretraga** (lupa u meniju ili **Ctrl+K**) nalazi svaku sekciju, podešavanje, kontrolu i ritam na srpskom ili engleskom; Enter otvori tačan tab i označi kontrolu.
+
+Poruke aplikacije pojavljuju se na dnu ekrana, gde god da se nalaziš na stranici.
+
 ## Vežbanje
 
-Otvori karticu **Vežbanje** ispod nota:
+Sekcije **Vežbanje**, **Pesma** i **Rezultati**:
 
 - **Fokus**: uključi A–B, izaberi prvi i poslednji takt i instrumente za ocenjivanje. Dugmad Svi/Ruke/Noge ubrzavaju izbor. Ostali udarci se čuju i snimaju, ali ne umanjuju ocenu. „Predloži iz poslednje sesije” bira problematičan takt/instrument i smanjuje tempo za 10 BPM. Za ponavljanje uključi Ponavljaj.
 - **Dnevnik**: sesija se čuva posle Stop ili automatskog završetka. Vidi trajanje, tempo, tačnost, tajming i dinamiku po instrumentu, graf po danima i promenu u odnosu na prethodnu uporedivu sesiju. Najbolji BPM računa se iz završenih prolaza sa najmanje 90% tačnosti, za isti ritam, fokus i strogost.
-- **Pesma**: izaberi lokalni audio fajl, unesi njegov originalni BPM i vreme prvog takta. Klik na waveform takođe postavlja prvi takt. A–B bira odgovarajući deo fajla; Start sinhronizuje pesmu i metronom posle odbrojavanja. Brzine su 50%, 75%, 100% i 125%, unutar 30–260 BPM. Promena brzine menja i visinu tona. Audio fajl ostaje u memoriji i ponovo se bira posle osvežavanja stranice.
+- **Pesma → Sviraj uz pesmu**: izaberi lokalni audio fajl, unesi njegov originalni BPM i vreme prvog takta. Klik na waveform takođe postavlja prvi takt. A–B bira odgovarajući deo fajla; Start sinhronizuje pesmu i metronom posle odbrojavanja. Brzine su 50%, 75%, 100% i 125%, unutar 30–260 BPM. Promena brzine menja i visinu tona. Audio fajl ostaje u memoriji i ponovo se bira posle osvežavanja stranice.
 - **Programi**: dodaj trenutni ritam i fokus, zadaj trajanje u sekundama, BPM, cilj tačnosti i pauzu. Možeš promeniti redosled i sačuvati program. Jedno pokretanje izvršava sve stavke i zapisuje svaku u dnevnik. Program čuva svoje kopije ritmova. Odbrojavanje i završni prozor za kasne udarce dodaju se navedenom trajanju.
 - **Replay**: izaberi sesiju, uspori slušanje, pauziraj i pomeraj poziciju. Graf poredi očekivane i stvarne udarce, uključujući promašaje; možeš prikazati pojedinačni prolaz. JSON čuva originalna vremena sa decimalama, velocity i MIDI note. Standardni MIDI fajl čuva iste udarce sa preciznošću 1 ms, na kanalu 10. Replay koristi trenutno izabrani zvuk bubnja; ne snima audio podlogu.
 
@@ -51,7 +69,7 @@ Dnevnik i programi čuvaju se lokalno u browseru. Ako čuvanje ne uspe, upozoren
 
 ## MIDI uvoz, swing i profili
 
-- **Alati → MIDI uvoz**: izaberi `.mid`, traku, kanal (bubnjevi su najčešće na 10), početak u četvrtinama i 1–8 taktova. Proveri meru, kvantizaciju i mapu MIDI nota. Pregled pokazuje uvezene, preskočene i spojene udarce. Uvezi u editor i sačuvaj ritam. Možeš koristiti mapu aktivnog uređaja. Podržani su MIDI tipovi 0/1 sa PPQ vremenom, do 10 MB; SMPTE i tip 2 nisu podržani. Promene tempa se svode na početni tempo izabranog dela uz upozorenje. Deo sa promenom mere treba skratiti ili pomeriti.
+- **Ritmovi → Uvoz MIDI**: izaberi `.mid`, traku, kanal (bubnjevi su najčešće na 10), početak u četvrtinama i 1–8 taktova. Proveri meru, kvantizaciju i mapu MIDI nota. Pregled pokazuje uvezene, preskočene i spojene udarce. Uvezi u editor i sačuvaj ritam. Možeš koristiti mapu aktivnog uređaja. Podržani su MIDI tipovi 0/1 sa PPQ vremenom, do 10 MB; SMPTE i tip 2 nisu podržani. Promene tempa se svode na početni tempo izabranog dela uz upozorenje. Deo sa promenom mere treba skratiti ili pomeriti.
 - **Uredi ritam**: uz broj doba izaberi jedinicu **/4** ili **/8**, npr. 6/8 ili 7/8. Grupe `3+3` ili `2+2+3` određuju akcente metronoma. Zbir grupa mora odgovarati broju doba. BPM uvek označava četvrtinu; 7/8 na 120 BPM traje 1,75 s. Swing je 50–75%: 50% ravno, oko 67% odnos 2:1. U /4 pomera par osmina, u /8 par šesnaestina. Triole imaju fiksnu podelu i isključen swing.
 - **Podešavanja → Profili uređaja**: podesi MIDI mapu, kalibraciju, velocity krivu i pojačanje, zatim sačuvaj profil. Možeš ga povezati sa nazivom MIDI uređaja; dugme „Profil za povezani uređaj” bira odgovarajući sačuvani profil. Promene primeni čuvanjem profila. Linearna kriva ostavlja jačinu, meka olakšava jake udarce, tvrda daje više prostora tihim udarcima. Snimak i MIDI izvoz čuvaju originalnu velocity; živi zvuk i ocena koriste podešenu krivu.
 
@@ -61,7 +79,7 @@ Klikni **☆** uz gotovi ili sačuvani ritam da ga dodaš u **Favorite**; ponovn
 
 Biblioteka ima 94 ritma: 14 osnovnih i po 20 novih u kategorijama **Latino**, **Rock**, **Jazz** i **3/8**. Koristi kategoriju i pretragu na srpskom ili engleskom; prikazani su mera, nivo i kratko uputstvo. To su originalne vežbe i adaptacije za set, a ne transkripcije pesama. Muzički okvir: [jazz](https://www.drumeo.com/beat/?p=6953) i [bossa nova](https://www.drumeo.com/beat/the-bossa-nova/).
 
-Editor zauzima celu širinu, a ispod njega su Ritmovi / Rezultat / Podešavanja. Povuci ručicu ispod nota za visinu notnog sistema, ili fokusiraj ručicu i koristi strelice. Izaberi **Redovi nota → 2 / 4** da rasporediš taktove u više redova; broj redova ne može biti veći od broja taktova. **Samo note** prikazuje komande i veliki notni sistem, a **Esc** vraća editor. Sviranje prati novi red automatskim pomeranjem. Visina, izbor redova i režim se pamte.
+Notni sistem zauzima celu širinu, a ispod njega je meni sa sekcijama. Povuci ručicu ispod nota za visinu notnog sistema, ili fokusiraj ručicu i koristi strelice. Izaberi **Redovi nota → 2 / 4** da rasporediš taktove u više redova; broj redova ne može biti veći od broja taktova. **Samo note** prikazuje komande i veliki notni sistem, a **Esc** vraća editor. Sviranje prati novi red automatskim pomeranjem. Visina, izbor redova i režim se pamte.
 
 U kartici **Bubanj** klikni bilo koji bubanj, činelu ili pedalu za zvuk i boju, dok ritam ide ili dok je zaustavljen. Klik se čuje i kada je **Moj zvuk** isključen; ta opcija i dalje kontroliše monitoring MIDI-ja i tastature. **Shift-klik** daje akcenat, a **Alt-klik** tiši udarac. Dok ritam ide, udarci ulaze u bodovanje; samo uz uključeno **Snimaj** upisuju se u mrežu ritma. U režimu **Pomjeri djelove** klik ne svira.
 
@@ -87,15 +105,15 @@ Ako postojeći ritam koristi isključen deo, njegovi udarci ostaju sačuvani i v
 
 ## MCP konektor
 
-**Alati → MCP konektor** prikazuje stanje veze, prekidač i poslednji poziv. Drummer izlaže **13 WebMCP alata** otvorenom Codex browseru: čitanje stanja, pretraga/izbor ritmova, favoriti, tempo, opcije sviranja, start/stop, A–B fokus, prikaz, jezik i rezultati. Možeš, na primer, tražiti: „Pronađi jazz ritam, dodaj ga u favorite i postavi 100 BPM.” Pre prvog puštanja zvuka klikni u aplikaciji.
+**Podešavanja → Aplikacija i podaci → MCP konektor** prikazuje stanje veze, prekidač i poslednji poziv. Drummer izlaže **13 WebMCP alata** otvorenom Codex browseru: čitanje stanja, pretraga/izbor ritmova, favoriti, tempo, opcije sviranja, start/stop, A–B fokus, prikaz, jezik i rezultati. Možeš, na primer, tražiti: „Pronađi jazz ritam, dodaj ga u favorite i postavi 100 BPM.” Pre prvog puštanja zvuka klikni u aplikaciji.
 
 Stranica mora biti otvorena u browseru koji podržava WebMCP. Nisu potrebni zaseban MCP server, API ključ ni izmena Codex konfiguracije. Konektor ne odbacuje nesačuvane izmene; nije alat za brisanje biblioteke ili promenu MIDI mape. Čitanje rezultata vraća sažetke bez sirovih snimaka. Detalji i granice: [MCP.md](MCP.md). U browserima bez WebMCP-a aplikacija radi uobičajeno.
 
 ## Offline aplikacija i štampa
 
-**Alati → Offline aplikacija** prikazuje stanje pripreme i dugmad za instalaciju i ažuriranje. Prvi put učitaj aplikaciju dok server radi i sačekaj poruku da je spremna. Posle toga ista adresa radi bez servera sa ugrađenim zvukom, ritmovima i lokalnim podacima. Instalaciju pokreće dugme ili meni browsera. Za ažuriranje ponovo pokreni server, proveri novu verziju i primeni je pošto sačuvaš ritam/program i zaustaviš vežbu. Aplikacija prvo proverava uspešno čuvanje svih podataka. Audio podlogu ponovo izaberi nakon otvaranja; WAV kitove treba bar jednom učitati online.
+**Podešavanja → Aplikacija i podaci** prikazuje stanje pripreme i dugmad za instalaciju i ažuriranje. Prvi put učitaj aplikaciju dok server radi i sačekaj poruku da je spremna. Posle toga ista adresa radi bez servera sa ugrađenim zvukom, ritmovima i lokalnim podacima. Instalaciju pokreće dugme ili meni browsera. Za ažuriranje ponovo pokreni server, proveri novu verziju i primeni je pošto sačuvaš ritam/program i zaustaviš vežbu. Aplikacija prvo proverava uspešno čuvanje svih podataka. Audio podlogu ponovo izaberi nakon otvaranja; WAV kitove treba bar jednom učitati online.
 
-**Alati → Štampa / PDF** priprema trenutni ritam za A4, sa nazivom, tempom, merom, swingom/grupama i brojevima taktova. Izaberi 1–4 takta po redu, 1–8 ponavljanja i R/L oznake. Klikni „Štampaj / Sačuvaj PDF”; u dijalogu browsera izaberi **Sačuvaj kao PDF**, A4 i isključi zaglavlja browsera. Pregled se deli na stranice po tri reda nota.
+**Ritmovi → Štampa / PDF** priprema trenutni ritam za A4, sa nazivom, tempom, merom, swingom/grupama i brojevima taktova. Izaberi 1–4 takta po redu, 1–8 ponavljanja i R/L oznake. Klikni „Štampaj / Sačuvaj PDF”; u dijalogu browsera izaberi **Sačuvaj kao PDF**, A4 i isključi zaglavlja browsera. Pregled se deli na stranice po tri reda nota.
 
 Za razvoj: posle izmene keširanog HTML/CSS/JS fajla ili ikona promeni `VERSION` u `sw.js`. Time instalirana aplikacija dobija novu verziju kroz kontrolisano ažuriranje.
 

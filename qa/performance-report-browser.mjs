@@ -109,8 +109,8 @@ await scenario('Report: long performances load twenty chronological bars per bat
       session.timeline.push(...Array.from({ length: 32 }, (_, slot) => ({ loop, slot, timeMs: loop * 4000 + slot * 125, bpm: 120 })));
       session.hits.push(...Array.from({ length: 12 }, (_, slot) => ({ inst: 'snare', loop, slot, timeMs: loop * 4000 + slot * 125 + 20, kind: 'extra' })));
     }
-    const container = document.createElement('div'); container.id = 'longPerformanceReport'; document.querySelector('#view-tools').append(container);
-    document.querySelector('[data-view=tools]').click(); renderPerformanceReport(container, session);
+    const container = document.createElement('div'); container.id = 'longPerformanceReport'; document.querySelector('#settings-app').append(container);
+    document.querySelector('#appNav [data-section=settings]').click(); document.querySelector('.subtabs [data-pane=app]').click(); renderPerformanceReport(container, session);
   });
   const report = page.locator('#longPerformanceReport');
   assert.equal(await report.locator('.performance-bar').count(), 20);

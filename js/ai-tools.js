@@ -7,15 +7,16 @@ import { createDrumSeparator, getSeparatorModelInfo } from './drum-separator.js'
 import { ADTOF_CLASSES, activationEvents, estimateDrumTempo, transcriptionMidi } from './ai-transcription-model.js';
 import { AI_WASM_ASSET, isAiAssetCached, clearAiModelCache } from './ai-model-cache.js';
 import { decodeAiAudio, encodeAiWav, aiAudioBuffer } from './ai-audio.js';
+import { navigate, adoptPane } from './navigation.js';
 
 const format = (source, values = {}) => t(source).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
 const channelsOf = buffer => Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index));
 const mb = bytes => (bytes / 1000000).toFixed(1);
 
 export function createAiTools(host = {}) {
-  const container = host.container || document.getElementById('view-tools'), tab = document.createElement('button'), panel = document.createElement('section');
-  tab.dataset.tool = 'ai'; tab.textContent = 'AI audio'; panel.id = 'tool-ai'; panel.className = 'studio-panel ai-tools-panel'; panel.hidden = true;
-  container.querySelector('nav')?.append(tab); container.append(panel);
+  const container = host.container || document.getElementById('section-song'), panel = document.createElement('section');
+  panel.id = 'tool-ai'; panel.className = 'studio-panel ai-tools-panel'; panel.hidden = true;
+  container.append(panel); adoptPane(panel, 'ai', container.dataset.sectionPanel || 'song');
   panel.innerHTML = `<h2>Pesma → bubnjevi → note</h2><p class="muted">Audio se obrađuje na ovom uređaju. Internet je potreban samo za opciono preuzimanje modela; audio se ne šalje na server.</p>
     <label class="btn ai-file-label">Izaberi audio (MP3, WAV…)<input id="aiAudioFile" type="file" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" hidden></label><p id="aiAudioInfo" class="muted">Mono ili stereo, do 100 MB i 10 minuta.</p>
     <div class="ai-controls"><label>Slušaj<select id="aiAudition"><option value="original">Original</option><option value="drums" disabled>Samo bubnjevi</option><option value="without" disabled>Bez bubnjeva</option></select></label><button id="aiExportWav" disabled>Izvezi izabrani WAV</button></div><audio id="aiPlayer" controls preload="metadata" hidden></audio>
@@ -95,7 +96,8 @@ export function createAiTools(host = {}) {
     const label = document.createElement('label'); label.append(document.createTextNode(group.label)); const select = document.createElement('select'); select.dataset.group = group.id;
     select.append(new Option(t('Preskoči'), ''), ...INSTRUMENTS.map(inst => new Option(t(inst.label), inst.id))); select.value = group.inst; label.append(select); el('aiClassMap').append(label);
   }
-  tab.onclick = () => { for (const other of container.querySelectorAll(':scope > section[id^="tool-"]')) other.hidden = other !== panel; for (const other of container.querySelectorAll('[data-tool]')) other.classList.toggle('active', other === tab); refresh(); };
+  const shown = ({ detail }) => { if (detail.pane === 'ai') refresh(); };
+  document.addEventListener('drummer:pane', shown);
   el('aiAudioFile').onchange = async event => {
     const next = event.target.files[0]; event.target.value = ''; if (!next) return;
     await run(async (signal, current) => {
@@ -142,7 +144,7 @@ export function createAiTools(host = {}) {
   const translate = () => { refresh(); if (analysis) review(); };
   document.addEventListener('drummer:language', translate);
   refresh(); void refreshCache().catch(() => {}); document.dispatchEvent(new Event('drummer:translate'));
-  return { get busy() { return busy(); }, stopAudio, refresh, show: () => tab.click(),
-    destroy() { destroyed = true; generation++; controller?.abort(); transcriber?.dispose(); separator?.dispose(); running = false; clearAudio(); notifyBusy(); document.removeEventListener('drummer:language', translate); panel.remove(); tab.remove(); },
+  return { get busy() { return busy(); }, stopAudio, refresh, show: () => navigate('ai'),
+    destroy() { destroyed = true; generation++; controller?.abort(); transcriber?.dispose(); separator?.dispose(); running = false; clearAudio(); notifyBusy(); document.removeEventListener('drummer:language', translate); document.removeEventListener('drummer:pane', shown); panel.remove(); },
   };
 }

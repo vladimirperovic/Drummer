@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
+const lib = async page => { await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=library]').click(); };
 
 const browser = await chromium.launch({ headless: true, args: ['--autoplay-policy=no-user-gesture-required'] });
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
@@ -45,6 +46,19 @@ await scenario('Tempo controls, top hit feedback and score picker work at deskto
   }
 });
 
+await scenario('Search: Ctrl+K finds settings, toggles header options and loads patterns', async page => {
+  await page.keyboard.press('Control+k'); await page.locator('#commandSearchInput').fill('kalib');
+  await page.keyboard.press('Enter'); await page.locator('#calib').waitFor();
+  assert.equal(await page.locator('#commandSearch').evaluate(dialog => dialog.open), false);
+  await page.locator('#searchOpen').click(); await page.locator('#commandSearchInput').fill('metronom');
+  const before = await page.locator('#metro').isChecked(); await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#metro').isChecked(), !before);
+  await page.keyboard.press('Control+k'); await page.locator('#commandSearchInput').fill('bossa nova'); await page.keyboard.press('Enter');
+  await page.waitForFunction(() => /Bossa nova/.test(document.querySelector('#patternName').textContent));
+  await page.setViewportSize({ width: 375, height: 812 }); assert.ok(await page.locator('#searchOpen').isVisible());
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+});
+
 await scenario('Editor stays locked after opening during playback; first early note is scored', async page => {
   await page.locator('#countIn').uncheck(); await page.locator('#metro').uncheck();
   await page.locator('#playBtn').click();
@@ -55,7 +69,7 @@ await scenario('Editor stays locked after opening during playback; first early n
     return qa.scorer.results.find(r => r.inst === 'kick');
   });
   assert.equal(early.kind, 'good'); assert.ok(Math.abs(early.err + 10) < .01);
-  await page.locator('[data-view=editor]').click();
+  await page.locator('#appNav [data-section=editor]').click();
   const cell = page.locator('#grid .cell[data-inst=snare][data-slot="0"]');
   assert.equal(await cell.isDisabled(), true);
   const before = await cell.getAttribute('data-v');
@@ -68,12 +82,13 @@ await scenario('Editor stays locked after opening during playback; first early n
 });
 
 await scenario('Unsaved draft remains dirty across reload and cannot be silently replaced', async page => {
-  await page.locator('[data-view=editor]').click();
+  await page.locator('#appNav [data-section=editor]').click();
   await page.locator('#grid .cell[data-inst=snare][data-slot="0"]').click();
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('trener.podesavanja.v1'))?.currentDirty === true);
   await page.reload(); await page.waitForFunction(() => !!globalThis.__feedbackQA);
   assert.equal(await page.evaluate(() => __feedbackQA.dirty), true);
   assert.equal(await page.evaluate(() => __feedbackQA.pattern.steps.snare[0]), 2);
+  await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=library]').click();
   const dialogPromise = page.waitForEvent('dialog');
   const click = page.locator('#presets .load').first().click();
   const dialog = await dialogPromise; assert.match(dialog.message(), /nesačuvan/);

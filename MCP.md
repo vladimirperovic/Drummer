@@ -2,7 +2,7 @@
 
 Drummer registers page-scoped tools with `document.modelContext.registerTool`, with a `navigator.modelContext` fallback. This is a **WebMCP connection to the open page**, not a standalone HTTP/stdio server. It operates on the same rhythm, playback and local data shown to the user. Implementation: [js/agent-tools.js](js/agent-tools.js), application adapter in [js/main.js](js/main.js). API reference: [OpenAI WebMCP guide](https://learn.chatgpt.com/docs/webmcp).
 
-Open Drummer in the Codex browser and check **Tools / Alati → MCP connector / MCP konektor**. “Ready” confirms registration. The switch disables all calls, including reads, and persists across reloads. Unsupported browsers show guidance while all ordinary controls remain usable. Tool discovery refreshes after navigation; browser-generated suffixes are not stable identifiers.
+Open Drummer in the Codex browser and check **Settings / Podešavanja → App and data / Aplikacija i podaci → MCP connector / MCP konektor**. “Ready” confirms registration. The switch disables all calls, including reads, and persists across reloads. Unsupported browsers show guidance while all ordinary controls remain usable. Tool discovery refreshes after navigation; browser-generated suffixes are not stable identifiers.
 
 | Tool | Input / result |
 | --- | --- |
@@ -15,7 +15,7 @@ Open Drummer in the Codex browser and check **Tools / Alati → MCP connector / 
 | `drummer_set_options` | At least one boolean: `metro`, `countIn`, `loop`, `playPattern`, `liveSound`. Requires idle playback. |
 | `drummer_start` | Optional `durationSeconds`, integer 1–3600. Uses the app Start operation and journal. Audio must first be activated by interacting with the page. Repeated calls while playing do not restart. |
 | `drummer_stop` | Stops playback/pending start, replay and practice program; finalizes an active exercise in the journal. |
-| `drummer_set_view` | At least one: `view` (kit/editor/practice/tools), `panel` (library/stats/settings), `kitView` (2d/3d), `notesOnly` boolean, `rows` (0/1/2/4/8). |
+| `drummer_set_view` | At least one: `section` (kit/library/editor/practice/song/results/settings), legacy `view` (kit/editor/practice/tools) or `panel` (library/stats/settings), `kitView` (2d/3d), `notesOnly` boolean, `rows` (0/1/2/4/8). |
 | `drummer_set_focus` | Required `enabled`, 1-based `from`/`to` bars, distinct `instruments` from state/pattern data. Range must fit current pattern. Requires idle playback. |
 | `drummer_get_results` | Optional `limit`, 1–20, default 5. Current compact scoring, total session count and recent summaries; no raw hits/timeline/audio/profile data. |
 | `drummer_set_language` | Required `language`: sr/en. Preserves note data and custom names. |

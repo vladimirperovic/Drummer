@@ -25,6 +25,8 @@ import { createEditorTools } from './editor-tools.js';
 import { appendLibraryPreview } from './library-preview.js';
 import { createAiTools } from './ai-tools.js';
 import { candidateArrangement } from './ai-reference.js';
+import { setupNavigation, navigate, currentView } from './navigation.js';
+import { createCommandSearch } from './command-search.js';
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
@@ -360,10 +362,11 @@ const KEYMAP = {};
 for (const inst of INSTRUMENTS) for (const k of inst.keys) KEYMAP[k] = inst.id;
 
 document.addEventListener('keydown', e => {
-  const typing = e.target instanceof Element && e.target.matches('input[type=text], input[type=search], input[type=number], select, textarea');
+  const typing = e.target instanceof Element && e.target.matches('input:not([type]), input[type=text], input[type=search], input[type=number], select, textarea, [contenteditable]');
   if (typing) return;
   if (e.code === 'Space') {
-    if (e.target instanceof Element && e.target.matches('button, input[type=checkbox], input[type=file], a')) return;
+    // Space must still open <summary> panels and toggle radios from the keyboard.
+    if (e.target instanceof Element && e.target.matches('button, summary, input[type=checkbox], input[type=radio], input[type=file], a')) return;
     e.preventDefault();
     if (e.repeat) return;
     document.activeElement?.blur();
@@ -410,7 +413,7 @@ function renderAll() {
   renderTransport();
   renderNotationView();
   renderEditorControls();
-  if (!$('#view-editor').hidden) renderEditor();
+  if (currentView().pane === 'editor') renderEditor();
   renderLibrary();
   editorTools?.refresh();
 }
@@ -419,6 +422,8 @@ function renderHeader() {
   $('#patternName').toggleAttribute('data-user-text', !pattern.preset);
   $('#patternName').textContent = pattern.name + (dirty ? ' •' : '');
   $('#patternName').title = dirty ? 'Ima nesačuvanih izmjena' : '';
+  // Saving is reachable from every section, not only from the library.
+  $('#quickSave').hidden = !dirty;
   $('#patternInfo').textContent = patternInfo(pattern);
   $('#patternLesson').textContent = typeof pattern.lesson === 'string' ? pattern.lesson : '';
 }
@@ -432,7 +437,7 @@ function renderNotationView() {
 
 const rerender = debounce(() => {
   renderNotationView();
-  if (!$('#view-editor').hidden) syncGrid();
+  if (currentView().pane === 'editor') syncGrid();
   renderHeader();
 }, 120);
 
@@ -523,7 +528,7 @@ function renderEditor() {
   const grid = $('#grid');
   const total = totalSlots(pattern), spb = slotsPerBeat(pattern), spBar = slotsPerBar(pattern);
   grid.innerHTML = '';
-  grid.style.gridTemplateColumns = `132px repeat(${total}, minmax(19px, 1fr))`;
+  grid.style.gridTemplateColumns = `var(--label-w, 132px) repeat(${total}, minmax(19px, 1fr))`;
   edCells = Array.from({ length: total }, () => []);
   const div = (cls, text = '') => Object.assign(document.createElement('div'), { className: cls, textContent: text });
   const subs = spb === 4 ? ['', 'e', '&', 'a'] : spb === 2 ? ['', '&'] : ['', '&', 'a'];
@@ -569,7 +574,7 @@ function setCell(b, v) {
 }
 
 function setNowColumn(slot) {
-  if ($('#view-editor').hidden) return;
+  if (currentView().pane !== 'editor') return;
   for (const c of edCells[play.nowCol] || []) c.classList.remove('now');
   for (const c of edCells[slot] || []) c.classList.add('now');
   play.nowCol = slot;
@@ -854,10 +859,11 @@ function bind() {
   $('#homeLink').onclick = e => {
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button) return;
     e.preventDefault(); workspaceView?.toggle(false);
-    $('.viewtabs [data-view=kit]').click(); $('.sidetabs [data-panel=library]').click();
+    navigate('kit');
     window.scrollTo({top:0,behavior:'smooth'});
   };
-  $('#captureRhythm').onclick = () => rhythmCapture.open();
+  $('#captureRhythm').onclick = $('#libraryCapture').onclick = () => rhythmCapture.open();
+  $('#songOpenScore').onclick = () => $('#importSong').click();
   $('#playBtn').onclick = toggle;
   $('#bpm').onchange = e => setBpm(e.target.value);
   for (const b of $$('.tbtn')) b.onclick = () => setBpm(pattern.bpm + Number(b.dataset.bpm));
@@ -872,19 +878,10 @@ function bind() {
   }
   $('#clickSub').onchange = e => { settings.clickSub = Number(e.target.value); saveSettings(); };
 
-  for (const b of $$('.viewtabs button')) b.onclick = () => {
-    for (const x of $$('.viewtabs button')) x.classList.toggle('active', x === b);
-    $('#view-kit').hidden = b.dataset.view !== 'kit';
-    $('#view-editor').hidden = b.dataset.view !== 'editor';
-    $('#view-practice').hidden = b.dataset.view !== 'practice';
-    $('#view-tools').hidden = b.dataset.view !== 'tools';
-    if (b.dataset.view === 'editor') renderEditor();
-  };
-  for (const b of $$('.sidetabs button')) b.onclick = () => {
-    for (const x of $$('.sidetabs button')) x.classList.toggle('active', x === b);
-    for (const p of ['library', 'stats', 'settings']) $('#panel-' + p).hidden = b.dataset.panel !== p;
-    if (b.dataset.panel === 'stats') renderStats();
-  };
+  document.addEventListener('drummer:pane', ({ detail }) => {
+    if (detail.pane === 'editor') renderEditor();
+    if (detail.pane === 'stats') renderStats();
+  });
 
   // Editor
   $('#grid').addEventListener('click', e => {
@@ -939,11 +936,10 @@ function bind() {
       if ($('#' + id + suffix).disabled) $('#' + id + (delta > 0 ? 'Prev' : 'Next')).focus({ preventScroll: true });
     };
   }
-  $('#saveBtn').onclick = () => saveCurrent(false);
+  $('#saveBtn').onclick = $('#quickSave').onclick = () => saveCurrent(false);
   $('#saveAsBtn').onclick = () => saveCurrent(true);
   $('#newBtn').onclick = () => {
-    loadPattern(blankPattern({ name: t('Novi ritam'), bpm: pattern.bpm }));
-    $('.viewtabs [data-view=editor]').click();
+    if (loadPattern(blankPattern({ name: t('Novi ritam'), bpm: pattern.bpm }))) navigate('editor');
   };
   $('#exportBtn').onclick = () => store.download('drummer-ritmovi.json', { ritmovi: library });
   $('#importFile').onchange = async e => {
@@ -952,6 +948,8 @@ function bind() {
     if (!file) return;
     try {
       const list = await store.importFile(file);
+      // Valid JSON without any pattern is still the wrong file, not "0 imported".
+      if (!list.length) throw new Error('empty import');
       const updated = [...list, ...library];
       if (!store.saveLibrary(updated)) return;
       library = updated;
@@ -1001,11 +999,13 @@ function bind() {
   window.addEventListener('resize', () => {
     if (Math.abs(window.innerHeight - viewHeight) > 20) { viewHeight = window.innerHeight; rerender(); }
   });
+  // Sticky section navigation sits directly below the sticky header.
+  new ResizeObserver(() => document.documentElement.style.setProperty('--bar-h', `${Math.round($('.bar').getBoundingClientRect().height)}px`)).observe($('.bar'));
   new ResizeObserver(([entry]) => {
     const w = Math.round(entry.contentRect.width);
     if (Math.abs(w - paperWidth) > 4) { paperWidth = w; rerender(); }
   }).observe($('#notation'));
-  setInterval(() => { if (play.on && !$('#panel-stats').hidden) renderStats(); }, 1000);
+  setInterval(() => { if (play.on && currentView().pane === 'stats') renderStats(); }, 1000);
   $('#backupCurrent').textContent = 'Izvezi sve podatke';
   $('#backupCurrent').onclick = async () => store.download('drummer-backup.json', { ...await getBackupState(), sessions: await studio.exportSessions() });
   $('#retryStorage').onclick = async () => {
@@ -1072,7 +1072,7 @@ document.addEventListener('drummer:language', () => {
   if (!studio.program.id && !studio.programDirty && ['Moj program', 'My program'].includes(studio.program.name)) {
     studio.program.name = t('Moj program'); studio.renderPrograms();
   }
-  if (!$('#tool-print').hidden && !$('#view-tools').hidden) workbench.printPreview();
+  if (currentView().pane === 'print') workbench.printPreview();
 });
 workspaceView = new WorkspaceView(settings, saveSettings, renderNotationView);
 renderNotationView();
@@ -1085,14 +1085,17 @@ editorTools = createEditorTools({ container:$('#view-editor'), getPattern:()=>pa
   } });
 editorTools.reset({ saved: !dirty });
 rhythmCapture = new RhythmCapture({ audio,getPattern:()=>pattern,calibration:()=>settings.calib,isBusy:kitBusy,
-  onBusyChange:renderTransport,toast,showKit:()=>{ workspaceView.toggle(false); $('.viewtabs [data-view=kit]').click(); },
+  onBusyChange:renderTransport,toast,showKit:()=>{ workspaceView.toggle(false); navigate('kit'); },
   save: next => {
     if (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?')) return false;
     const saved=normalize({...next,id:store.newId(),preset:false}), list=[saved,...library];
     if (!store.saveLibrary(list)) return false;
     library=list; libraryPages.mine=1; dirty=false; loadPattern(saved); toast(`Sačuvano: ${saved.name}`); return true;
   } });
-aiTools=createAiTools({container:$('#view-tools'),isBusy:kitBusy,onBusyChange:renderTransport,toast,onCandidate:applyAiCandidate});
+aiTools=createAiTools({container:$('#section-song'),isBusy:kitBusy,onBusyChange:renderTransport,toast,onCandidate:applyAiCandidate});
+setupNavigation();
+const commandSearch = createCommandSearch({ toast, patterns: () => [...library, ...PRESETS], loadPattern });
+$('#searchOpen').onclick = () => commandSearch.open();
 function applyAiCandidate(candidate){
   if(kitBusy())return false;
   if(studio.arrangements.dirty&&!confirm(t('Odbaciti nesačuvane izmene aranžmana?')))return false;
@@ -1102,7 +1105,7 @@ function applyAiCandidate(candidate){
   const backing=studio.backing;backing.stop();backing.buffer=candidate.backingBuffer||candidate.audioBuffer;
   backing.name=candidate.fileName;backing.enabled=!!backing.buffer;backing.bpm=candidate.bpm;
   backing.offset=candidate.offsetSeconds||0;backing.arrangementId=arrangement.id;studio.renderBacking();
-  $('.viewtabs [data-view=kit]').click();studio.show('arrangement');
+  studio.show('arrangement');
   studio.arrangements.status(t('Proveri note po deonicama, sačuvaj aranžman i pokreni vežbanje uz pesmu.'));
   return true;
 }
@@ -1117,8 +1120,7 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
     unsavedPattern: dirty, unsavedProgram: studio.programDirty, backingEnabled: studio.backing.enabled,
     kitConfig: settings.kitConfig, audioReady: audio.ready, language: getLanguage(), focus: studio.focus, favoriteCount: favoriteCount(),
     options: Object.fromEntries(['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record'].map(k => [k, settings[k]])),
-    view: { active: $('.viewtabs button.active')?.dataset.view, panel: $('.sidetabs button.active')?.dataset.panel,
-      kit: kit.mode, notesOnly: workspaceView.focus, rows: settings.scoreRows },
+    view: { section: currentView().section, pane: currentView().pane, kit: kit.mode, notesOnly: workspaceView.focus, rows: settings.scoreRows },
     midi: { supported: midi.supported, inputs: [...(midi.access?.inputs.values() || [])].map(i => i.name), outputSelected: !!midi.outId },
   }),
   listPatterns: ({ source, category, query, offset, limit, favoritesOnly }) => {
@@ -1138,8 +1140,7 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
       await kit.select(options.kitView);
       if (kit.mode !== options.kitView) throw new ToolError('VIEW_UNAVAILABLE', $('#kitViewStatus').textContent);
     }
-    if (options.view) $(`[data-view="${options.view}"]`).click();
-    if (options.panel) $(`[data-panel="${options.panel}"]`).click();
+    for (const target of [options.view, options.panel, options.section]) if (target) navigate(target);
     if (options.rows !== undefined) {
       settings.scoreRows = options.rows; $('#scoreRows').value = options.rows; renderNotationView(); saveSettings();
     }
@@ -1154,7 +1155,7 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
   setLanguage: language => { $('#languageSelect').value = language; $('#languageSelect').dispatchEvent(new Event('change')); },
 });
 setupPwa({ canReload: () => !kitBusy() && !dirty && !studio.programDirty,
-  showUpdates: () => { workspaceView.toggle(false); $('.viewtabs [data-view=tools]').click(); workbench.show('offline'); },
+  showUpdates: () => { workspaceView.toggle(false); navigate('app'); $('#tool-offline').scrollIntoView({ block: 'nearest' }); },
   flush: async () => [saveSettings.flush(),store.saveLibrary(library),await studio.flushJournal(),store.savePrograms(studio.programs),store.saveProfiles(profiles.items),midi.save()].every(Boolean) });
 loadKitList().then(() => settings.kit && chooseKit(settings.kit));
 midi.init();

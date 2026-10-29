@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+const lib = async page => { await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=library]').click(); };
 
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER || '';
@@ -25,7 +26,7 @@ async function scenario(name, fn, options = {}) {
     HTMLCanvasElement.prototype.getContext = function (type, ...args) { return type.startsWith('webgl') ? null : getContext.call(this, type, ...args); };
   });
   try {
-    await p.goto(base); await p.locator('#presets .load').first().waitFor();
+    await p.goto(base); await p.locator('#presets .load').first().waitFor({ state: 'attached' });
     await fn(p, context); assert.deepEqual(errors, [], 'uncaught page errors');
     results.push({ name, status: 'PASS' }); console.log(`PASS ${name}`);
   } catch (e) {
@@ -33,7 +34,7 @@ async function scenario(name, fn, options = {}) {
     results.push({ name, status: 'FAIL', error: e.stack, errors, screenshot }); console.log(`FAIL ${name}: ${e.message}`);
   } finally { await context.close(); }
 }
-const three = async p => { await p.locator('[data-view=kit]').click(); await p.locator('#kit3d').click(); await p.waitForFunction(() => __qa.kit.three && __qa.kit.mode === '3d'); };
+const three = async p => { await p.locator('#appNav [data-section=kit]').click(); await p.locator('#kit3d').click(); await p.waitForFunction(() => __qa.kit.three && __qa.kit.mode === '3d'); };
 const loadEight = async p => p.evaluate(async () => {
   const { blankPattern } = await import('/js/patterns.js'); const pattern = blankPattern({ bars: 8, bpm: 180 }); pattern.steps.snare.fill(2); __qa.loadPattern(pattern);
 });
@@ -41,16 +42,16 @@ const loadEight = async p => p.evaluate(async () => {
 await scenario('Catalog: category counts, bilingual search and typing without drum shortcuts', async p => {
   assert.equal(await p.locator('#presets .load').count(), 20);
   assert.match(await p.locator('#presetCount').innerText(), /\/ 94/);
-  for (const category of ['latin', 'rock', 'jazz', 'three-eight']) { await p.locator('#presetCategory').selectOption(category); assert.equal(await p.locator('#presets .load').count(), 20); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/); }
-  await p.locator('#presetCategory').selectOption('latin'); await p.locator('#presetSearch').pressSequentially('bossa');
+  for (const category of ['latin', 'rock', 'jazz', 'three-eight']) { await lib(p); await p.locator('#presetCategory').selectOption(category); assert.equal(await p.locator('#presets .load').count(), 20); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/); }
+  await lib(p); await p.locator('#presetCategory').selectOption('latin'); await lib(p); await p.locator('#presetSearch').pressSequentially('bossa');
   assert.equal(await p.locator('#presetSearch').inputValue(), 'bossa'); assert.equal(await p.locator('#presets .load').count(), 2);
   assert.equal(await p.evaluate(() => __qa.play.on), false);
-  await p.locator('#presetSearch').fill('anticipated kick'); assert.equal(await p.locator('#presets .load').count(), 1);
-  await p.locator('#presetSearch').fill('no-such-pattern'); assert.ok(await p.locator('#presetEmpty').isVisible());
+  await lib(p); await p.locator('#presetSearch').fill('anticipated kick'); assert.equal(await p.locator('#presets .load').count(), 1);
+  await lib(p); await p.locator('#presetSearch').fill('no-such-pattern'); assert.ok(await p.locator('#presetEmpty').isVisible());
 });
 await scenario('Catalog: twenty real notation previews match notes, retain names and show first-two-bar captions', async p => {
   for (const category of ['all', 'latin', 'rock', 'jazz', 'three-eight']) {
-    await p.locator('#presetCategory').selectOption(category);
+    await lib(p); await p.locator('#presetCategory').selectOption(category);
     assert.equal(await p.locator('#presets .library-preview svg').count(), 20);
     const failures = await p.evaluate(async () => {
       const { PRESETS, INSTRUMENTS, slotsPerBar } = await import('/js/patterns.js'), failures = [];
@@ -87,15 +88,17 @@ await scenario('Catalog: all eighty new presets load their correct meter, notes 
   }); assert.deepEqual(result, []);
   await p.waitForFunction(() => document.querySelector('#patternLesson').textContent.startsWith('Count three'));
 });
-await scenario('Workspace: editor and library occupy full width and stack at desktop and phone sizes', async p => {
-  await p.locator('[data-view=editor]').click();
+await scenario('Workspace: sections and navigation occupy full width at desktop and phone sizes', async p => {
+  await p.locator('#appNav [data-section=editor]').click();
   for (const width of [1440, 768, 390, 360]) {
     await p.setViewportSize({ width, height: 1000 });
     const r = await p.evaluate(() => {
-      const editor = document.querySelector('.stage').getBoundingClientRect(), side = document.querySelector('.side').getBoundingClientRect();
-      return { editorWidth: editor.width, sideWidth: side.width, gap: side.top - editor.bottom, overflow: document.documentElement.scrollWidth - innerWidth };
+      const section = document.querySelector('#section-editor').getBoundingClientRect(), nav = document.querySelector('#appNav').getBoundingClientRect();
+      const buttons = [...document.querySelectorAll('#appNav button')].map(b => b.getBoundingClientRect());
+      return { sectionWidth: section.width, navWidth: nav.width, navInside: buttons.every(b => b.left >= -1 && b.right <= innerWidth + 1 && b.height >= 44),
+        overflow: document.documentElement.scrollWidth - innerWidth };
     });
-    assert.ok(r.editorWidth >= width - 4 && r.sideWidth >= width - 4, JSON.stringify(r)); assert.ok(r.gap >= -2); assert.ok(r.overflow <= 1, JSON.stringify(r));
+    assert.ok(r.sectionWidth >= width - 4 && r.navWidth >= width - 4, JSON.stringify(r)); assert.ok(r.navInside, JSON.stringify(r)); assert.ok(r.overflow <= 1, JSON.stringify(r));
   }
   await p.screenshot({ path: artifacts + 'phone-editor.png' });
 });
@@ -202,7 +205,7 @@ await scenario('Kit: all thirteen live instruments and reference playback color 
   await p.evaluate(() => __qa.stop());
   // Finishing now opens the notation report; resume the visible 3D view before
   // asserting a fade that intentionally pauses while the canvas is hidden.
-  await p.locator('[data-view=kit]').click();
+  await p.locator('#appNav [data-section=kit]').click();
   await p.waitForTimeout(500); assert.ok(await p.evaluate(() => [...__qa.kit.three.targets.values()].flat().every(t => t.mesh.material.color.equals(t.base))));
 });
 await scenario('Kit: mouse rotation, zoom, reset and keyboard controls work without tempo conflicts', async p => {
@@ -237,11 +240,11 @@ await scenario('Kit: phone 3D fits, English labels translate and lost graphics c
 await scenario('Kit: 3D and new presets load offline even when 3D was never opened online', async (p, context) => {
   await p.evaluate(async () => { await navigator.serviceWorker.ready; });
   await p.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await context.setOffline(true); await p.reload(); await p.locator('#presets .load').first().waitFor();
+  await context.setOffline(true); await p.reload(); await p.locator('#presets .load').first().waitFor({ state: 'attached' });
   assert.equal(await p.locator('#presets .load').count(), 20);
   assert.match(await p.locator('#presetCount').innerText(), /\/ 94/);
   await p.locator('#kit3d').click(); await p.locator('#kit3dHost canvas').waitFor(); assert.equal(await p.locator('#kit3d').getAttribute('aria-pressed'), 'true');
-  await p.locator('#presetCategory').selectOption('three-eight'); assert.equal(await p.locator('#presets .load').count(), 20); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/);
+  await lib(p); await p.locator('#presetCategory').selectOption('three-eight'); assert.equal(await p.locator('#presets .load').count(), 20); assert.match(await p.locator('#presetCount').innerText(), /\/ 20/);
 }, { offline: true });
 
 const report = { browser: channel || 'Chromium', browserVersion: browser.version(), generatedAt: new Date().toISOString(), passed: results.filter(r => r.status === 'PASS').length, failed: results.filter(r => r.status === 'FAIL').length, results };

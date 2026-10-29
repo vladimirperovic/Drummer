@@ -17,7 +17,7 @@ async function scenario(name, fn) {
   await page.addInitScript(() => Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map(), outputs: new Map() }) }));
   await page.route('**/js/main.js', async route => { const response = await route.fetch(); await route.fulfill({ response, body: await response.text() + bridge }); });
   try {
-    await page.goto(base); await page.locator('#presets .load').first().waitFor();
+    await page.goto(base); await page.locator('#presets .load').first().waitFor({ state: 'attached' });
     await page.evaluate(async () => {
       const { blankPattern } = await import('/js/patterns.js');
       const pattern = blankPattern({ bars: 8, bpm: 180 });

@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+const lib = async page => { await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=library]').click(); };
 
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER;
@@ -65,7 +66,7 @@ await scenario('All presets render valid note coordinates', async p => {
   const loaded = new Set();
   for (let i = 0; i < 94; i++) {
     if (i && i % 20 === 0) await p.locator('#presetsNext').click();
-    await p.locator('#presets .load').nth(i % 20).click();
+    await lib(p); await p.locator('#presets .load').nth(i % 20).click();
     loaded.add(await p.evaluate(() => __qa.pattern.id));
     assert.equal(await p.locator('#notation .notation-svg').count(), 1);
     assert.ok(await p.locator('#notation .head').count() > 0);
@@ -100,7 +101,7 @@ await scenario('Keyboard: all 13 instruments, normal/accent/ghost', async p => {
 });
 
 await scenario('Keyboard shortcuts do not trigger when editing text', async p => {
-  await p.locator('[data-view=editor]').click(); await p.locator('#edName').fill('ff jj vv');
+  await p.locator('#appNav [data-section=editor]').click(); await p.locator('#edName').fill('ff jj vv');
   await p.locator('#edName').press('Space'); assert.equal(await p.locator('#lastHit').innerText(), 'Spremno za sviranje');
   assert.equal(await p.evaluate(() => __qa.play.on), false);
 });
@@ -112,14 +113,14 @@ await scenario('Tempo UI enforces 30-260 BPM and keyboard increments', async p =
 });
 
 await scenario('BUG: editor clicks follow normal -> accent -> ghost -> empty', async p => {
-  await p.locator('[data-view=editor]').click();
+  await p.locator('#appNav [data-section=editor]').click();
   const cell = p.locator('[data-inst=crash2][data-slot="0"]'); const values = [];
   for (let i = 0; i < 4; i++) { await cell.click(); values.push(Number(await cell.getAttribute('data-v'))); }
   assert.deepEqual(values, [2, 3, 1, 0]);
 });
 
 await scenario('Editor modifiers, erase, resize and copy first bar', async p => {
-  await p.locator('[data-view=editor]').click();
+  await p.locator('#appNav [data-section=editor]').click();
   const cell = p.locator('[data-inst=crash2][data-slot="0"]');
   await cell.click({ modifiers: ['Shift'] }); assert.equal(await cell.getAttribute('data-v'), '3');
   await cell.click({ modifiers: ['Alt'] }); assert.equal(await cell.getAttribute('data-v'), '1');
@@ -132,10 +133,10 @@ await scenario('Editor modifiers, erase, resize and copy first bar', async p => 
 
 await scenario('Save, duplicate, export and reload preserve an edited rhythm', async p => {
   p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'QA rhythm' : undefined));
-  await p.locator('[data-view=editor]').click(); await p.locator('[data-inst=crash2][data-slot="0"]').click({ modifiers: ['Shift'] });
-  await p.locator('#saveBtn').click(); assert.equal(await p.locator('#mine .item').count(), 1);
-  await p.locator('#mine button').filter({ hasText: 'Dupliraj' }).click(); assert.equal(await p.locator('#mine .item').count(), 2);
-  const downloadPromise = p.waitForEvent('download'); await p.locator('#exportBtn').click(); const download = await downloadPromise;
+  await p.locator('#appNav [data-section=editor]').click(); await p.locator('[data-inst=crash2][data-slot="0"]').click({ modifiers: ['Shift'] });
+  await lib(p); await p.locator('#saveBtn').click(); assert.equal(await p.locator('#mine .item').count(), 1);
+  await lib(p); await p.locator('#mine button').filter({ hasText: 'Dupliraj' }).click(); assert.equal(await p.locator('#mine .item').count(), 2);
+  const downloadPromise = p.waitForEvent('download'); await lib(p); await p.locator('#exportBtn').click(); const download = await downloadPromise;
   const path = `${artifacts}/export.json`; await download.saveAs(path);
   const { readFile } = await import('node:fs/promises'); const data = JSON.parse(await readFile(path, 'utf8'));
   assert.equal(data.ritmovi.length, 2); assert.equal(data.ritmovi[0].steps.crash2[0], 3);
@@ -155,7 +156,7 @@ await scenario('JSON upload accepts valid patterns and rejects malformed JSON', 
 await scenario('BUG: imported non-string sticking must not crash pattern loading', async p => {
   await p.locator('#importFile').setInputFiles({ name: 'bad-type.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ name: 'Bad sticking', sticking: 123, steps: {} })) });
   await p.waitForFunction(() => document.querySelectorAll('#mine .load').length === 1);
-  await p.locator('#mine .load').click();
+  await lib(p); await p.locator('#mine .load').click();
   await p.waitForTimeout(250);
   assert.equal(await p.locator('#notation svg').count(), 1, 'Notation disappeared after importing numeric sticking');
 });
@@ -163,7 +164,7 @@ await scenario('BUG: imported non-string sticking must not crash pattern loading
 await scenario('BUG: imported non-string name must not break export', async (p, errors) => {
   await p.locator('#importFile').setInputFiles({ name: 'bad-name.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ name: 123, steps: {} })) });
   await p.waitForFunction(() => document.querySelectorAll('#mine .item').length === 1);
-  await p.locator('#mine button').filter({ hasText: /^Izvezi$/ }).click(); await p.waitForTimeout(100);
+  await lib(p); await p.locator('#mine button').filter({ hasText: /^Izvezi$/ }).click(); await p.waitForTimeout(100);
   assert.deepEqual(errors, []);
 });
 
@@ -173,7 +174,7 @@ await scenario('BUG: corrupted library shape must recover on startup', async (p,
 }, { startupFailure: true, initial: { 'trener.ritmovi.v1': '{}' } });
 
 await scenario('MIDI learn, input, choke, pedal and reset through UI', async p => {
-  await p.locator('[data-panel=settings]').click(); await p.locator('[data-learn=crash2]').click();
+  await p.locator('#appNav [data-section=settings]').click(); await p.locator('.subtabs [data-pane=device]').click(); await p.locator('[data-learn=crash2]').click();
   await p.evaluate(() => __midiFixture.port.onmidimessage({ data: [0x99, 60, 110], timeStamp: performance.now() }));
   assert.equal(await p.evaluate(() => __qa.midi.map[60]), 'crash2');
   await p.evaluate(() => __midiFixture.port.onmidimessage({ data: [0x99, 60, 110], timeStamp: performance.now() }));
@@ -332,7 +333,7 @@ await scenario('WAV sample kit loads and missing kit falls back to synth', async
 await scenario('BUG: failed persistent save must not report success', async p => {
   p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Unsaved QA' : undefined));
   await p.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException('Test quota', 'QuotaExceededError'); }; });
-  await p.locator('#saveBtn').click();
+  await lib(p); await p.locator('#saveBtn').click();
   assert.doesNotMatch(await p.locator('#toast').innerText(), /^Sačuvano:/);
 });
 
@@ -345,7 +346,8 @@ await scenario('Continuous playback completes eight loops without growing pendin
 });
 
 // Functional acceptance scenarios for the five new practice features.
-const showStudio = async (p, name) => { await p.locator('[data-view=practice]').click(); await p.locator(`[data-studio=${name}]`).click(); await p.waitForTimeout(150); };
+const STUDIO_SECTION = { focus: 'practice', program: 'practice', journal: 'results', replay: 'results', backing: 'song', arrangement: 'song' };
+const showStudio = async (p, name) => { await p.locator(`#appNav [data-section=${STUDIO_SECTION[name]}]`).click(); await p.locator(`.subtabs [data-pane=${name}]`).click(); await p.waitForTimeout(150); };
 const onePass = async (p, { perfect = false } = {}) => {
   await p.evaluate(async perfect => {
     __qa.settings.countIn = false; __qa.settings.loop = false; __qa.setBpm(260);
@@ -386,7 +388,7 @@ const seedReplay = async p => {
 };
 
 await scenario('Feature: A-B scores only chosen bars and instruments while retaining other raw hits', async p => {
-  await p.locator('#presets .load').filter({ hasText: 'Bossa nova' }).click();
+  await lib(p); await p.locator('#presets .load').filter({ hasText: 'Bossa nova' }).click();
   await showStudio(p, 'focus'); await p.locator('#focusOn').check();
   await p.locator('#focusFrom').selectOption('2'); await p.locator('#focusTo').selectOption('2'); await p.locator('#focusFeet').click();
   await p.locator('#countIn').uncheck(); await p.locator('#loop').uncheck();
@@ -499,7 +501,7 @@ await scenario('Feature: MIDI and JSON exports retain recorded notes and velocit
 });
 
 await scenario('Feature: backing WAV, A-B, first beat and half-speed share the audio clock', async p => {
-  await p.locator('#presets .load').filter({ hasText: 'Bossa nova' }).click();
+  await lib(p); await p.locator('#presets .load').filter({ hasText: 'Bossa nova' }).click();
   await showStudio(p, 'focus'); await p.locator('#focusOn').check(); await p.locator('#focusFrom').selectOption('2'); await p.locator('#focusTo').selectOption('2');
   await showStudio(p, 'backing');
   await p.locator('#backingFile').setInputFiles({ name: 'qa-song.wav', mimeType: 'audio/wav', buffer: wave() });
@@ -552,7 +554,7 @@ const setupProgram = async (p, rest = 0) => {
   for (const [field, value] of [['seconds', '1'], ['bpm', '260'], ['rest', String(rest)], ['target', '0']]) {
     const input = p.locator(`[data-field=${field}][data-index="0"]`); await input.fill(value); await input.press('Tab');
   }
-  await p.locator('#presets .load').filter({ hasText: 'Shuffle (triole)' }).click(); await p.locator('#programAdd').click();
+  await lib(p); await p.locator('#presets .load').filter({ hasText: 'Shuffle (triole)' }).click(); await showStudio(p, 'program'); await p.locator('#programAdd').click();
   for (const [field, value] of [['seconds', '1'], ['bpm', '250'], ['rest', '0'], ['target', '90']]) {
     const input = p.locator(`[data-field=${field}][data-index="1"]`); await input.fill(value); await input.press('Tab');
   }
@@ -620,7 +622,7 @@ await scenario('Feature: corrupt journal fields remain readable and safe after r
   await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   await showStudio(p, 'journal'); await showStudio(p, 'replay');
   assert.equal(await p.locator('#replayHits tr').count(), 2);
-  assert.equal(await p.locator('#view-practice img').count(), 0);
+  assert.equal(await p.locator('#sections img').count(), 0);
   assert.equal(await p.evaluate(async () => (await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits[0].err), null);
 });
 
