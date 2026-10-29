@@ -9,6 +9,7 @@ import aiNext from './ai-tools-i18n.js';
 export const EN = {
   ...editorNext, ...studioNext, ...routingNext, ...captureNext, ...aiNext,
   'Otkaži':'Cancel',
+  'Nova verzija je spremna':'Update available',
   'Proveri note po deonicama, sačuvaj aranžman i pokreni vežbanje uz pesmu.':'Review each section, save the arrangement, then start practicing along with the song.',
   'Uredi note':'Edit notes', 'Preuzmi trenutni ritam':'Use current rhythm',
   'Druga partitura': 'Choose another score', 'Vrati na bubanj': 'Back to drums', 'Deonice': 'Parts',

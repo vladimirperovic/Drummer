@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const base = process.env.DRUMMER_URL || 'http://127.0.0.1:8123';
 const channel = process.env.DRUMMER_BROWSER || '';
-const artifacts = fileURLToPath(new URL(`./artifacts/score-view/${channel || 'chromium'}/`, import.meta.url));
+const artifacts = process.env.DRUMMER_ARTIFACTS ? process.env.DRUMMER_ARTIFACTS.replace(/[\\/]?$/, '/') : fileURLToPath(new URL(`./artifacts/score-view/${channel || 'chromium'}/`, import.meta.url));
 await mkdir(artifacts, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}), args: ['--autoplay-policy=no-user-gesture-required'] });
 const results = [];
@@ -110,11 +110,28 @@ await scenario('Score view: compact phone layout keeps controls and navigation a
   assert.ok(await page.locator('#scoreScale').isVisible());
   assert.ok(await page.locator('#scoreOnly').isVisible());
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-  await page.evaluate(() => __scoreQA.notation.setPlayhead(112));
-  assert.ok(await page.locator('#notation').evaluate(element => element.scrollTop > 0));
+  const before = await page.evaluate(() => {
+    __scoreQA.notation.setPlayhead(112);
+    const element = document.querySelector('#notation');
+    return { scroll: element.scrollTop, top: __scoreQA.notation.svg.viewBox.baseVal.y + element.scrollTop / __scoreQA.notation.geometry.scale };
+  });
+  assert.ok(before.scroll > 0);
+  // A queued resize render used to reset scrollTop between setting the
+  // playhead and the following assertion (and visibly jump the user's score).
+  await page.evaluate(() => new Promise(resolve => {
+    let remaining = 5;
+    const refresh = () => { __scoreQA.workspaceView.render(); if (--remaining) requestAnimationFrame(refresh); else resolve(); };
+    requestAnimationFrame(refresh);
+  }));
+  assert.ok(Math.abs(await page.locator('#notation').evaluate(element => element.scrollTop) - before.scroll) <= 1);
+  await zoom(page, 60);
+  const afterZoom = await page.evaluate(() => __scoreQA.notation.svg.viewBox.baseVal.y + document.querySelector('#notation').scrollTop / __scoreQA.notation.geometry.scale);
+  assert.ok(Math.abs(afterZoom - before.top) <= 2, 'zoom retains the same musical viewport');
   await page.locator('#languageSelect').selectOption('en');
   await page.waitForFunction(() => document.querySelector('#scoreScale').getAttribute('aria-label') === 'Note size');
   await page.screenshot({ path: artifacts + 'phone-score.png' });
+  await page.evaluate(() => __scoreQA.loadPattern({ ...structuredClone(__scoreQA.pattern), name: 'A different pattern' }));
+  assert.equal(await page.locator('#notation').evaluate(element => element.scrollTop), 0, 'loading a different pattern starts at the top');
 });
 
 await browser.close();

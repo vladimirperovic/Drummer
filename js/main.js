@@ -1154,6 +1154,7 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
   setLanguage: language => { $('#languageSelect').value = language; $('#languageSelect').dispatchEvent(new Event('change')); },
 });
 setupPwa({ canReload: () => !kitBusy() && !dirty && !studio.programDirty,
+  showUpdates: () => { workspaceView.toggle(false); $('.viewtabs [data-view=tools]').click(); workbench.show('offline'); },
   flush: async () => [saveSettings.flush(),store.saveLibrary(library),await studio.flushJournal(),store.savePrograms(studio.programs),store.saveProfiles(profiles.items),midi.save()].every(Boolean) });
 loadKitList().then(() => settings.kit && chooseKit(settings.kit));
 midi.init();

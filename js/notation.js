@@ -10,6 +10,7 @@ const TOP = 72;           // od vrha reda do gornje linije
 const HEAD_W = 6.2;       // pola širine glave note
 const HEADER = 60;        // ključ i oznaka takta
 const PAD_L = 18, PAD_R = 12;
+const viewports = new WeakMap();
 
 function el(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -37,6 +38,11 @@ function beatEvents(p, voice, start, spb) {
 }
 
 export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine: requestedBars, barOffset = 0, finalBar = true, pageWidth, zoom = 100 } = {}) {
+  const previous = viewports.get(container);
+  // Resize/zoom can replace the SVG after the playhead has followed a later
+  // staff. Preserve that musical viewport for the same pattern; loading a new
+  // pattern starts at the top. Store SVG coordinates so zoom does not drift.
+  const viewportTop = previous?.pattern === p ? previous.top + container.scrollTop / previous.scale : null;
   container.innerHTML = '';
   const pixelW = pageWidth || Math.max(340, container.clientWidth || 900);
   const spb = slotsPerBeat(p), spBar = slotsPerBar(p), total = totalSlots(p);
@@ -252,6 +258,8 @@ export function renderNotation(container, p, { maxHeight = Infinity, barsPerLine
   const bottom = Math.min(height, Math.max(...ink.map(b => b.y + b.height), lines.at(-1).y0 + 72) + 12);
   svg.setAttribute('viewBox', `0 ${top} ${width} ${bottom - top}`);
   svg.setAttribute('height', (bottom - top) * scale);
+  viewports.set(container, { pattern: p, top, scale });
+  container.scrollTop = viewportTop == null ? 0 : Math.max(0, (viewportTop - top) * scale);
 
   let marks = [], lastFollowedLine = null;
   return {

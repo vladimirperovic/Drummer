@@ -279,7 +279,13 @@ await scenario('Expansion: a real PWA update protects edits and storage failures
     await setting(p); await input(p,'calib',37); await input(p,'profileName','Update profile'); await p.locator('#profileSave').click();
     await tools(p,'offline'); version = 'qa-after'; await p.locator('#pwaCheck').click();
     await p.locator('#pwaUpdate').waitFor();
-    await p.evaluate(() => { window.__beforeUpdate = true; }); await p.locator('#pwaUpdate').click();
+    await p.locator('[data-view=kit]').click();
+    assert.equal(await p.locator('#appUpdate').isVisible(),true);
+    assert.equal(await p.locator('#appUpdate').innerText(),'Update available');
+    await p.setViewportSize({width:390,height:844});
+    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await p.evaluate(() => { window.__beforeUpdate = true; }); await p.locator('#appUpdate').click();
+    assert.equal(await p.locator('#tool-offline').isVisible(),true);
     assert.match(await p.locator('#pwaStatus').innerText(), /save pattern and program/);
     assert.equal(await p.evaluate(() => window.__beforeUpdate), true);
     let savePrompt; p.once('dialog', async d => { savePrompt = d.message(); await d.accept('Saved through update'); });
@@ -289,6 +295,7 @@ await scenario('Expansion: a real PWA update protects edits and storage failures
     assert.equal(await p.evaluate(() => window.__beforeUpdate), true);
     await p.evaluate(() => { Storage.prototype.setItem = __originalSet; }); await p.locator('#pwaUpdate').click();
     await p.waitForFunction(() => !window.__beforeUpdate && document.querySelector('#presets .load'));
+    assert.equal(await p.locator('#appUpdate').isVisible(),false);
     assert.equal(await p.locator('#languageSelect').inputValue(),'en');
     await editor(p); assert.equal(await p.locator('#edName').inputValue(),'Saved through update');
     await setting(p); assert.equal(await p.locator('#calib').inputValue(),'37'); assert.equal(await p.locator('#profileName').inputValue(),'Update profile');

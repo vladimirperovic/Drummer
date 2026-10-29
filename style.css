@@ -411,3 +411,4 @@ body.notes-only .sheet { flex: 1; height: auto; min-height: 0; padding-bottom: 1
 .list .item.active .load .library-preview::before { content:none; }
 .preview-caption { text-align:right; }
 #presets .load,#mine .load { min-width:0; }
+.bar-tools .app-update { background:#fff4cd; border-color:#8c6500; color:#493500; font-weight:600; }

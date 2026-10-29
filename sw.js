@@ -1,5 +1,5 @@
 // Bump VERSION whenever a cached application file changes.
-const VERSION = '2026-10-29-roadmap-ai-1';
+const VERSION = '2026-10-29-roadmap-ai-2';
 const ROOT = new URL('./', self.location.href);
 const PREFIX = `drummer:${ROOT.pathname}:`;
 const CACHE = PREFIX + VERSION;
