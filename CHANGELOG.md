@@ -2,6 +2,7 @@
 
 ## Unreleased — saved songs and whole-song MusicXML
 
+- Turn **Play pattern** on by default for first-time visitors; the standard kit was already the first-load kit. Saved settings keep their choice.
 - Export the complete AI drum transcription as MusicXML 4.0 with percussion mappings, meter, tempo, straight/triplet quantization, simultaneous notes, ghost heads and accents; preserve raw timing separately in MIDI and project metadata.
 - Add a laptop folder library with unchanged originals, drums-only and drumless WAV files, MusicXML, MIDI and exact practice references. Remember the folder handle, search songs, load without re-analysis and switch active practice using Previous/Next.
 - Save new revisions without overwriting existing songs, publish the manifest last, validate paths/metadata/audio duration and retain the previous reference if loading fails. Include the library modules in offline installation.

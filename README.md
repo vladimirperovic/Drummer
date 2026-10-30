@@ -26,7 +26,7 @@ The first visit opens in English. Choose **SR** at the top right for Serbian; yo
 
 ## Quick start
 
-Open the [demo](https://vladimirperovic.github.io/Drummer/) in Chrome, Edge or Brave, click **Start**, and play with the keyboard. Enable **Play pattern** to hear the reference rhythm. For an electronic kit, connect USB and grant the browser's MIDI permission.
+Open the [demo](https://vladimirperovic.github.io/Drummer/) in Chrome, Edge or Brave, click **Start**, and play with the keyboard. **Play pattern** is on by default so you hear the reference rhythm; clear it to practise without it. For an electronic kit, connect USB and grant the browser's MIDI permission.
 
 | Control | Action |
 | --- | --- |

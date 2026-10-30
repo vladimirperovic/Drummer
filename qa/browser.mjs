@@ -58,6 +58,8 @@ await scenario('Startup: notation, 94 presets, simulated MIDI, assets', async p 
   assert.match(await p.locator('#presetCount').innerText(), /1–20 \/ 94/);
   assert.equal(await p.locator('#notation .head').count(), 12);
   assert.match(await p.locator('#midiStatus').innerText(), /Simulated TD-17/);
+  assert.equal(await p.locator('#kitPreset').inputValue(), 'standard', 'first load uses the standard kit');
+  assert.equal(await p.locator('#playPattern').isChecked(), true, 'Play pattern is on by default');
   const response = await p.request.get(`${base}/kits/index.json`); assert.equal(response.status(), 200); assert.deepEqual(await response.json(), []);
   await p.screenshot({ path: `${artifacts}/desktop.png`, fullPage: true });
 });

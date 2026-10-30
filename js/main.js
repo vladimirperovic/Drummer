@@ -44,7 +44,7 @@ const debounce = (fn, ms) => {
 };
 
 const settings = store.loadSettings({
-  metro: true, clickSub: 1, countIn: true, loop: true, playPattern: false, liveSound: false, record: false,
+  metro: true, clickSub: 1, countIn: true, loop: true, playPattern: true, liveSound: false, record: false,
   calib: 0, level: 'normalno', quiet: 'off', midiOut: '', kit: '',
   vol: { click: 0.7, pattern: 0.6, live: 0.9 },
   trainer: { on: false, step: 2 },
