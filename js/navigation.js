@@ -15,7 +15,7 @@ export function setMode(mode) {
   mode = mode === 'song' ? 'song' : 'notes';
   const changed = document.body.dataset.mode !== mode;
   document.body.dataset.mode = mode;
-  for (const button of document.querySelectorAll('[data-mode]')) button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+  for (const button of document.querySelectorAll('button[data-mode]')) button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
   try { localStorage.setItem(MODE_KEY, mode); } catch {}
   if (changed) document.dispatchEvent(new CustomEvent('drummer:mode', { detail: { mode } }));
 }

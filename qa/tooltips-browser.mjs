@@ -20,7 +20,7 @@ for (const language of ['sr', 'en']) {
     await page.locator(`#appNav [data-section=${section}]`).click(); await collect();
     for (const pane of await page.locator(`#section-${section} .subtabs [data-pane]`).all()) { await pane.click(); await collect(); }
   }
-  await page.locator('[data-mode=song]').click();
+  await page.locator('button[data-mode=song]').click();
   for (const pane of ['ai', 'songplay', 'songreport']) { await page.locator(`#appNav [data-pane=${pane}]`).click(); await collect(); }
   try {
     assert.deepEqual([...missing], [], `${language}: controls without a tooltip`);

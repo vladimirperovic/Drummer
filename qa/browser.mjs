@@ -436,6 +436,8 @@ await scenario('Feature: original MIDI zone, velocity and fractional timing surv
     return { relative: timestamp - __qa.studio.capture.firstPerf };
   });
   await p.waitForFunction(() => !__qa.play.on);
+  // The journal is written asynchronously after Stop; wait for it before reloading.
+  await p.waitForFunction(() => __qa.studio.sessions.length > 0); await p.evaluate(() => __qa.studio.flushJournal());
   await p.reload(); await p.waitForFunction(() => !!globalThis.__qa); await p.evaluate(() => __qa.studio.journalReady);
   const hit = await p.evaluate(async () => { await __qa.studio.journalReady; return (await __qa.studio.loadSession(__qa.studio.sessions[0].id)).hits[0]; });
   assert.equal(hit.note, 40); assert.equal(hit.vel, 73); assert.equal(hit.kind, 'good');

@@ -237,8 +237,9 @@ await scenario('Song: mode switch swaps notation for the live meter and keeps no
   assert.equal(await p.locator('.sheet').isVisible(), true); assert.equal(await p.locator('#songStage').isVisible(), false);
   assert.deepEqual(await p.locator('#appNav button').evaluateAll(list => list.filter(b => b.getClientRects().length).map(b => b.dataset.section || b.dataset.pane || b.id)),
     ['kit', 'library', 'editor', 'practice', 'results', 'settings', 'searchOpen'], 'notes menu');
-  await p.locator('[data-mode=song]').click();
+  await p.locator('button[data-mode=song]').click();
   assert.equal(await p.evaluate(() => document.body.dataset.mode), 'song');
+  assert.equal(await p.evaluate(() => document.body.hasAttribute('aria-pressed')), false, 'only the switch buttons are pressed');
   assert.equal(await p.locator('.sheet').isVisible(), false); assert.equal(await p.locator('#songStage').isVisible(), true);
   assert.equal(await p.locator('#appNav [data-section=library]').isVisible(), false); assert.equal(await p.locator('.tempo').isVisible(), false);
   assert.equal(await p.locator('[data-song-empty]').isVisible(), true);
@@ -248,15 +249,15 @@ await scenario('Song: mode switch swaps notation for the live meter and keeps no
   assert.deepEqual(await p.locator('#appNav button').evaluateAll(list => list.filter(b => b.getClientRects().length).map(b => b.dataset.section || b.dataset.pane || b.id)),
     ['kit', 'ai', 'songplay', 'songreport', 'settings', 'searchOpen'], 'song menu');
   // Arrangement and pattern backing now live in Practice and switch back to Notes.
-  await p.locator('[data-mode=notes]').click(); await p.locator('#appNav [data-section=practice]').click();
+  await p.locator('button[data-mode=notes]').click(); await p.locator('#appNav [data-section=practice]').click();
   await p.locator('.subtabs [data-pane=arrangement]').click(); assert.equal(await p.locator('#studio-arrangement').isVisible(), true);
-  await p.locator('[data-mode=song]').click(); assert.equal(await p.evaluate(() => document.body.dataset.section), 'song');
+  await p.locator('button[data-mode=song]').click(); assert.equal(await p.evaluate(() => document.body.dataset.section), 'song');
   await p.reload(); await p.waitForFunction(() => !!window.__qa);
   assert.equal(await p.evaluate(() => document.body.dataset.mode), 'song', 'mode is remembered');
 });
 
 await scenario('Song: playing along shows early/late live and a whole-song report against the song hits', async p => {
-  await p.locator('[data-mode=song]').click(); await songSetup(p);
+  await p.locator('button[data-mode=song]').click(); await songSetup(p);
   await p.locator('#appNav [data-pane=songplay]').click();
   assert.match(await p.locator('#song-play [data-play-info]').textContent(), /Test groove\.mp3 · 16 udaraca bubnja · 0:05/);
   assert.deepEqual(await p.locator('[data-play-backing] option').evaluateAll(list => list.map(o => o.disabled)), [false, false, true], 'no “without drums” audio in this reference');
@@ -298,7 +299,7 @@ await scenario('Song: playing along shows early/late live and a whole-song repor
 });
 
 await scenario('Song: count-in, half speed and a pattern cannot start during the song', async p => {
-  await p.locator('[data-mode=song]').click(); await songSetup(p, { countIn: true });
+  await p.locator('button[data-mode=song]').click(); await songSetup(p, { countIn: true });
   await p.locator('#appNav [data-pane=songplay]').click(); await p.locator('[data-play-rate]').selectOption('0.5');
   const before = await p.evaluate(() => { document.activeElement.blur(); return performance.now(); });
   await p.keyboard.press('Space'); await p.waitForFunction(() => __qa.songPractice.active);

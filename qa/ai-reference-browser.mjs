@@ -7,9 +7,9 @@ try{
  await page.addInitScript(()=>Object.defineProperty(navigator,'requestMIDIAccess',{value:async()=>({inputs:new Map(),outputs:new Map()})}));
  await page.route('**/js/main.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:await response.text()+'\nglobalThis.__aiReference={applyAiCandidate,studio,audio,settings,play};'});});
  await page.goto(process.env.DRUMMER_URL||'http://127.0.0.1:8123');await page.waitForFunction(()=>!!globalThis.__aiReference);
- await page.locator('[data-mode=song]').click(); await page.locator('#appNav [data-pane=ai]').click();
+ await page.locator('button[data-mode=song]').click(); await page.locator('#appNav [data-pane=ai]').click();
  assert.equal(await page.locator('#tool-ai').isVisible(),true);
- await page.locator('[data-mode=notes]').click(); await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=import]').click();assert.equal(await page.locator('#tool-ai').isVisible(),false);
+ await page.locator('button[data-mode=notes]').click(); await page.locator('#appNav [data-section=library]').click(); await page.locator('.subtabs [data-pane=import]').click();assert.equal(await page.locator('#tool-ai').isVisible(),false);
  await page.evaluate(async()=>{
   const q=__aiReference;await q.studio.journalReady;await q.audio.ensure();
   q.settings.countIn=false;q.settings.metro=false;
