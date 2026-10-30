@@ -1,5 +1,5 @@
 // Bump VERSION whenever a cached application file changes.
-const VERSION = '2026-10-30-drum-next-9';
+const VERSION = '2026-10-30-song-library-3';
 const ROOT = new URL('./', self.location.href);
 const PREFIX = `drummer:${ROOT.pathname}:`;
 const CACHE = PREFIX + VERSION;
@@ -11,7 +11,10 @@ const ASSETS = ['./', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/arrangements.js', 'js/backup-restore.js', 'js/journal-store.js', 'js/studio-next-i18n.js',
   'js/midi-routing.js', 'js/midi-routing-ui.js', 'js/routing-next-i18n.js', 'js/library-preview.js',
   'js/ai-tools.js', 'js/ai-tools-i18n.js', 'js/ai-model-cache.js', 'js/ai-audio.js', 'js/ai-reference.js',
+  'js/song-musicxml.js', 'js/song-library-store.js', 'js/song-library.js',
   'js/ai-transcriber.js', 'js/ai-transcription-model.js', 'js/ai-transcription-worker.js',
+  'js/ai-model-ui.js', 'js/adt-str-model.js', 'js/adt-str-dsp.js', 'js/adt-str-transcriber.js', 'js/scnet-dsp.js',
+  'js/vendor/ADT-STR-NOTICE.txt', 'js/vendor/SCNET-LICENSE.txt', 'js/vendor/AUDIOJS-NEURAL-LICENSE.txt',
   'js/drum-separator.js', 'js/drum-separator-core.js', 'js/drum-separator-worker.js',
   'js/vendor/ort-wasm-1.31.1.min.mjs', 'js/vendor/ORT-LICENSE.txt',
   'js/vendor/DEMUCS-LICENSE.txt', 'js/vendor/DEMUCS-ONNX-LICENSE.txt',

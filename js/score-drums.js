@@ -129,11 +129,12 @@ function readMeasures(part) {
       else if (child.localName === 'note') {
         const chord = !!kid(child, 'chord'), duration = num(child, 'duration');
         const start = chord ? last : cursor;
-        if (kid(child, 'grace') || kid(child, 'cue')) { grace++; continue; }
+        if (kid(child, 'grace')) { grace++; continue; }
         if (!chord) { last = cursor; cursor += duration; }
+        if (kid(child, 'cue')) { grace++; continue; }
         if (kid(child, 'rest')) continue;
         const ties = kids(child, 'tie').map(t => t.getAttribute('type'));
-        if (ties.includes('stop') && !ties.includes('start')) { tied++; continue; }
+        if (ties.includes('stop')) { tied++; continue; }
         const key = noteKey(child); if (!key) continue;
         const notations = kid(child, 'notations'), articulations = notations && kid(notations, 'articulations');
         if (notations?.querySelector('tremolo')) tremolo++;

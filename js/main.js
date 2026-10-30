@@ -24,6 +24,7 @@ import { RhythmCapture } from './rhythm-capture.js';
 import { createEditorTools } from './editor-tools.js';
 import { appendLibraryPreview } from './library-preview.js';
 import { createAiTools } from './ai-tools.js';
+import { createSongLibrary } from './song-library.js';
 import { candidateArrangement } from './ai-reference.js';
 import { setupNavigation, navigate, currentView } from './navigation.js';
 import { createCommandSearch } from './command-search.js';
@@ -83,7 +84,7 @@ const savedPattern = [...library, ...PRESETS].find(p => p.id && p.id === pattern
 const draftContent = p => JSON.stringify(['name', 'bars', 'beats', 'beatUnit', 'division', 'swing', 'groups', 'sticking', 'steps'].map(key => p[key]));
 let dirty = settings.currentDirty === true || (settings.currentDirty == null && !!settings.current && (!savedPattern || draftContent(pattern) !== draftContent(normalize(savedPattern))));
 settings.currentDirty = dirty;
-let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator, editorTools, rhythmCapture, aiTools, triggerCheck, songPractice;
+let notation, kit, studio, profiles, workbench, workspaceView, agentTools, configurator, editorTools, rhythmCapture, aiTools, triggerCheck, songPractice, songLibrary;
 let edCells = [];
 let calibration = null;
 
@@ -107,12 +108,12 @@ const perfForAudio = time => play.on && play.firstAudio != null ? play.firstPerf
 // ---------- Sviranje ----------
 
 async function start(options = {}) {
-  if (rhythmCapture?.busy || studio?.backupRestore?.running || aiTools?.busy) return false;
+  if (rhythmCapture?.busy || studio?.backupRestore?.running || (aiTools?.busy || songLibrary?.busy)) return false;
   if (play.on || play.starting) return false;
   if (missingKitInstruments(pattern, settings.kitConfig).length) { toast('Ritam koristi delove koji nisu u tvom setu. Uključi ih u Moj bubanj ili izmeni ritam.'); return false; }
   if (calibration) { toast('Sačekaj da se kalibracija završi.'); return false; }
   if (triggerCheck?.busy) { toast('Završi proveru trigera pre vežbe.'); return false; }
-  if (songPractice?.active) return false;
+  if (songPractice?.busy) return false;
   if (!options.program) studio?.cancelProgram();
   const token = ++play.token;
   play.starting = true; renderTransport();
@@ -172,7 +173,7 @@ function stop(reason = 'manual', {preserveScheduled = false, boundaryPerf} = {})
   studio?.stopped(reason, session);
 }
 
-const toggle = () => rhythmCapture?.busy ? rhythmCapture.finish()
+const toggle = () => songPractice?.busy ? songPractice.stop('manual') : rhythmCapture?.busy ? rhythmCapture.finish()
   : document.body.dataset.mode === 'song' && !play.on && !play.starting ? songPractice.toggle() : (play.on || play.starting ? stop() : start());
 
 function schedule() {
@@ -317,7 +318,7 @@ function onHit(instId, vel, perf, source = 'keyboard', midiNote, metadata, defer
     return;
   }
   let res = null;
-  if (songPractice?.active) {
+  if (songPractice?.busy) {
     res = songPractice.hit(instId, vel, perf);
     if (!deferred) kit.hit(instId, res ? res.kind : 'free');
     showLastHit(instId, vel, res); return;
@@ -457,16 +458,16 @@ const rerender = debounce(() => {
 
 function renderTransport() {
   const b = $('#playBtn');
-  const songOn = !!songPractice?.active;
-  b.textContent = play.starting ? '■ Otkaži' : play.on || songOn ? '■ Stop' : '▶ Start';
+  const songOn = !!songPractice?.busy;
+  b.textContent = (play.starting || songPractice?.starting) ? '■ Otkaži' : play.on || songOn ? '■ Stop' : '▶ Start';
   b.classList.toggle('playing', play.on || play.starting || songOn);
   $('#bpm').value = pattern.bpm;
   for (const id of ['metro', 'countIn', 'loop', 'playPattern', 'liveSound', 'record']) $('#' + id).checked = settings[id];
   renderClickSub();
-  const busy = play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running;
+  const busy = play.on || play.starting || !!rhythmCapture?.busy || !!(aiTools?.busy || songLibrary?.busy) || !!studio?.backupRestore?.running;
   for (const el of $$('#view-editor input, #view-editor select, #view-editor button, #calibBtn, #resetStats, #level, #calib')) el.disabled = busy;
   for (const el of $$('#bpm, .tbtn, #trainerOn')) el.disabled = !!rhythmCapture?.busy || (busy && !!(studio?.backing.enabled || studio?.run));
-  b.disabled = !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running;
+  b.disabled = !!rhythmCapture?.busy || !!(aiTools?.busy || songLibrary?.busy) || !!studio?.backupRestore?.running;
   $('#captureRhythm').disabled = busy || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
   studio?.playState();
   profiles?.playState();
@@ -477,10 +478,11 @@ function renderTransport() {
   $('#edSwing').disabled = busy || pattern.division === 12;
   editorTools?.refresh();
   aiTools?.refresh();
+  songLibrary?.refresh();
 }
 
 function renderSongImport() {
-  const busy = play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
+  const busy = play.on || play.starting || !!rhythmCapture?.busy || !!(aiTools?.busy || songLibrary?.busy) || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || !!studio?.replay.playing || !!studio?.replay.starting;
   $('#importSong').disabled = busy;
   $('#scoreFile').disabled = busy;
 }
@@ -496,7 +498,7 @@ function renderClickSub() {
 }
 
 function setBpm(v) {
-  if (rhythmCapture?.busy || aiTools?.busy || studio?.backupRestore?.running) return;
+  if (rhythmCapture?.busy || (aiTools?.busy || songLibrary?.busy) || studio?.backupRestore?.running) return;
   if (play.on && (studio?.backing.enabled || studio?.run)) return;
   pattern.bpm = Math.min(260, Math.max(30, Math.round(Number(v) || pattern.bpm)));
   settings.current = pattern;
@@ -698,7 +700,7 @@ function libraryItem(p, own) {
 const fileName = name => (String(name).toLowerCase().replace(/[^a-z0-9šđčćž]+/g, '-').replace(/^-|-$/g, '') || 'ritam') + '.json';
 
 function loadPattern(p, { program = false } = {}) {
-  if (rhythmCapture?.busy || aiTools?.busy || studio?.backupRestore?.running) return false;
+  if (rhythmCapture?.busy || (aiTools?.busy || songLibrary?.busy) || studio?.backupRestore?.running) return false;
   if (dirty && !confirm('Trenutni ritam ima nesačuvane izmjene. Da ih odbaciš?')) return false;
   stop(program ? 'transition' : 'load');
   studio?.replay.stop();
@@ -1035,7 +1037,8 @@ function bind() {
   window.addEventListener('pagehide', () => { rhythmCapture?.close(); stop('unload'); saveSettings.flush(); });
 }
 
-const kitBusy = () => play.on || play.starting || !!triggerCheck?.busy || !!songPractice?.active || !!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || studio?.replay.playing || studio?.replay.starting;
+const libraryBusy = () => play.on || play.starting || !!triggerCheck?.busy || !!rhythmCapture?.busy || !!(aiTools?.busy || songLibrary?.busy) || !!studio?.backupRestore?.running || !!calibration || !!studio?.run || studio?.replay.playing || studio?.replay.starting;
+const kitBusy = () => libraryBusy() || !!songPractice?.busy || !!songLibrary?.busy;
 function applyKit(value, persist = true) {
   if (kitBusy()) return false;
   const config = normalizeKit(value);
@@ -1063,12 +1066,12 @@ renderAll();
 renderMapTable();
 renderKeyHelp();
 studio = new PracticeStudio({ audio, getPattern: () => pattern, getLevel: () => settings.level,
-  isPlaying: () => play.on || play.starting || !!rhythmCapture?.busy || !!aiTools?.busy || !!calibration, start, stop, loadPattern, setBpm,
+  isPlaying: () => play.on || play.starting || !!songPractice?.busy || !!triggerCheck?.busy || !!rhythmCapture?.busy || !!(aiTools?.busy || songLibrary?.busy) || !!calibration, start, stop, loadPattern, setBpm,
   getBackupState, applyRestoredState: async () => { saveSettings.cancel(); location.reload(); },
   refreshNotation: renderNotationView, toast, getInstruments: () => kitInstruments(settings.kitConfig),
   onBusyChange: () => {
     profiles?.playState(); configurator?.playState(); kit?.playState(); renderSongImport();
-    const locked=!!rhythmCapture?.busy || !!aiTools?.busy || !!studio?.backupRestore?.running;
+    const locked=!!rhythmCapture?.busy || !!(aiTools?.busy || songLibrary?.busy) || !!studio?.backupRestore?.running;
     $('#playBtn').disabled=locked; $('#captureRhythm').disabled=kitBusy();
     for(const control of $$('#view-editor input,#view-editor select,#view-editor button,#calibBtn,#resetStats,#level,#calib'))control.disabled=kitBusy();
     for(const control of $$('#bpm,.tbtn,#trainerOn'))control.disabled=locked || ((play.on || play.starting) && !!(studio?.backing.enabled || studio?.run));
@@ -1120,8 +1123,12 @@ rhythmCapture = new RhythmCapture({ audio,getPattern:()=>pattern,calibration:()=
     library=list; libraryPages.mine=1; dirty=false; loadPattern(saved); toast(`Sačuvano: ${saved.name}`); return true;
   } });
 aiTools=createAiTools({container:$('#section-song'),isBusy:kitBusy,onBusyChange:renderTransport,toast,onCandidate:applyAiCandidate,
-  onSongReference:candidate=>{ if(!songPractice.setReference(candidate))return false; navigate('songplay'); toast('Pesma je spremna. Start pokreće sviranje uz pesmu.'); return true; }});
+  onSongReference:candidate=>{ if(!songPractice.setReference(candidate))return false; songLibrary?.clearSelection(); navigate('songplay'); toast('Pesma je spremna. Start pokreće sviranje uz pesmu.'); return true; }});
 songPractice = new SongPractice({ audio, settings, toast, isBusy: kitBusy, onBusyChange: renderTransport });
+songLibrary = createSongLibrary({ playPanel: songPractice.play, isBusy: libraryBusy, onBusyChange: renderTransport,
+  getSong: () => aiTools.getSongProject(), canSaveSong: () => aiTools.canSaveSong(), stopPreview: () => aiTools.stopAudio(), stopSong: () => songPractice.stop('manual'),
+  prepareAudio: () => audio.ensure(), startSong: () => songPractice.start(),
+  onLoad: candidate => { const accepted = songPractice.setReference(candidate); if (accepted) { aiTools.releaseSong(); songPractice.backing = 'without'; songPractice.renderPlay(); } return accepted; } });
 setupNavigation();
 setupTooltips();
 const commandSearch = createCommandSearch({ toast, patterns: () => [...library, ...PRESETS], loadPattern });
@@ -1145,7 +1152,7 @@ const patternMeta = p => ({ id: p.id, name: p.name, nameEn: p.nameEn || t(p.name
   beatUnit: p.beatUnit, division: p.division, swing: p.swing, difficulty: p.difficulty || '', favorite: favorites.has(p.id) });
 agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENTS.map(i => i.id),
   getState: () => ({ pattern: patternMeta(pattern), playing: play.on, starting: play.starting,
-    capturing:!!rhythmCapture?.busy,restoring:!!studio.backupRestore?.running,aiBusy:!!aiTools?.busy,
+    capturing:!!rhythmCapture?.busy,restoring:!!studio.backupRestore?.running,aiBusy:!!(aiTools?.busy || songLibrary?.busy),
     programRunning: !!studio.run, calibrating: !!calibration, replaying: studio.replay.playing || studio.replay.starting,
     unsavedPattern: dirty, unsavedProgram: studio.programDirty, backingEnabled: studio.backing.enabled,
     kitConfig: settings.kitConfig, audioReady: audio.ready, language: getLanguage(), focus: studio.focus, favoriteCount: favoriteCount(),
@@ -1185,7 +1192,7 @@ agentTools = setupAgentTools({ settings, saveSettings, instrumentIds: INSTRUMENT
   setLanguage: language => { $('#languageSelect').value = language; $('#languageSelect').dispatchEvent(new Event('change')); },
 });
 setupPwa({ canReload: () => !kitBusy() && !dirty && !studio.programDirty, toast,
-  blockReason: () => aiTools?.busy ? 'Zaustavi plejer pesme ili AI obradu, pa ponovo klikni Primeni novu verziju.'
+  blockReason: () => (aiTools?.busy || songLibrary?.busy) ? 'Zaustavi plejer pesme ili AI obradu, pa ponovo klikni Primeni novu verziju.'
     : kitBusy() ? 'Zaustavi sviranje, pa ponovo klikni Primeni novu verziju.'
     : dirty ? `Ritam „${pattern.name}“ ima nesačuvane izmene. Sačuvaj ga dugmetom Sačuvaj pored naziva, pa ponovo klikni Primeni novu verziju.`
     : studio.programDirty ? 'Program vežbanja ima nesačuvane izmene. Sačuvaj ga u Vežbanje → Programi, pa ponovo klikni Primeni novu verziju.' : null,
@@ -1199,7 +1206,7 @@ async function getBackupState() {
   saveSettings.flush();
   return {version:2,ritmovi:library,trenutni:pattern,podesavanja:settings,programs:studio.programs,
     programDraft:studio.program,profiles:profiles.items,midiMap:midi.map,midiRouting:midi.routing,
-    language:getLanguage(),favorites:[...favorites],arrangements:studio.arrangements.items,arrangementDraft:studio.arrangements.draft};
+    songRuns:structuredClone(songPractice?.history || []),language:getLanguage(),favorites:[...favorites],arrangements:studio.arrangements.items,arrangementDraft:studio.arrangements.draft};
 }
 
 // Queue the first few audible events of the next section on the current audio

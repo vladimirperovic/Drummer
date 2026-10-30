@@ -1,20 +1,35 @@
 import { getAiAsset, chooseAiSession } from './ai-model-cache.js';
-import { ADTOF_MODEL, ADTOF_SAMPLE_RATE, ADTOF_FPS } from './ai-transcription-model.js';
+import { ADTOF_MODEL, ADTOF_SAMPLE_RATE, ADTOF_FPS, getTranscriptionModel } from './ai-transcription-model.js';
+import { ADT_STR_MODEL } from './adt-str-model.js';
+import { createAdtStrTranscriber } from './adt-str-transcriber.js';
 
 let runtime, session, model, backend = 'wasm', threads = 1, benchmark = null, downloads = false, preparing, processing = false;
+let selectedModelId, preparingModelId, adtSession;
 // Probni ulaz za merenje GPU/CPU: deset sekundi kratkih tonova, kao isečak koji model inače dobija.
 const sample = ort => ({ waveform: new ort.Tensor('float32', Float32Array.from({ length: 441000 }, (_, i) => (i % 22050 < 400 ? Math.sin(i * .3) : 0) * .5), [1, 441000]) });
-async function prepare(id, allowDownload, preference = 'auto') {
-  if (session) return;
-  if (preparing) return preparing;
+async function prepare(id, allowDownload, preference = 'auto', modelId = ADTOF_MODEL.id) {
+  const selected = getTranscriptionModel(modelId);
+  if ((session || adtSession) && selectedModelId === selected.id) return;
+  if (preparing) {
+    if (preparingModelId !== selected.id) throw new Error('Drugi AI model se još učitava.');
+    return preparing;
+  }
   const onProgress = progress => self.postMessage({ id, type: 'progress', progress });
-  downloads ||= allowDownload;
+  downloads = allowDownload; preparingModelId = selected.id;
   preparing = (async () => {
+    await Promise.resolve(session?.release?.()).catch(() => {}); runtime?.release();
+    await Promise.resolve(adtSession?.release()).catch(() => {});
+    session = runtime = adtSession = undefined; selectedModelId = undefined;
+    if (selected.id === ADT_STR_MODEL.id) {
+      adtSession = await createAdtStrTranscriber({ allowDownload, onProgress });
+      ({ backend, threads, benchmark } = adtSession); selectedModelId = selected.id; return;
+    }
     model ||= await getAiAsset(ADTOF_MODEL, { allowDownload: downloads, onProgress });
     onProgress({ stage: 'loading', progress: 0 });
     ({ runtime, session, backend, threads, benchmark } = await chooseAiSession(model, {}, { allowDownload: downloads, onProgress, preference, sample }));
+    selectedModelId = selected.id;
   })();
-  try { await preparing; } finally { preparing = null; }
+  try { await preparing; } finally { preparing = null; preparingModelId = null; }
 }
 // GPU greška ili neispravan izlaz: isti deo se ponavlja na CPU sa svim nitima.
 async function fallBackToCpu(id) {
@@ -23,13 +38,14 @@ async function fallBackToCpu(id) {
   benchmark = { ...benchmark, chosen: 'wasm', reason: 'GPU greška tokom obrade' };
 }
 
-async function transcribe(id, audio, allowDownload, preference) {
+async function transcribe(id, audio, allowDownload, preference, modelId) {
   if (processing) throw new Error('AI obrada je već pokrenuta.');
   processing = true;
   try {
     if (!(audio instanceof Float32Array) || audio.length < 2205 || audio.length > ADTOF_SAMPLE_RATE * 600) throw new Error('Za AI izaberi snimak od 0,05 sekundi do 10 minuta.');
     if (!audio.every(Number.isFinite)) throw new Error('Audio sadrži neispravne uzorke.');
-    await prepare(id, allowDownload, preference);
+    await prepare(id, allowDownload, preference, modelId);
+    if (adtSession) return await adtSession.transcribe(audio, { onProgress: progress => self.postMessage({ id, type: 'progress', progress }) });
     const frames = Math.ceil(audio.length / 441), activations = new Float32Array(frames * 5), started = performance.now();
     // Eight-second central windows plus one second of context on each side.
     // Bidirectional GRU cannot carry a streaming state; overlap avoids hard
@@ -52,17 +68,20 @@ async function transcribe(id, audio, allowDownload, preference) {
       }
       self.postMessage({ id, type: 'progress', progress: { stage: 'transcribing', completed: end, total: frames, progress: end / frames } });
     }
-    return { activations, fps: ADTOF_FPS, durationSeconds: audio.length / ADTOF_SAMPLE_RATE, backend, threads, benchmark, inferenceMs: performance.now() - started };
+    return { modelId: ADTOF_MODEL.id, activations, fps: ADTOF_FPS, durationSeconds: audio.length / ADTOF_SAMPLE_RATE, backend, threads, benchmark, inferenceMs: performance.now() - started };
   } finally { processing = false; }
 }
 
 self.onmessage = async ({ data }) => {
-  const { id, type, allowDownload = false, backend: preference = 'auto' } = data;
+  const { id, type, allowDownload = false, backend: preference = 'auto', modelId = ADTOF_MODEL.id } = data;
   try {
-    if (type === 'prepare') { await prepare(id, allowDownload, preference); self.postMessage({ id, type: 'result', result: { backend, threads, benchmark } }); }
+    if (type === 'prepare') {
+      if (processing) throw new Error('AI obrada je već pokrenuta.');
+      await prepare(id, allowDownload, preference, modelId); self.postMessage({ id, type: 'result', result: { modelId: selectedModelId, backend, threads, benchmark } });
+    }
     else if (type === 'transcribe') {
-      const result = await transcribe(id, data.audio, allowDownload, preference);
-      self.postMessage({ id, type: 'result', result }, [result.activations.buffer]);
+      const result = await transcribe(id, data.audio, allowDownload, preference, modelId);
+      self.postMessage({ id, type: 'result', result }, result.activations ? [result.activations.buffer] : []);
     }
   } catch (error) { self.postMessage({ id, type: 'error', error: { message: error?.message || 'AI analiza nije uspela.', code: error?.code } }); }
 };

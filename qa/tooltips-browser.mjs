@@ -21,7 +21,7 @@ for (const language of ['sr', 'en']) {
     for (const pane of await page.locator(`#section-${section} .subtabs [data-pane]`).all()) { await pane.click(); await collect(); }
   }
   await page.locator('button[data-mode=song]').click();
-  for (const pane of ['ai', 'songplay', 'songreport']) { await page.locator(`#appNav [data-pane=${pane}]`).click(); await collect(); }
+  for (const pane of ['ai', 'songlibrary', 'songplay', 'songreport']) { await page.locator(`#appNav [data-pane=${pane}]`).click(); await collect(); }
   try {
     assert.deepEqual([...missing], [], `${language}: controls without a tooltip`);
     if (language === 'en') assert.deepEqual([...serbianInEnglish], [], 'English tooltips are translated');

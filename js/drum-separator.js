@@ -1,6 +1,7 @@
-import { DRUM_SEPARATOR_MODEL, SEPARATOR_RATE, validateSeparatorAudio } from './drum-separator-core.js';
+import { DRUM_SEPARATOR_MODEL, SEPARATOR_RATE, validateSeparatorAudio, separatorModel } from './drum-separator-core.js';
+export { SEPARATOR_MODELS } from './drum-separator-core.js';
 
-export const getSeparatorModelInfo = () => ({ ...DRUM_SEPARATOR_MODEL });
+export const getSeparatorModelInfo = modelId => ({ ...separatorModel(modelId) });
 const aborted = () => new DOMException('Separation cancelled', 'AbortError');
 
 async function stereo44k(channels, sampleRate, signal) {
@@ -18,11 +19,12 @@ async function stereo44k(channels, sampleRate, signal) {
   return [result.getChannelData(0), result.getChannelData(1)];
 }
 
-export function createDrumSeparator({ onProgress = () => {} } = {}) {
-  let worker, counter = 0, current, prepared = false, processing = false, generation = 0;
+export function createDrumSeparator({ onProgress = () => {}, modelId = DRUM_SEPARATOR_MODEL.id } = {}) {
+  let selectedModel = separatorModel(modelId).id;
+  let worker, counter = 0, current, prepared = false, preparedInfo, processing = false, generation = 0;
   function terminate(error = aborted()) {
     generation++;
-    worker?.terminate(); worker = undefined; prepared = false;
+    worker?.terminate(); worker = undefined; prepared = false; preparedInfo = undefined;
     if (current) { const request = current; current = undefined; request.cleanup(); request.reject(error); }
   }
   function getWorker() {
@@ -32,7 +34,7 @@ export function createDrumSeparator({ onProgress = () => {} } = {}) {
       if (!current || data.id !== current.id) return;
       if (data.type === 'progress') { onProgress(data.progress); return; }
       const request = current; current = undefined; request.cleanup();
-      if (data.type === 'error') { worker.terminate(); worker = undefined; prepared = false; request.reject(Object.assign(new Error(data.error), { code: data.code })); }
+      if (data.type === 'error') { worker.terminate(); worker = undefined; prepared = false; preparedInfo = undefined; request.reject(Object.assign(new Error(data.error), { code: data.code })); }
       else request.resolve(data.result);
     };
     worker.onerror = event => { event.preventDefault(); terminate(new Error(event.message || 'SEPARATOR_WORKER_FAILED')); };
@@ -45,13 +47,18 @@ export function createDrumSeparator({ onProgress = () => {} } = {}) {
       const id = ++counter, cancel = () => terminate();
       current = { id, resolve, reject, cleanup: () => signal?.removeEventListener('abort', cancel) };
       signal?.addEventListener('abort', cancel, { once: true });
-      try { getWorker().postMessage({ id, type, ...payload }, transfer); }
+      try { getWorker().postMessage({ id, type, modelId: selectedModel, ...payload }, transfer); }
       catch (error) { terminate(error); }
     });
   }
-  async function prepare({ allowDownload = false, signal, backend = 'auto' } = {}) {
-    if (prepared) { if (signal?.aborted) throw aborted(); return getSeparatorModelInfo(); }
-    const result = await request('prepare', { allowDownload, backend }, signal); prepared = true; return result;
+  async function prepare({ allowDownload = false, signal, backend = 'auto', modelId = selectedModel } = {}) {
+    const nextModel = separatorModel(modelId).id;
+    if (nextModel !== selectedModel) {
+      if (current || processing) throw new Error('SEPARATOR_BUSY');
+      terminate(); selectedModel = nextModel;
+    }
+    if (prepared) { if (signal?.aborted) throw aborted(); return { ...preparedInfo }; }
+    const result = await request('prepare', { allowDownload, backend }, signal); prepared = true; preparedInfo = result; return result;
   }
   return {
     prepare(options) { if (processing) return Promise.reject(new Error('SEPARATOR_BUSY')); return prepare(options); },
@@ -63,7 +70,9 @@ export function createDrumSeparator({ onProgress = () => {} } = {}) {
         if (token !== generation) throw aborted();
         await prepare({ signal });
         if (token !== generation) throw aborted();
-        return await request('separate', { channels: stereo }, signal, stereo.map(c => c.buffer));
+        const result = await request('separate', { channels: stereo }, signal, stereo.map(c => c.buffer));
+        preparedInfo = { ...getSeparatorModelInfo(selectedModel), backend: result.backend, threads: result.threads, benchmark: result.benchmark };
+        return result;
       } finally { processing = false; }
     },
     dispose() { terminate(); },

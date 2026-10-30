@@ -1,5 +1,43 @@
 # Drummer QA
 
+`song-library.test.mjs` adds six unit cases for whole-song MusicXML timing, meter/grid combinations and project validation. `song-library-browser.mjs` uses real browser filesystem handles, writable streams and IndexedDB with a simulated OS folder picker and model outputs. It checks exact original bytes, both stems, MusicXML/MIDI, reopening, active song switching, denied access, interrupted disk writes, corrupted audio, OSMD rendering, languages, phone layout and offline reload. Set `DRUMMER_ARTIFACTS` to redirect its screenshots and XML exports. It does not exercise a native OS picker or physical MIDI hardware.
+
+`audit-fixes-browser.mjs` proverava sedam naknadnih popravki: Stop kroz režime, transport/busy zaštite, konkurentni i otkazani Song Start, /8 vreme, MusicXML cue/tie i istoriju pesama u punoj kopiji (uključujući restore i reload). Uključen je u `test:browser`.
+
+Provera od **30. oktobra 2026**: **301/301 JavaScript i 10/10 Python** testova, postojeći browser paketi i nove provere stvarnih modela, izbora modela, mobilnog prikaza i offline Pages paketa. Obim, ograničenja i otvoreni nalazi su u [auditu](../docs/AUDIT-MODELS-2026-10-30.md). Brojke ispod iz tog ranijeg izveštaja ostaju istorijske.
+
+## AI modeli i poređenje na istom audiju
+
+`test:browser` uključuje `ai-model-choice-browser.mjs`, koji proverava kontrolisani worker ugovor, čuvanje izbora, licence, prekid i mobilni raspored. Stvarna inferencija se proverava odvojeno; testovi ne preuzimaju modele sa interneta. Pre pokretanja navedi putanje do već preuzetih modela odgovarajuće licence i pinovanog SHA-256.
+
+```powershell
+# ADTOF i Demucs; server mora biti pokrenut.
+npm --prefix qa run test:ai
+# ADT_STR encoder/decoder iz DRUMMER_ADT_DIR; isti server i ADTOF za switch proveru.
+npm --prefix qa run test:adt-str
+# SCNet-large: obavezne eksplicitne putanje.
+$env:DRUMMER_SCNET_MODEL = 'C:\models\scnet-large.int8.onnx'
+$env:DRUMMER_AI_WASM = 'C:\models\ort-wasm-simd-threaded.wasm'
+npm --prefix qa run test:scnet
+```
+
+`benchmark:separators` pokreće tri modela nad tri ista sintetička miksa sa poznatim čistim bubnjevima. Koristi `DRUMMER_DEMUCS_MODEL`, `DRUMMER_SCNET_MODEL`, `DRUMMER_SCNET_SMALL_MODEL` i `DRUMMER_AI_WASM`, ili proverene podrazumevane fajlove u `%TEMP%/drummer-ai-feasibility`. Rezultati i WAV datoteke idu u `%TEMP%/drummer-separator-benchmark` (promenljivo kroz `DRUMMER_BENCH_OUTPUT`). To nije benchmark tačnosti na stvarnoj muzici.
+
+Za sopstveni MP3/FLAC koristi eksplicitne putanje (jedan do tri fajla), npr.:
+
+```powershell
+$env:DRUMMER_COMPARE_FILES = '["C:/music/song.mp3","C:/music/song.flac"]'
+$env:DRUMMER_COMPARE_OFFSET = '45'
+$env:DRUMMER_COMPARE_SECONDS = '15'
+npm --prefix qa run compare:audio
+```
+
+Sva tri separatora dobijaju iste dekodirane uzorke, 44,1 kHz, podrazumevano WASM sa osam niti. Skripta otvara samo navedene fajlove, bez slanja audija ili traženja po fasciklama. Čuva izvorni isečak i tri rezultata sa jednakim faktorom glasnoće, vreme obrade i proveru ispravnosti uzoraka. Bez čistog referentnog drum stema **ne računa SDR niti ocenu tačnosti**. Izlaz je `%TEMP%/drummer-audio-comparison`, a `DRUMMER_COMPARE_OUTPUT` menja fasciklu.
+
+`compare:transcription` obrađuje eksplicitne, prethodno isečene audio fajlove kroz ADTOF i ADT_STR. `DRUMMER_TRANSCRIBE_FILES` je JSON lista putanja ili objekata `{ "path": "C:/music/excerpt.wav", "label": "excerpt", "sourceOffsetSeconds": 45 }`. Offset označava početak isečka u pesmi; ne seče audio. Podrazumevani limit je 60 sekundi po fajlu. Rezultati idu u `%TEMP%/drummer-transcription-comparison` (`DRUMMER_TRANSCRIBE_OUTPUT` menja izlaz), sa sirovim i mapiranim događajima, MIDI fajlovima, brojem preskočenih artikulacija i isečaka koji su dostigli granicu modela. MIDI čuva onset vremena; 120 BPM i 4/4 u ovom QA izvozu su neutralni metapodaci, nisu procena tempa pesme. Broj predviđenih nota nije mera tačnosti.
+
+## Raniji izveštaji
+
 Aktuelna javna priprema od **29. oktobra 2026**: [izveštaj](RELEASE-2026-10-29.md), **229 JS + 7 Python + 156 Chromium browser scenarija = 392 različita testa**. Novi skupovi su `score-view`, `performance-report`, `ui-feedback`, `score-import` i `release-browser`. Opisi i brojke ispod beleže prethodne nadogradnje. Testovi koji proveravaju SR eksplicitno biraju taj jezik; posebna release provera potvrđuje novi EN default i pamćenje izabranog SR.
 
 Regresione i funkcionalne provere za popravke devet problema, dve nadogradnje sa po pet funkcija, SR/EN interfejs, 80 novih ritmova, promenljivi raspored nota, 2D/3D bubanj, WebMCP, favorite, paginaciju i konfigurator seta sa jednim/dva bas bubnja i ručnim rasporedom, nad osnovom `b9199e027af2c76b99e67a5dc48835f87daac57f`.

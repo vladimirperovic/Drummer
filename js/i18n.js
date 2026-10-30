@@ -98,7 +98,7 @@ export const EN = {
   ...Object.fromEntries(PRESET_CATEGORIES.filter(c => c.lesson).map(c => [c.lesson, c.lessonEn])),
   '⤢ Samo note': '⤢ Notes only', '↩ Vrati editor': '↩ Back to editor',
   'Prikaži samo komande i note; Esc vraća editor': 'Show only controls and notation; Esc returns to the editor',
-  'Redovi nota': 'Notation rows', 'Automatski': 'Auto', 'Vrati visinu': 'Reset height',
+  'Redovi nota': 'Notation rows', 'Redovi': 'Rows', 'Veličina': 'Size', 'Opcije': 'Options', 'Automatski': 'Auto', 'Vrati visinu': 'Reset height',
   'Vrati podrazumevanu visinu nota': 'Restore the default notation height',
   'Visina notnog sistema': 'Notation height', 'Povuci gore/dole za visinu nota; strelice menjaju visinu': 'Drag up/down to resize notation; arrow keys adjust height',
   'Kategorija': 'Category', 'Sve kategorije': 'All categories', 'Osnovni': 'Basics', 'Latino': 'Latin',

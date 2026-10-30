@@ -1,8 +1,12 @@
-import { ADTOF_MODEL, ADTOF_SAMPLE_RATE } from './ai-transcription-model.js';
+import { ADTOF_SAMPLE_RATE, getTranscriptionModel } from './ai-transcription-model.js';
 import { AI_WASM_ASSET } from './ai-model-cache.js';
+export { TRANSCRIBER_MODELS } from './ai-transcription-model.js';
 
-export const getTranscriberModelInfo = () => ({ ...ADTOF_MODEL, downloadBytes: ADTOF_MODEL.bytes,
-  totalDownloadBytes: ADTOF_MODEL.bytes + AI_WASM_ASSET.bytes, backend: 'wasm', sampleRate: ADTOF_SAMPLE_RATE, maxSeconds: 600 });
+export const getTranscriberModelInfo = modelId => {
+  const model = getTranscriptionModel(modelId);
+  return { ...model, downloadBytes: model.bytes, totalDownloadBytes: model.bytes + AI_WASM_ASSET.bytes,
+    backend: 'wasm', inputSampleRate: ADTOF_SAMPLE_RATE, maxSeconds: 600 };
+};
 
 export function createDrumTranscriber({ onProgress = () => {} } = {}) {
   let worker, sequence = 0; const pending = new Map();
@@ -36,8 +40,9 @@ export function createDrumTranscriber({ onProgress = () => {} } = {}) {
     });
   }
   return {
-    prepare: ({ allowDownload = false, signal, backend = 'auto' } = {}) => request('prepare', { allowDownload, backend }, { signal }),
-    async transcribe({ channels, sampleRate }, { allowDownload = false, signal, backend = 'auto' } = {}) {
+    prepare: ({ allowDownload = false, signal, backend = 'auto', modelId } = {}) => request('prepare', { allowDownload, backend, modelId: getTranscriptionModel(modelId).id }, { signal }),
+    async transcribe({ channels, sampleRate }, { allowDownload = false, signal, backend = 'auto', modelId } = {}) {
+      const selected = getTranscriptionModel(modelId);
       if (sampleRate !== ADTOF_SAMPLE_RATE || !Array.isArray(channels) || !channels.length || channels.length > 2
         || channels.some(channel => !(channel instanceof Float32Array) || channel.length !== channels[0].length)) throw new Error('AI transkripcija zahteva audio na 44.100 Hz.');
       const audio = new Float32Array(channels[0].length);
@@ -48,7 +53,7 @@ export function createDrumTranscriber({ onProgress = () => {} } = {}) {
         for (let i = start; i < end; i++) { let value = 0; for (const channel of channels) value += channel[i]; audio[i] = value / channels.length; }
         if (end < audio.length) await new Promise(resolve => setTimeout(resolve, 0));
       }
-      return request('transcribe', { audio, allowDownload, backend }, { signal }, [audio.buffer]);
+      return request('transcribe', { audio, allowDownload, backend, modelId: selected.id }, { signal }, [audio.buffer]);
     },
     dispose,
   };

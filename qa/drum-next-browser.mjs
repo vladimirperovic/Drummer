@@ -247,7 +247,7 @@ await scenario('Song: mode switch swaps notation for the live meter and keeps no
   await p.locator('#playBtn').click(); assert.equal(await p.evaluate(() => __qa.play.on), false);
   assert.equal(await p.locator('#appNav [data-pane=ai]').getAttribute('aria-current'), 'page');
   assert.deepEqual(await p.locator('#appNav button').evaluateAll(list => list.filter(b => b.getClientRects().length).map(b => b.dataset.section || b.dataset.pane || b.id)),
-    ['kit', 'ai', 'songplay', 'songreport', 'settings', 'searchOpen'], 'song menu');
+    ['kit', 'ai', 'songlibrary', 'songplay', 'songreport', 'settings', 'searchOpen'], 'song menu');
   // Arrangement and pattern backing now live in Practice and switch back to Notes.
   await p.locator('button[data-mode=notes]').click(); await p.locator('#appNav [data-section=practice]').click();
   await p.locator('.subtabs [data-pane=arrangement]').click(); assert.equal(await p.locator('#studio-arrangement').isVisible(), true);

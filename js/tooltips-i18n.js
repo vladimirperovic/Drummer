@@ -1,5 +1,9 @@
 // Engleski prevodi opisa dugmadi (js/tooltips.js).
 export default {
+  'Izaberi model za izdvajanje bubnjeva. Promena izbora ne pokreće preuzimanje.': 'Choose a drum separation model. Changing the selection does not start a download.',
+  'Izaberi model za prepoznavanje nota iz audija. Proveri opis i licencu modela.': 'Choose an audio transcription model. Review its description and license.',
+  'Izdvoji bubnjeve izabranim modelom i postavi ih kao izvor za note.': 'Isolate drums with the selected model and use them as the transcription source.',
+  'Prepoznaj note iz izabranog izvora i pregledaj rezultat pre izvoza.': 'Transcribe notes from the selected source and review the result before exporting.',
   'Smanji tempo za 5 BPM (Shift + strelica dole).': 'Decrease tempo by 5 BPM (Shift + Down arrow).',
   'Smanji tempo za 1 BPM (strelica dole).': 'Decrease tempo by 1 BPM (Down arrow).',
   'Povećaj tempo za 1 BPM (strelica gore).': 'Increase tempo by 1 BPM (Up arrow).',

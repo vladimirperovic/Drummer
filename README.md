@@ -59,11 +59,21 @@ MusicXML viewing does not turn piano music into a drum exercise or assess pitche
 
 ## AI audio: drums and drum notes
 
-Open **Song → Song analysis** and choose an MP3 or another browser-decodable audio file, up to 100 MB / 10 minutes. **Isolate drums** runs Demucs locally, with drums-only listening, a mix without drums, and WAV export. **Transcribe notes** runs ADTOF on the original mix or extracted drums. Review the estimated tempo, five instrument groups and note suggestions, then export MIDI or apply a whole-song practice reference.
+Open **Song → Song analysis** and choose an MP3, FLAC or another browser-decodable audio file, up to 100 MB / 10 minutes. **Isolate drums** offers **Demucs FT** (default), **SCNet-large** and **SCNet-small**, with drums-only listening, a mix without drums, and WAV export. **Transcribe notes** offers **ADTOF** (default: five instrument groups) and experimental **ADT_STR** (26 articulation classes and predicted velocity). Review the tempo, instrument mapping and note suggestions, then export MIDI or apply a whole-song practice reference. Model choices are remembered in this browser; changing a dropdown does not download anything.
 
-The first action explicitly downloads the selected model and a shared runtime: approximately **180.5 MB for Demucs** or **17.0 MB for ADTOF**; the 14.85 MB runtime is shared. Verified files are cached for reuse and can be deleted in the AI panel. Audio is never uploaded. Processing uses CPU/WASM workers, can take several minutes and substantial memory, and can be cancelled. Transcription is approximate: toms, hi-hat articulations and cymbal types are grouped, and MIDI velocity is a default rather than detected dynamics.
+The action shows the selected model's remaining download. Model sizes are approximately **165.6 MB / 45.1 MB / 12.9 MB** for the three separators and **2.2 MB / 72.9 MB** for the transcribers, plus a shared runtime. SHA-256-verified files are cached and can be deleted in the AI panel. Audio is never uploaded. Processing can take several minutes and substantial memory, and can be cancelled. ADT_STR uses CPU/WASM and works best on isolated drums; ADTOF groups articulations and uses default velocity. Both need review. Compare separators using the same input: a larger model or a smaller download does not guarantee a better result.
 
-ADTOF's model is **CC BY-NC-SA 4.0, non-commercial use only**. This is separate from Drummer's MIT code license; see [model notices](THIRD_PARTY_NOTICES.md).
+SCNet weights have author-confirmed **MIT** terms. ADTOF is **CC BY-NC-SA 4.0, non-commercial use only**. ADT_STR's publisher declares **CC BY-SA 4.0**, but the original weights do not have a separate license declaration. Demucs weights have conflicting original research-use and converter MIT statements. These terms are separate from Drummer's MIT code license; see [model notices](THIRD_PARTY_NOTICES.md) and the [audit and comparison](docs/AUDIT-MODELS-2026-10-30.md).
+
+After **Isolate drums**, the resulting drum stem automatically becomes the input to **Transcribe notes**. Run the second action to produce the notation candidate. You can explicitly select the original mix for comparison.
+
+## Laptop song library and MusicXML
+
+In Song mode, open **Songs → Choose folder** in desktop Chrome or Edge and choose a folder such as `Music/Drummer`. After separation and transcription, click **Save to library** in Analysis. Each save creates a new song folder containing the unchanged original file, `drums.wav`, `without-drums.wav`, `notes.musicxml`, `notes.mid` and `song.json` with exact hit times, tempo, meter and model choices. A failed save never replaces an earlier revision. Copy the whole library folder for backup or to move to another laptop; it is separate from the app's JSON settings backup.
+
+Search the list and use **Practice** to load and start a song without running AI again. **Previous / Next** switches between songs in the filtered list; switching stops the current take. **Load** prepares a song without starting it. All three backing tracks remain available, with the drumless track selected initially. The browser remembers the folder, but may ask for access again after restart; use **Refresh list** or choose the folder again. The app and saved songs work offline after the app finishes offline installation.
+
+**Export MusicXML** exports the entire transcription, including percussion instrument mappings, tempo, meter, rests, simultaneous hits, ghost-note heads and accents. It uses the selected straight/triplet grid and first downbeat, not the four-bar preview limit. Review tempo and mapping before exporting. Exact unquantized timing remains in MIDI and `song.json`; the score is a quantized AI suggestion, not a verified published transcription.
 
 ## Read your timing
 
@@ -85,7 +95,7 @@ For Web MIDI, use a supported Chromium browser over HTTPS or localhost. Keyboard
 
 ## Local data and offline use
 
-Patterns, sessions and settings belong to the browser and origin. The public demo and localhost have separate data. **Settings → App and data → Backup and restore** exports patterns, full sessions, programs, profiles, favorites, arrangements and settings. Review merge/replace choices and conflicts before applying a restore. Audio files and downloaded AI models are not included. The journal stores recordings in IndexedDB and loads details on demand; storage failures still show export/retry actions.
+Patterns, sessions and settings belong to the browser and origin. The public demo and localhost have separate data. **Settings → App and data → Backup and restore** exports patterns, full sessions, song performance reports, programs, profiles, favorites, arrangements and settings. Review merge/replace choices and conflicts before applying a restore. Audio files and downloaded AI models are not included. The journal stores recordings in IndexedDB and loads details on demand; storage failures still show export/retry actions.
 
 Open Settings → App and data and wait until it is ready before going offline. AI needs its optional downloads before offline use. See [privacy](PRIVACY.md).
 

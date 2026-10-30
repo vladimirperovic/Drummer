@@ -47,7 +47,9 @@ export class WorkspaceView {
   }
   get maximum() { return Math.max(280, Math.min(1000, innerHeight - 130)); }
   apply() {
-    const height = Math.round(Math.max(180, Math.min(this.maximum, Number(this.settings.sheetHeight) || Math.min(280, innerHeight * .32))));
+    // Phone controls need more vertical space; leave a full staff visible at the default zoom.
+    const defaultHeight = innerWidth <= 700 ? 320 : Math.min(280, innerHeight * .32);
+    const height = Math.round(Math.max(180, Math.min(this.maximum, Number(this.settings.sheetHeight) || defaultHeight)));
     if (this.settings.sheetHeight) this.settings.sheetHeight = height;
     this.sheet.style.height = this.focus ? '' : `${height}px`;
     document.body.classList.toggle('notes-only', this.focus);

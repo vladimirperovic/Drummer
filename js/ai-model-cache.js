@@ -107,7 +107,7 @@ async function timeSession({ runtime, session }, sample) {
     return performance.now() - started;
   } finally { for (const tensor of [...Object.values(feeds), ...Object.values(outputs || {})]) tensor.dispose(); }
 }
-const stopping = error => error?.name === 'AbortError' || error?.code === 'AI_DOWNLOAD_REQUIRED';
+const stopping = error => error?.name === 'AbortError';
 
 // Pozadina po modelu: 'wasm' (CPU sa više niti), 'webgpu' (GPU, uz CPU za čvorove koje GPU nema) ili 'auto':
 // tada se oba otvore i izmere na istom probnom ulazu (sample) i zadržava se brži. GPU koji ne može da otvori
@@ -126,7 +126,12 @@ export async function chooseAiSession(model, sessionOptions = {}, { preference =
     reason = String(error?.message || error).replace(/\s+/g, ' ').slice(0, 200);
   }
   if (gpu && (preference === 'webgpu' || !sample)) return { ...gpu, threads, benchmark: { chosen: 'webgpu', gpuMs, cpuMs: null, reason } };
-  const cpuChoice = await cpu();
+  let cpuChoice;
+  try { cpuChoice = await cpu(); }
+  catch (error) {
+    if (gpu && !stopping(error)) return { ...gpu, threads, benchmark: { chosen: 'webgpu', gpuMs, cpuMs: null, reason: String(error?.message || error).slice(0, 200) } };
+    await closeSession(gpu); throw error;
+  }
   let cpuMs = null;
   if (gpu) {
     try { cpuMs = await timeSession(cpuChoice, sample); }

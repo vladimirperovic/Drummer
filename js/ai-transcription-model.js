@@ -1,3 +1,7 @@
+import { INST } from './patterns.js';
+import { ADT_STR_MODEL, ADT_STR_CLASSES } from './adt-str-model.js';
+export { ADT_STR_MODEL, ADT_STR_CLASSES } from './adt-str-model.js';
+
 export const ADTOF_MODEL = Object.freeze({
   id: 'adtof-frame-rnn-d0e809b', name: 'ADTOF Frame_RNN', bytes: 2171762,
   url: 'https://huggingface.co/thebluescreen/adtof-drums-onnx/resolve/d0e809bb1c1b6fe8a4a00c576852117a0636ab5a/adtof_frame_rnn.onnx',
@@ -12,6 +16,32 @@ export const ADTOF_CLASSES = Object.freeze([
   { id: 'cymbals', label: 'Činele zajedno', inst: 'crash', threshold: .30 },
 ]);
 export const ADTOF_SAMPLE_RATE = 44100, ADTOF_FPS = 100;
+
+export const TRANSCRIBER_MODELS = Object.freeze([
+  Object.freeze({ ...ADTOF_MODEL, sourceUrl: ADTOF_MODEL.source, assets: Object.freeze([ADTOF_MODEL]),
+    classes: ADTOF_CLASSES, sampleRate: ADTOF_SAMPLE_RATE, predictsVelocity: false }),
+  ADT_STR_MODEL,
+]);
+export function getTranscriptionModel(id = ADTOF_MODEL.id) {
+  const canonical = id === 'adtof' ? ADTOF_MODEL.id : id === 'adt-str' ? ADT_STR_MODEL.id : id;
+  const model = TRANSCRIBER_MODELS.find(entry => entry.id === canonical);
+  if (!model) throw new Error('Nepoznat model za transkripciju.');
+  return model;
+}
+export const getTranscriptionClasses = id => getTranscriptionModel(id).classes;
+
+export function transcriptionEvents(result, options = {}) {
+  const model = getTranscriptionModel(result?.modelId);
+  if (model.id === ADTOF_MODEL.id) return activationEvents(result.activations, { durationSeconds: result.durationSeconds, ...options });
+  if (!Array.isArray(result.events)) throw new Error('Neispravan izlaz AI modela.');
+  const mapping = options.mapping || {}, duration = Math.min(options.durationSeconds ?? Infinity, result.durationSeconds ?? Infinity);
+  return result.events.flatMap(event => {
+    const group = model.classes.find(entry => entry.id === event.group);
+    const inst = group && (Object.hasOwn(mapping, group.id) ? mapping[group.id] : group.inst);
+    if (!inst || !Object.hasOwn(INST, inst) || !Number.isFinite(event.timeSeconds) || event.timeSeconds < 0 || event.timeSeconds >= duration) return [];
+    return [{ ...event, inst, velocity: Math.max(1, Math.min(127, Math.round(event.velocity) || 100)) }];
+  });
+}
 
 // Peak picking uses local mean (100 ms before / 10 ms after), local maximum
 // (20 ms before / 10 ms after) and a 20 ms refractory interval. Model confidence
@@ -56,11 +86,10 @@ export function estimateDrumTempo(events) {
 // preserving the model's raw onset times (no grid quantization on export).
 export function transcriptionMidi(events, { bpm = 120, beats = 4, beatUnit = 4, durationSeconds = 0, noteMap = {} } = {}) {
   bpm = Math.max(30, Math.min(260, Number(bpm) || 120));
-  const defaults = { kick: 36, snare: 38, tom1: 48, tom2: 45, tom3: 43, hh: 42, hho: 46, crash: 49, ride: 51, crash2: 57 };
   const ppq = 960, microseconds = Math.round(60000000 / bpm), ticksPerSecond = ppq * 1000000 / microseconds;
   const notes = [];
   for (const event of events) {
-    const note = noteMap[event.inst] ?? defaults[event.inst];
+    const note = noteMap[event.inst] ?? INST[event.inst]?.midiOut;
     if (!Number.isInteger(note) || note < 0 || note > 127 || !Number.isFinite(event.timeSeconds) || event.timeSeconds < 0) continue;
     const tick = Math.round(event.timeSeconds * ticksPerSecond), velocity = Math.max(1, Math.min(127, Math.round(event.velocity || 92)));
     notes.push({ tick, status: 0x99, note, velocity }, { tick: tick + Math.max(1, Math.round(.04 * ticksPerSecond)), status: 0x89, note, velocity: 0 });

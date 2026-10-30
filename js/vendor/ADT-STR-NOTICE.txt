@@ -1,0 +1,50 @@
+ADT_STR model and browser preprocessing attribution
+
+Original research and implementation: Pierfrancesco Melucci, Paolo Merialdo,
+Taketo Akama, Towards Realistic Synthetic Data for Automatic Drum Transcription.
+https://arxiv.org/abs/2601.09520
+https://github.com/pier-maker92/ADT_STR
+Original repository license: Creative Commons Attribution-ShareAlike 4.0
+International, added at commit 6c4909b711c8f1697b180926052fa984e80b9279.
+https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+ONNX conversion and browser port: Coming Undone, Bengisu Ozaydin (2026).
+Source revision: 46d9aacc81371a0dd098f5dfb3435379c4de9158
+https://github.com/swwallowws/coming-undone
+Optional model revision: 89a917875e272bb492311624d7536b5e27604a64
+https://huggingface.co/swwallowws/coming-undone-browser-models
+
+The ONNX publisher explicitly distributes the ADT_STR weight adaptations under
+CC BY-SA 4.0. The upstream project has CC BY-SA 4.0 licensing; the original
+Pierfrancesco/adt-str Hugging Face weight repository does not separately declare
+a weights license. This notice records that distinction and is not an additional
+permission grant from the original model authors.
+
+Drummer's js/adt-str-dsp.js adapts the browser log-mel and resampling preprocessing
+and retains that CC BY-SA 4.0 lineage. Changes include local exports and integration
+with Drummer workers; the bounded decoder/session adapter is separately written.
+This preprocessing file is an exception to the application-wide MIT description.
+
+The Coming Undone source additionally carries this MIT notice, retained here:
+
+MIT License
+
+Copyright (c) 2026 Bengisu Ozaydin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -39,6 +39,12 @@ razmak = start/stop, strelice = tempo.
 
 ## Režimi: Note i Pesma
 
+**Biblioteka na laptopu:** u režimu Pesma otvori **Pesme → Izaberi fasciklu** (Chrome ili Edge na laptopu). Posle izdvajanja bubnja i prepoznavanja nota, u Analizi klikni **Sačuvaj u biblioteku**. Svaka pesma dobija novu podfasciklu: neizmenjen original, `drums.wav`, `without-drums.wav`, `notes.musicxml`, `notes.mid` i `song.json`. Cela fascikla može da se kopira na drugi računar; audio nije deo standardnog JSON bekapa podešavanja.
+
+U listi pretraži pesmu i klikni **Vežbaj** za trenutno učitavanje i sviranje bez ponovne AI obrade, ili **Učitaj** za pripremu bez pokretanja. **Prethodna / Sledeća** zaustavljaju tekuću pesmu i pokreću susednu iz filtrirane liste. Prvobitno je izabrana pratnja bez bubnja, a dostupna su sva tri zvuka. Posle ponovnog otvaranja browser može tražiti pristup fascikli; klikni **Osveži listu**. Fajlovi ostaju na disku i ako obrišeš podatke browsera.
+
+**Izvezi MusicXML** čuva note cele pesme, ne samo četiri takta pregleda. Koristi zadati BPM, meru, prvu dobu i podelu (šesnaestine ili triole), sa instrumentima, pauzama, istovremenim udarcima, ghost notama i akcentima. Pregledaj AI predlog pre izvoza; izvorni nekvantizovani tajming ostaje u MIDI-ju i podacima biblioteke.
+
 Gore levo biraš režim rada:
 
 - **Note** — sviranje po notama: bubanj, ritmovi, editor, vežbanje i izveštaj po notama. Gore je notni list.
@@ -55,6 +61,12 @@ Izveštaj na kraju pokazuje tačnost, prosek (žuriš/kasniš u ms), rasipanje, 
 **Brzina AI obrade.** Izdvajanje bubnja (Demucs) i prepoznavanje udaraca (ADTOF) rade na ovom računaru, u browseru. `alati/server.py` (i `pokreni.command`) šalje COOP/COEP zaglavlja, pa AI koristi više niti procesora; offline verzija dodaje ista zaglavlja preko service workera, pa i na GitHub Pages radi od drugog otvaranja. Pri prvoj obradi svakog modela aplikacija izmeri GPU (WebGPU) i CPU na probnom ulazu i zapamti brži; panel Analiza piše šta je izabrano i zašto. Izmereno na M1: Demucs ne radi na WebGPU (ONNX Runtime nema jedan čvor njegovog ISTFT dela), ADTOF je na GPU oko 5× sporiji, a CPU je najbrži sa 4 niti (pola logičkih jezgara). Izdvajanje bubnja za pesmu od 3:35 palo je sa ~600 s na ~260–290 s; prepoznavanje traje nekoliko sekundi.
 
 Učitavaju se MP3, FLAC, WAV, OGG i M4A (sve što Chrome/Edge umeju da dekodiraju), do 100 MB i 10 minuta, mono ili stereo.
+
+Glavni tok je **pesma → izdvajanje bubnjeva → prepoznavanje nota**. Posle izdvajanja izvor za note automatski postaje **Samo bubnjevi**; zatim pokreni drugi korak. Originalni miks ostaje ručni izbor za poređenje.
+
+**Izbor AI modela.** U panelu **Pesma → Analiza** padajuća lista za izdvajanje nudi **Demucs FT** (podrazumevan), **SCNet-large** i **SCNet-small**. Modeli imaju oko **165,6 / 45,1 / 12,9 MB**, uz zajednički runtime. Za prepis nota možeš izabrati **ADTOF** (2,2 MB; pet grupa, podrazumevana jačina) ili eksperimentalni **ADT_STR** (72,9 MB; 26 vrsta udaraca i procenjena jačina, CPU/WASM). ADT_STR je namenjen izdvojenim bubnjevima; sve rezultate treba pregledati. Izbor se pamti, a promena liste ne pokreće preuzimanje. Upoređuj isti MP3 kroz sva tri separatora, zatim isti FLAC kroz sva tri; format i pesma su odvojeni faktori.
+
+SCNet težine imaju autorovu potvrdu **MIT** licence. ADTOF je **CC BY-NC-SA 4.0**, samo za nekomercijalnu upotrebu. Izdavač ADT_STR konverzije navodi **CC BY-SA 4.0**, ali originalne težine nemaju zasebnu izjavu o licenci. Za Demucs postoji neslaganje između istraživačkih uslova originalnog autora i MIT oznake konverzije. Detalji, izvori i rezultati: [licence](THIRD_PARTY_NOTICES.md) i [audit i poređenje](docs/AUDIT-MODELS-2026-10-30.md).
 
 ## Navigacija
 

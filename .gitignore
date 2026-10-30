@@ -16,4 +16,8 @@ qa/artifacts/routing-performance/
 qa/artifacts/drum-separator/
 qa/artifacts/ai-transcription/
 qa/artifacts/ai-tools/
+qa/artifacts/ai-model-choice/
+qa/artifacts/adt-str/
+qa/artifacts/scnet-separator/
+qa/artifacts/song-library/
 qa/artifacts/pagination-final/

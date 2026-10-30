@@ -9,7 +9,7 @@ let onError = () => {};
 export function setErrorHandler(fn) { onError = fn; }
 export function reportError(error, key = 'drummer.journal') { onError(error, key); }
 export const STORAGE_KEYS = Object.freeze({ library: LIB_KEY, settings: SET_KEY, favorites: FAV_KEY,
-  sessions: 'drummer.sessions.v1', programs: 'drummer.programs.v1', profiles: 'drummer.profiles.v1',
+  songRuns: 'drummer.songRuns.v1', sessions: 'drummer.sessions.v1', programs: 'drummer.programs.v1', profiles: 'drummer.profiles.v1',
   midiMap: 'trener.midiMapa.v1', midiRouting: 'drummer.midiRouting.v1', language: 'drummer.language.v1', arrangements: 'drummer.arrangements.v1', arrangementDraft: 'drummer.arrangementDraft.v1', programDraft: 'drummer.programDraft.v1' });
 
 function read(key, fallback) {

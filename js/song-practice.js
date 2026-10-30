@@ -144,9 +144,9 @@ export class SongPractice {
     q('[data-play-backing]').value = this.backing; q('[data-play-rate]').value = String(this.rate);
     q('[data-play-from]').value = this.from; q('[data-play-to]').value = this.end().toFixed(1); q('[data-play-volume]').value = this.volume;
     q('[data-play-from]').max = q('[data-play-to]').max = ref?.durationSeconds || 0;
-    for (const control of this.play.querySelectorAll('select,input')) control.disabled = !ref || this.active;
+    for (const control of this.play.querySelectorAll('select,input')) control.disabled = !ref || this.busy;
     q('[data-play-start]').disabled = !ref;
-    q('[data-play-start]').textContent = this.active ? words('■ Zaustavi', '■ Stop') : words('▶ Sviraj uz pesmu', '▶ Play along');
+    q('[data-play-start]').textContent = this.busy ? words('■ Zaustavi', '■ Stop') : words('▶ Sviraj uz pesmu', '▶ Play along');
     q('[data-play-info]').textContent = ref
       ? words(`${ref.fileName} · ${ref.events.length} udaraca bubnja · ${clock(ref.durationSeconds)}${ref.buffers?.drums ? '' : ' · za „Samo bubanj” i „Bez bubnja” prvo izdvoji bubnjeve u koraku 1'}`,
         `${ref.fileName} · ${ref.events.length} drum hits · ${clock(ref.durationSeconds)}${ref.buffers?.drums ? '' : ' · separate the drums in step 1 for “Drums only” and “Without drums”'}`)
@@ -155,7 +155,7 @@ export class SongPractice {
 
   // Referenca iz AI analize: vremena udaraca, mapirani instrumenti i izdvojeni zvuk.
   setReference(candidate) {
-    if (this.active) return false;
+    if (this.busy) return false;
     const events = (candidate.events || []).filter(e => Number.isFinite(e.timeSeconds) && INST[e.inst]).map(e => ({ timeSeconds: e.timeSeconds, inst: e.inst }));
     if (!events.length) throw new Error('AI analiza nema udarce bubnja za poređenje.');
     this.reference = { events, fileName: candidate.fileName || 'Pesma', durationSeconds: candidate.durationSeconds, bpm: candidate.bpm || null,
@@ -168,33 +168,43 @@ export class SongPractice {
   buffer() { const b = this.reference?.buffers; return b?.[this.backing] || b?.original || null; }
   songTime(perf) { return this.from + (perf - this.perfStart) / 1000 * this.rate; }
 
-  toggle() { return this.active ? this.stop('manual') : this.start(); }
+  get busy() { return this.active || !!this.starting; }
+
+  toggle() { return this.busy ? this.stop('manual') : this.start(); }
 
   async start() {
     const { audio, settings } = this.host;
-    if (this.active) return false;
+    if (this.busy) return false;
     if (!this.reference) { this.host.toast('Prvo učitaj pesmu i prepoznaj udarce bubnja.'); navigate('ai', { reveal: true }); return false; }
     if (this.host.isBusy()) { this.host.toast('Zaustavi vežbu pre sviranja uz pesmu.'); return false; }
-    await audio.ensure();
-    const ctx = audio.ctx, buffer = this.buffer(), from = this.from, to = this.end(), rate = this.rate;
-    let startAt = ctx.currentTime + .25;
-    const clicks = [], ref = this.reference;
-    if (settings.countIn && ref.bpm) {
-      const beat = 60 / ref.bpm, beats = ref.meter?.beats || 4, next = ref.offsetSeconds + Math.max(0, Math.ceil((from - ref.offsetSeconds) / beat - 1e-6)) * beat;
-      const lead = (next - from) / rate, need = beats * beat / rate - lead;
-      if (need > 0) startAt += need;
-      for (let i = beats; i >= 1; i--) clicks.push({ time: startAt + lead - i * beat / rate, accent: i === beats });
-    }
-    for (const click of clicks) audio.click(click.time, click.accent);
-    const source = this.source = ctx.createBufferSource(), gain = this.gain = ctx.createGain();
-    source.buffer = buffer; source.playbackRate.value = rate; gain.gain.value = this.volume;
-    source.connect(gain).connect(ctx.destination); source.start(startAt, from, to - from);
-    source.onended = () => { if (this.source === source && this.active) this.stop('complete'); };
-    this.perfStart = audio.ctxToPerf(startAt); this.endPerf = this.perfStart + (to - from) / rate * 1000;
-    this.refs = prepareReference(ref.events, { from, to }); this.hits = []; this.avg = null; this.lastEnd = null; this.active = true;
-    this.run = { date: new Date().toISOString(), rate, backing: this.backing, from, to, level: settings.level };
-    this.host.onBusyChange?.(); this.renderPlay(); this.renderStage(); this.loop();
-    return true;
+    const token = this.startToken = (this.startToken || 0) + 1;
+    this.starting = true; this.renderPlay(); this.host.onBusyChange?.();
+    try {
+      await audio.ensure();
+      if (token !== this.startToken) return false;
+      const ctx = audio.ctx, buffer = this.buffer(), from = this.from, to = this.end(), rate = this.rate;
+      let startAt = ctx.currentTime + .25;
+      const clicks = [], ref = this.reference;
+      if (settings.countIn && ref.bpm) {
+        const beat = 60 / ref.bpm * 4 / (ref.meter?.beatUnit || 4), beats = ref.meter?.beats || 4, next = ref.offsetSeconds + Math.max(0, Math.ceil((from - ref.offsetSeconds) / beat - 1e-6)) * beat;
+        const lead = (next - from) / rate, need = beats * beat / rate - lead;
+        if (need > 0) startAt += need;
+        for (let i = beats; i >= 1; i--) clicks.push({ time: startAt + lead - i * beat / rate, accent: i === beats });
+      }
+      for (const click of clicks) audio.click(click.time, click.accent);
+      const source = this.source = ctx.createBufferSource(), gain = this.gain = ctx.createGain();
+      source.buffer = buffer; source.playbackRate.value = rate; gain.gain.value = this.volume;
+      source.connect(gain).connect(ctx.destination); source.start(startAt, from, to - from);
+      source.onended = () => { if (this.source === source && this.active) this.stop('complete'); };
+      this.perfStart = audio.ctxToPerf(startAt); this.endPerf = this.perfStart + (to - from) / rate * 1000;
+      this.refs = prepareReference(ref.events, { from, to }); this.hits = []; this.avg = null; this.lastEnd = null; this.active = true;
+      this.run = { date: new Date().toISOString(), rate, backing: this.backing, from, to, level: settings.level };
+      this.host.onBusyChange?.(); this.renderPlay(); this.renderStage(); this.loop();
+      return true;
+    } catch (error) {
+      if (token === this.startToken) { try { this.source?.stop(); } catch {} this.source = null; this.gain = null; this.active = false; this.host.toast(error.message); }
+      return false;
+    } finally { if (token === this.startToken) { this.starting = false; this.renderPlay(); this.host.onBusyChange?.(); } }
   }
 
   loop() {
@@ -218,7 +228,9 @@ export class SongPractice {
   }
 
   stop(reason = 'manual') {
-    if (!this.active) return null;
+    this.startToken = (this.startToken || 0) + 1;
+    const wasStarting = this.starting; this.starting = false;
+    if (!this.active) { if (wasStarting) { this.renderPlay(); this.host.onBusyChange?.(); } return null; }
     this.active = false; cancelAnimationFrame(this.frameId);
     try { this.source?.stop(); } catch {}
     this.source = null; this.gain = null;
@@ -333,7 +345,7 @@ export class SongPractice {
     const lanes = new Map(present.map(([id], i) => [id, 22 + i * laneH + laneH / 2]));
     const grid = [];
     if (r.bpm) {
-      const beat = 60 / r.bpm, beats = r.meter?.beats || 4, first = Math.ceil((from - r.offsetSeconds) / beat - 1e-6);
+      const beat = 60 / r.bpm * 4 / (r.meter?.beatUnit || 4), beats = r.meter?.beats || 4, first = Math.ceil((from - r.offsetSeconds) / beat - 1e-6);
       for (let k = first; r.offsetSeconds + k * beat <= to; k++) {
         const time = r.offsetSeconds + k * beat, bar = Math.floor(k / beats) + 1, down = ((k % beats) + beats) % beats === 0;
         grid.push(`<line x1="${x(time)}" x2="${x(time)}" y1="16" y2="${height}" class="${down ? 'song-bar' : 'song-beat'}"/>${down ? `<text x="${x(time) + 3}" y="12" class="song-axis">${bar}</text>` : ''}`);

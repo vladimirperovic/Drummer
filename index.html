@@ -84,8 +84,8 @@
   </div>
   <div id="practiceStatus" class="practice-status" aria-live="polite" hidden></div>
   <div class="score-options">
-    <label>Redovi nota <select id="scoreRows"><option value="0">Automatski</option><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></label>
-    <label class="score-scale">Veličina nota <input id="scoreScale" type="range" min="40" max="140" step="5" value="100" aria-label="Veličina nota"><output id="scoreScaleValue" for="scoreScale" data-user-text>100%</output></label>
+    <label><span class="label-full">Redovi nota</span><span class="label-compact">Redovi</span> <select id="scoreRows"><option value="0">Automatski</option><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></label>
+    <label class="score-scale"><span class="label-full">Veličina nota</span><span class="label-compact">Veličina</span> <input id="scoreScale" type="range" min="40" max="140" step="5" value="100" aria-label="Veličina nota"><output id="scoreScaleValue" for="scoreScale" data-user-text>100%</output></label>
     <label class="tog score-hide-kit"><input id="scoreOnly" type="checkbox"> Sakrij bubanj · samo note</label>
     <button id="resetSheet" title="Vrati podrazumevanu visinu nota">Vrati visinu</button>
   </div>
@@ -112,9 +112,10 @@
   <button data-section="practice" data-for="notes"><svg class="ico" aria-hidden="true"><use href="#i-practice"/></svg><span>Vežbanje</span></button>
   <button data-section="results" data-for="notes"><svg class="ico" aria-hidden="true"><use href="#i-results"/></svg><span>Rezultati</span></button>
   <button data-pane="ai" data-for="song" title="Učitaj pesmu, izdvoji bubanj i prepoznaj udarce"><svg class="ico" aria-hidden="true"><use href="#i-song"/></svg><span>Analiza</span></button>
+  <button data-pane="songlibrary" data-for="song" title="Biblioteka pesama"><svg class="ico" aria-hidden="true"><use href="#i-library"/></svg><span>Pesme</span></button>
   <button data-pane="songplay" data-for="song" title="Sviraj uz original, samo bubanj ili bez bubnja"><svg class="ico" aria-hidden="true"><use href="#i-practice"/></svg><span>Sviraj</span></button>
   <button data-pane="songreport" data-for="song" title="Rano, tačno i kasno kroz pesmu"><svg class="ico" aria-hidden="true"><use href="#i-results"/></svg><span>Izveštaj</span></button>
-  <button data-section="settings"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><span>Podešavanja</span></button>
+  <button data-section="settings" aria-label="Podešavanja"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-full">Podešavanja</span><span class="label-compact">Opcije</span></button>
   <button id="searchOpen" class="nav-search" title="Pretraga funkcija i ritmova (Ctrl+K)" aria-keyshortcuts="Control+K"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><span>Traži</span><kbd>Ctrl K</kbd></button>
 </nav>
 
@@ -290,6 +291,7 @@
   <section id="section-song" class="app-section" data-section-panel="song" aria-label="Pesma" hidden>
     <nav class="subtabs flow-steps" aria-label="Rad sa pesmom">
       <button data-pane="ai" class="active"><b>1</b> Učitaj i analiziraj <small>izdvoji bubanj, prepoznaj udarce</small></button>
+      <button data-pane="songlibrary" title="Biblioteka pesama">Biblioteka pesama <small>sačuvane pesme na laptopu</small></button>
       <button data-pane="songplay"><b>2</b> Sviraj uz pesmu <small>original, samo bubanj ili bez bubnja</small></button>
       <button data-pane="songreport"><b>3</b> Izveštaj <small>rano, tačno i kasno kroz pesmu</small></button>
     </nav>

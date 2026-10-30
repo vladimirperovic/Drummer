@@ -102,13 +102,36 @@ await scenario('Score view: scale and hidden drum persist, auto layout uses sepa
   assert.equal(await page.locator('#notation .staff').count(), 40);
 });
 
+await scenario('Score view: phone default shows the entire first staff and preserves a custom height', async page => {
+  await page.evaluate(async () => {
+    const { blankPattern } = await import('/js/patterns.js');
+    const pattern = blankPattern({ bars: 1, bpm: 90 });
+    pattern.steps.snare[4] = 2; pattern.steps.kick[0] = 2;
+    __scoreQA.loadPattern(pattern);
+  });
+  for (const width of [360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.waitForFunction(() => {
+      const viewport = document.querySelector('#notation').getBoundingClientRect();
+      const staff = document.querySelector('#notation svg').getBoundingClientRect();
+      return staff.height > 0 && staff.top >= viewport.top && staff.bottom <= viewport.bottom + 1;
+    });
+    assert.equal(await page.locator('#scoreScale').inputValue(), '100', 'fitting the staff does not shrink notes');
+  }
+  await page.evaluate(() => { __scoreQA.settings.sheetHeight = 240; __scoreQA.workspaceView.apply(); });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.locator('.sheet').evaluate(node => node.getBoundingClientRect().height), 240, 'an explicit user height is retained');
+});
+
 await scenario('Score view: compact phone layout keeps controls and navigation accessible', async page => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('#scoreOnly').check(); await zoom(page, 40);
+  await page.locator('#scoreView').click(); await zoom(page, 40);
   await page.locator('#scoreRows').selectOption('8');
   assert.ok(await page.locator('#playBtn').isVisible());
   assert.ok(await page.locator('#scoreScale').isVisible());
-  assert.ok(await page.locator('#scoreOnly').isVisible());
+  assert.ok(await page.locator('#scoreOnly').isChecked());
+  assert.equal(await page.locator('#scoreOnly').isVisible(), false, 'phone uses the transport notes-only button without a duplicate checkbox');
+  assert.equal(await page.locator('#scoreView').getAttribute('aria-pressed'), 'true');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   const before = await page.evaluate(() => {
     __scoreQA.notation.setPlayhead(112);

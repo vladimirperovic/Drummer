@@ -107,24 +107,103 @@ body[data-mode=song] .sound-options { padding-left: 0; border-left: 0; }
   .song-meter-value { font-size: 24px; }
 }
 
-/* Telefon: red 1 start i tempo; red 2 režim levo, MIDI i jezik desno; red 3 poslednji udarac; nova verzija
-   kao traka ispod. Komande i opcije su u redovima (bez vodoravnog skrolovanja), jer se sve koriste dok se svira. */
+.label-compact { display: none; }
+
+/* Telefon: transport je jedna celina; režim i povratna informacija dele drugi red.
+   Kontrole ostaju dostupne bez otvaranja menija, sa dodirnim površinama od najmanje 44 px. */
 @media (max-width: 700px) {
-  .bar { position: static; }
-  .bar-tools { display: contents; }
-  .play { order: 1; }
-  .tempo { order: 2; }
-  .mode-switch { order: 3; }
-  .bar-tools .status { order: 4; margin-left: auto; }
-  .language-picker { order: 5; }
-  .hit-feedback { order: 6; flex: 1 1 100%; }
-  .bar-tools .app-update { order: 7; flex: 1 1 100%; min-height: 34px; }
-  .bar-secondary { flex-wrap: wrap; overflow: visible; gap: 5px 3px; }
+  body { --soft: #f3f1ed; --line: #e7e3dd; --mobile-accent: #684b7c; --mobile-accent-soft: #eee8f3; background: #f6f5f2; }
+  .bar { position: static; padding: 14px 14px 12px; background: #fcfbf9; border-bottom: 1px solid var(--line); }
+  .bar-primary { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; grid-template-areas: 'play tempo tempo' 'mode feedback tools'; gap: 8px; }
+  .transport-group { display: contents; }
+  .play { grid-area: play; min-width: 0; min-height: 50px; padding: 8px; border-radius: 13px; border: 0; background: #29262d; color: white; font-size: 15px; box-shadow: 0 2px 4px #29262d12; }
+  .play.playing { background: #fbece9; color: #b73024; box-shadow: inset 0 0 0 1px #efc7c0; }
+  .tempo { grid-area: tempo; display: grid; grid-template-columns: 44px 44px minmax(40px, 1fr) 44px 44px; gap: 0; padding: 3px; border: 0; border-radius: 13px; background: #eeece8; }
+  .tempo .tbtn { min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: #625d68; font-size: 15px; font-weight: 600; }
+  .tempo .tbtn-step { font-size: 24px; font-weight: 400; }
+  .tempo .tbtn:hover:not(:disabled) { background: #fff; }
+  #bpm { width: 100%; height: 44px; padding: 0; border: 0; border-radius: 9px; background: transparent; font: 750 23px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; appearance: textfield; }
+  #bpm::-webkit-inner-spin-button, #bpm::-webkit-outer-spin-button { appearance: none; margin: 0; }
+  .mode-switch { grid-area: mode; width: 88px; padding: 0; gap: 0; border: 0; border-radius: 12px; background: #eeece8; }
+  .mode-switch button { min-width: 44px; min-height: 44px; padding: 10px; border-radius: 12px; color: #716b76; }
+  .mode-switch button[aria-pressed=true] { background: white; color: var(--mobile-accent); box-shadow: inset 0 0 0 1px #e5e0e8, 0 1px 3px #30253608; }
+  .hit-feedback { grid-area: feedback; padding: 0 2px; min-width: 0; }
+  .lasthit { font-size: 12px; line-height: 1.4; font-weight: 600; min-height: 0; white-space: normal; overflow-wrap: anywhere; }
+  .lasthit.free { color: #746d7a; font-weight: 500; }
+  .bar-tools { grid-area: tools; display: flex; width: auto; margin: 0; padding: 0; gap: 6px; overflow: visible; }
+  .bar-tools .status { padding: 0; max-width: 12px; border: 0; background: transparent; }
+  .bar-tools .status.on { background: transparent; }
+  .language-picker select { min-width: 50px; min-height: 44px; padding: 6px; border-color: var(--line); border-radius: 10px; background: transparent; font-size: 12px; font-weight: 600; }
+  .bar-primary:has(.app-update:not([hidden])) { grid-template-areas: 'play tempo tempo' 'mode feedback tools' 'update update update'; }
+  .bar-tools:has(.app-update:not([hidden])) { display: contents; }
+  .bar-tools:has(.app-update:not([hidden])) .status { display: none; }
+  .bar-tools:has(.app-update:not([hidden])) .language-picker { grid-area: tools; justify-self: end; }
+  .bar-tools .app-update { grid-area: update; min-height: 44px; border-radius: 10px; }
+  .bar-secondary { flex-wrap: wrap; overflow: visible; margin-top: 8px; padding-top: 10px; gap: 6px; }
   .bar-secondary .opts { display: contents; }
-  .bar-actions { order: -1; flex: 1 1 100%; flex-wrap: nowrap; gap: 5px; }
-  .bar-actions button, #scoreView, #importSong { flex: 1 1 auto; min-height: 32px; padding: 3px 6px; font-size: 11.5px; }
-  #captureRhythm::before { width: 8px; height: 8px; margin-right: 5px; }
-  .bar-secondary .tog { min-height: 30px; padding: 2px 6px 2px 5px; gap: 4px; font-size: 11.5px; }
-  .bar-secondary .tog input { width: 13px; height: 13px; }
-  .bar-secondary #clickSub { min-height: 30px; max-width: 118px; padding: 2px 4px; font-size: 11.5px; }
+  .bar-secondary .tog { min-height: 44px; padding: 6px 10px; gap: 6px; border: 1px solid transparent; border-radius: 12px; background: #f1efeb; color: #625c68; font-size: 13px; }
+  .bar-secondary .tog:has(input:checked) { border-color: transparent; background: var(--mobile-accent-soft); color: #5e456f; font-weight: 600; }
+  .bar-secondary .tog.rec:has(input:checked) { background: #fae8e4; color: #a92e24; }
+  .bar-secondary .tog input { appearance: none; position: relative; width: 14px; height: 14px; margin: 0; flex: none; border: 1px solid #a9a1ae; border-radius: 4px; background: #fff; }
+  .bar-secondary .tog input:checked { background: var(--mobile-accent); border-color: var(--mobile-accent); }
+  .bar-secondary .tog input:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 3px; height: 7px; border: solid white; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+  .bar-secondary .tog.rec input:checked { background: #b73528; border-color: #b73528; }
+  .bar-secondary .tog:has(input:focus-visible) { outline: 2px solid var(--mobile-accent); outline-offset: 2px; }
+  .bar-secondary #clickSub { min-height: 44px; max-width: 132px; padding: 6px; border-color: var(--line); border-radius: 12px; background: transparent; font-size: 13px; }
+  .bar-actions { order: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: 1 1 100%; gap: 6px; margin: 2px 0 0; }
+  .bar-actions button, #scoreView, #importSong { min-width: 0; min-height: 44px; padding: 6px 4px; border: 0; border-radius: 11px; background: transparent; color: #514a58; font-size: 12px; font-weight: 600; white-space: normal; }
+  .bar-actions button:hover:not(:disabled) { background: #eeece8; }
+  #scoreView[aria-pressed=true] { background: var(--mobile-accent-soft); color: #5e456f; }
+  #captureRhythm::before { width: 6px; height: 6px; margin-right: 4px; }
+
+  .sheet { margin: 12px 8px 0; padding: 14px 10px 0; background: white; border: 1px solid var(--line); border-bottom: 0; border-radius: 17px 17px 0 0; }
+  .sheet-head { gap: 4px 8px; }
+  .sheet-head h1 { font-size: 21px; line-height: 1.2; letter-spacing: -.02em; }
+  #patternInfo { flex-basis: 100%; font-size: 12px; color: #807987; }
+  #patternLesson { font-size: 11px; }
+  .score-options { gap: 8px; padding: 6px 0 2px; scrollbar-width: thin; scrollbar-color: #d8d1dd transparent; font-size: 12px; }
+  .score-options::-webkit-scrollbar { display: block; height: 3px; }
+  .score-options::-webkit-scrollbar-thumb { background: #d8d1dd; border-radius: 3px; }
+  .score-options label { gap: 5px; }
+  .score-options > label:first-child { flex: 0 0 43%; }
+  .score-options .score-scale { flex: 0 0 calc(57% - 8px); }
+  .score-options select, .score-options button { min-height: 44px; padding: 4px 6px; border: 0; border-radius: 9px; background: #f5f3f0; font-size: 12px; }
+  .score-options .label-full, .appnav .label-full { display: none; }
+  .score-options .label-compact, .appnav .label-compact { display: inline; }
+  .score-scale input { width: 62px; min-width: 0; flex: 1 1 62px; height: 44px; margin: 0; accent-color: var(--mobile-accent); }
+  .score-scale output { min-width: 3.5ch; font-size: 11px; }
+  .score-options .tog { min-height: 44px; }
+  /* Samo note in the transport toggles this same state; avoid a clipped duplicate. */
+  .score-options .score-hide-kit { display: none; }
+  #notation { width: calc(100% + 16px); margin-left: -8px; }
+  .sheet-resize { height: 20px; margin: 0 8px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 17px 17px; }
+  .sheet-resize span { width: 36px; height: 3px; background: #d4ced8; }
+  body.notes-only { padding-bottom: 0; }
+  body.notes-only .sheet { margin-bottom: 12px; border-bottom: 1px solid var(--line); border-radius: 17px; }
+
+  .appnav { padding: 5px 6px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid #eae6e0; background: #fdfcfa; box-shadow: 0 -4px 20px #3a304209; }
+  .appnav button { min-height: 54px; gap: 4px; padding: 3px 0; border: 0; color: #746d7a; font-size: 10.5px; font-weight: 500; }
+  .appnav button span { overflow: visible; text-overflow: clip; }
+  .appnav .ico { width: 20px; height: 20px; padding: 4px 9px; box-sizing: content-box; border-radius: 10px; }
+  .appnav button.active { color: #5e456f; font-weight: 650; }
+  .appnav button.active .ico { background: var(--mobile-accent-soft); }
+  .appnav button:focus-visible { outline-color: var(--mobile-accent); border-radius: 10px; }
+  .app-section { padding: 14px 12px 24px; }
+  .kit-configurator { padding: 0 12px; margin: 0 0 8px; border-radius: 14px; background: white; }
+  .kit-configurator summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin: 0 -12px; padding: 10px 14px; list-style: none; font-size: 13px; font-weight: 600; }
+  .kit-configurator summary::-webkit-details-marker { display: none; }
+  .kit-configurator summary::after { content: '+'; color: #8b8292; font-size: 20px; font-weight: 400; }
+  .kit-configurator[open] summary::after { content: '−'; }
+  .kit-toolbar { gap: 6px; }
+  .kit-toolbar button { min-height: 44px; padding: 6px 8px; border: 0; border-radius: 10px; background: #eeece8; font-size: 13px; }
+  .kit-switch { padding: 0; border-radius: 10px; background: #eeece8; }
+  .kit-switch button { min-width: 44px; background: transparent; }
+  .kit-switch button[aria-pressed=true] { background: #29262d; }
+  .kit-toolbar .muted { font-size: 12px; color: #807987; }
+  .kit-host { border-radius: 14px; }
+  .subtabs button { min-height: 44px; }
+  body[data-mode=song] .bar-primary { grid-template-areas: 'mode feedback tools' 'play play play'; }
+  body[data-mode=song] .bar-primary:has(.app-update:not([hidden])) { grid-template-areas: 'mode feedback tools' 'play play play' 'update update update'; }
+  .song-stage { border: 0; }
+  .song-meter, .song-timeline, .song-empty { border-radius: 14px; background: white; }
 }

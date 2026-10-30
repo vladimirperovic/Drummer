@@ -7,9 +7,15 @@ import * as store from './storage.js';
 import { t } from './i18n.js';
 
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
-const COLLECTIONS = ['ritmovi', 'sessions', 'programs', 'profiles', 'arrangements'];
-const normalizers = { ritmovi: normalize, sessions: normalizeSession, programs: normalizeProgram, profiles: normalizeProfile, arrangements: normalizeArrangement };
-const valid = { ritmovi: x => object(x.steps), sessions: x => object(x.pattern?.steps) && Array.isArray(x.hits), programs: x => Array.isArray(x.entries) && x.entries.every(e => object(e?.pattern?.steps)), profiles: x => object(x.map), arrangements: x => Array.isArray(x.sections) && x.sections.every(s => object(s?.pattern?.steps)) };
+const COLLECTIONS = ['ritmovi', 'sessions', 'programs', 'profiles', 'arrangements', 'songRuns'];
+const normalizers = { songRuns: x => structuredClone(x), ritmovi: normalize, sessions: normalizeSession, programs: normalizeProgram, profiles: normalizeProfile, arrangements: normalizeArrangement };
+const valid = { songRuns: x => typeof x.id === 'string' && typeof x.name === 'string'
+  && ['from', 'to', 'rate', 'durationSeconds', 'offsetSeconds'].every(k => Number.isFinite(x[k]))
+  && x.rate > 0 && x.from >= 0 && x.to >= x.from && x.durationSeconds >= 0
+  && (x.bpm == null || Number.isFinite(x.bpm) && x.bpm > 0)
+  && object(x.meter) && Number.isInteger(x.meter.beats) && x.meter.beats > 0 && [4,8].includes(x.meter.beatUnit)
+  && Array.isArray(x.reference) && x.reference.every(n => Array.isArray(n) && n.length === 3 && Number.isFinite(n[0]) && Object.hasOwn(INST,n[1]) && (n[2] == null || Number.isFinite(n[2])))
+  && Array.isArray(x.hits) && x.hits.every(n => Array.isArray(n) && n.length === 5 && Number.isFinite(n[0]) && Object.hasOwn(INST,n[1]) && Number.isFinite(n[2]) && n[2] >= 0 && n[2] <= 127 && (n[3] == null || Number.isFinite(n[3])) && ['good','ok','bad','extra'].includes(n[4])), ritmovi: x => object(x.steps), sessions: x => object(x.pattern?.steps) && Array.isArray(x.hits), programs: x => Array.isArray(x.entries) && x.entries.every(e => object(e?.pattern?.steps)), profiles: x => object(x.map), arrangements: x => Array.isArray(x.sections) && x.sections.every(s => object(s?.pattern?.steps)) };
 export function validateBackup(value) {
   if (!object(value) || ![1, 2].includes(value.version) || !COLLECTIONS.some(key => Array.isArray(value[key]))) throw new Error('Fajl nije ispravna Drummer rezervna kopija.');
   const inspect = (item, depth = 0) => {
@@ -23,6 +29,7 @@ export function validateBackup(value) {
   for (const key of COLLECTIONS) {
     if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error('Rezervna kopija sadrži neispravnu listu.');
     const ids = new Set();
+    if (key === 'songRuns' && data[key] === undefined) continue;
     data[key] = (data[key] || []).map(item => {
       if (!object(item) || !valid[key](item)) throw new Error('Rezervna kopija sadrži neispravan zapis.');
       if (key === 'sessions' && (!item.hits.every(hit => object(hit) && Object.hasOwn(INST, hit.inst) && Number.isFinite(hit.timeMs) && hit.timeMs >= -2000)
@@ -52,6 +59,7 @@ export function planRestore(current, incoming, { mode = 'merge', conflicts = 'ke
   if (!['merge', 'replace'].includes(mode) || !['keep', 'replace', 'both'].includes(conflicts)) throw new Error('Izaberi način vraćanja podataka.');
   const result = structuredClone(current), counts = {}, remap = { ritmovi: new Map(), profiles: new Map() };
   for (const key of COLLECTIONS) {
+    if (key === 'songRuns' && incoming[key] === undefined) continue;
     const existing = current[key] || [], imported = incoming[key] || [], existingIds = new Set(existing.map(item => item.id)), map = new Map((mode === 'replace' ? [] : existing).map(item => [item.id, item]));
     let duplicates = 0, added = 0, replaced = 0;
     for (const original of imported) {
@@ -79,6 +87,7 @@ export function planRestore(current, incoming, { mode = 'merge', conflicts = 'ke
 }
 export function backupStorageValues(snapshot) {
   const pairs = { library: snapshot.ritmovi || [], programs: snapshot.programs || [], profiles: snapshot.profiles || [], favorites: snapshot.favorites || [], arrangements: snapshot.arrangements || [] };
+  if (snapshot.songRuns !== undefined) pairs.songRuns = snapshot.songRuns;
   if (snapshot.podesavanja) pairs.settings = { ...snapshot.podesavanja, ...(snapshot.trenutni ? { current: snapshot.trenutni } : {}) };
   if (snapshot.midiMap) pairs.midiMap = snapshot.midiMap;
   if (snapshot.midiRouting) pairs.midiRouting = snapshot.midiRouting;
@@ -127,7 +136,7 @@ export class BackupRestore {
   preview() {
     if (!this.imported || !this.current) return;
     this.plan = planRestore(this.current, this.imported, { mode: this.$('backupRestoreMode').value, conflicts: this.$('backupRestoreConflicts').value, settings: this.$('backupRestoreSettings').checked });
-    const names = { ritmovi: 'Ritmovi', sessions: 'Sesije', programs: 'Programi', profiles: 'Profili', arrangements: 'Aranžmani' };
+    const names = { songRuns: 'Izveštaj za pesmu', ritmovi: 'Ritmovi', sessions: 'Sesije', programs: 'Programi', profiles: 'Profili', arrangements: 'Aranžmani' };
     this.$('backupRestorePreview').innerHTML = Object.entries(this.plan.counts).map(([key, n]) => `<tr><td>${t(names[key])}</td><td>${n.incoming}</td><td>${n.conflicts}</td><td>${n.added}</td><td>${n.replaced}</td><td>${n.removed}</td><td>${n.total}</td></tr>`).join('');
     this.$('backupRestoreWarning').textContent = this.plan.mode === 'replace' ? 'Zamena uklanja postojeće zapise koji nisu u kopiji. Preporučeno je da prvo izvezeš trenutnu kopiju.' : 'Spajanje zadržava postojeće zapise prema izabranom pravilu sukoba.';
     document.dispatchEvent(new Event('drummer:translate'));
